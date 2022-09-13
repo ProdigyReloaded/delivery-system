@@ -1,0 +1,144 @@
+# Copyright 2022, Phillip Heller
+#
+# This file is part of prodigyd.
+#
+# prodigyd is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# prodigyd is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along with prodigyd. If not,
+# see <https://www.gnu.org/licenses/>.
+
+defmodule Prodigy.Server.Protocol.Dia.Packet.Test do
+  @moduledoc false
+  use ExUnit.Case, async: true
+
+  alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
+  alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm4, Fm9}
+
+  test "dia fm0 not concatenated" do
+    data =
+      <<0x10, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x22, 0x00, 0x00,
+        0x17, 0x01, 0x50, 0x48, 0x49, 0x4C, 0x39, 0x39, 0x41, 0x06, 0x46, 0x4F, 0x4F, 0x42, 0x41,
+        0x52, 0x30, 0x36, 0x2E, 0x30, 0x33, 0x2E, 0x31, 0x30>>
+
+    assert DiaPacket.decode(data) ==
+             {:ok,
+              %Fm0{
+                concatenated: false,
+                dest: 8704,
+                function: Fm0.Function.APPL_0,
+                logon_seq: 0,
+                message_id: 1,
+                mode: %Fm0.Mode{
+                  compaction: false,
+                  encryption: false,
+                  logging_required: false,
+                  reserved: false,
+                  response: false,
+                  response_expected: true,
+                  timeout_message_required: false,
+                  unsolicited_message: false
+                },
+                payload: "\x01PHIL99A\x06FOOBAR06.03.10",
+                src: 0
+              }}
+  end
+
+  test "dia fm0 + fm9" do
+    fm0header =
+      <<0x10, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0B, 0x00, 0x02, 0x02, 0x00, 0x00,
+        0x9A>>
+
+    fm9header =
+      <<0x06, 0x09, 0x03, 0x02, 0x90, 0x94, 0x50, 0x48, 0x49, 0x4C, 0x39, 0x39, 0x41, 0x20, 0x20,
+        0x54, 0x50, 0x43, 0x4D, 0x30, 0x33, 0x30, 0x39, 0x45, 0x20, 0x30, 0x30, 0x31, 0x20, 0x30,
+        0x31, 0x30, 0x31, 0x31, 0x39, 0x38, 0x38, 0x31, 0x32, 0x34, 0x35, 0x31, 0x30, 0x30, 0x30,
+        0x30, 0x31, 0x33, 0x30, 0x30, 0x32, 0x36, 0x30, 0x33, 0x34, 0x30, 0x30, 0x35, 0x2E, 0x30,
+        0x30, 0x38, 0x2E, 0x31, 0x39, 0x2E, 0x31, 0x36, 0x20, 0x4E, 0x4F, 0x57, 0x49, 0x4E, 0x44,
+        0x4F, 0x57, 0x49, 0x44, 0x58, 0x30, 0x30, 0x30, 0x30, 0x54, 0x4C, 0x38, 0x30, 0x54, 0x42,
+        0x31, 0x30, 0x42, 0x44, 0x59, 0x30, 0x30, 0x30, 0x38, 0x54, 0x4C, 0x38, 0x30, 0x54, 0x4F,
+        0x31, 0x30, 0x50, 0x47, 0x20, 0x30, 0x31, 0x30, 0x34, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x33, 0x30, 0x33, 0x37, 0x31, 0x32, 0x30,
+        0x31, 0x38, 0x34, 0x31, 0x30, 0x30, 0x32, 0x35, 0x36, 0x30, 0x31, 0x30, 0x36, 0x38, 0x30,
+        0x30, 0x35, 0x34, 0x35>>
+
+    assert DiaPacket.decode(fm0header <> fm9header) ==
+             {:ok,
+              %Fm0{
+                concatenated: true,
+                dest: 131_584,
+                function: Fm0.Function.APPL_0,
+                logon_seq: 0,
+                message_id: 11,
+                mode: %Fm0.Mode{
+                  compaction: false,
+                  encryption: false,
+                  logging_required: false,
+                  reserved: false,
+                  response: false,
+                  response_expected: false,
+                  timeout_message_required: false,
+                  unsolicited_message: false
+                },
+                fm9: %Fm9{
+                  concatenated: false,
+                  flags: %Fm9.Flags{
+                    ascii_data: true,
+                    binary_data: false,
+                    retrieve_by_key: false,
+                    store_by_key: true
+                  },
+                  function: Fm9.Function.ALERT,
+                  payload:
+                    "PHIL99A  TPCM0309E 001 01011988124510000130026034005.008.19.16 NOWINDOWIDX0000TL80TB10BDY0008TL80TO10PG 0104             030371201841002560106800545",
+                  reason: Fm9.Reason.RECEPTION_SYSTEM
+                },
+                payload: <<>>,
+                src: 0
+              }}
+  end
+
+  test "dia fm0 + fm4" do
+    headers =
+      <<0x10, 0x80, 0x0, 0x10, 0x0, 0x6, 0x72, 0x1, 0x0, 0xD, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4B, 0xC,
+        0x4, 0x50, 0x48, 0x49, 0x4C, 0x39, 0x39, 0x41, 0x30, 0x0, 0x0>>
+
+    payload =
+      <<0x3D, 0x4, 0x0, 0x30, 0x2E, 0x39, 0x32, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x31, 0x33,
+        0x32, 0x2E, 0x39, 0x36, 0x20, 0x20, 0x20, 0x20, 0x31, 0x33, 0x35, 0x2E, 0x31, 0x39, 0x20,
+        0x20, 0x20, 0x20, 0x31, 0x33, 0x32, 0x2E, 0x32, 0x34, 0x20, 0x20, 0x20, 0x20, 0x31, 0x33,
+        0x34, 0x2E, 0x39, 0x33, 0x20, 0x20, 0x20, 0x20, 0x32, 0x2C, 0x37, 0x34, 0x38, 0x2C, 0x30,
+        0x39, 0x32, 0x2E>>
+
+    assert DiaPacket.decode(headers <> payload) ==
+             {:ok,
+              %Fm0{
+                concatenated: true,
+                dest: 0,
+                function: Fm0.Function.APPL_0,
+                logon_seq: 0,
+                message_id: 13,
+                mode: %Fm0.Mode{
+                  compaction: false,
+                  encryption: false,
+                  logging_required: false,
+                  reserved: false,
+                  response: true,
+                  response_expected: false,
+                  timeout_message_required: false,
+                  unsolicited_message: false
+                },
+                fm4: %Fm4{
+                  user_id: "PHIL99A",
+                  correlation_id: <<0, 0>>
+                },
+                payload: payload,
+                src: 0x67201
+              }}
+  end
+end
