@@ -1,0 +1,22 @@
+name: prodigy
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_USER: prodigy
+      POSTGRES_PASSWORD: prodigy
+      POSTGRES_DB: prodigy
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    ports:
+      - "25234:25234"
+    environment:
+      - DB_NAME=prodigy
+      - DB_USER=prodigy
+      - DB_PASS=prodigy
+      - DB_HOST=db
+      - MIX_ENV=prod
+    depends_on:
+      - db
