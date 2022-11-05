@@ -225,7 +225,7 @@ defmodule Prodigy.Server.Service.Messaging do
 
   # TODO better understand the format of this message
   def handle(%Fm0{payload: <<0x1, payload::binary>>} = request, %Session{} = session) do
-    Logger.info("messaging got payload: #{inspect(payload, base: :hex, limit: :infinity)}")
+    Logger.debug("messaging got payload: #{inspect(payload, base: :hex, limit: :infinity)}")
 
     response =
       case payload do
