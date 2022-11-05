@@ -49,5 +49,9 @@
     <orderEntry type="library" name="credo" level="project" />
     <orderEntry type="library" name="file_system" level="project" />
     <orderEntry type="library" name="bunt" level="project" />
+    <orderEntry type="library" name="quantum" level="project" />
+    <orderEntry type="library" name="crontab" level="project" />
+    <orderEntry type="library" name="gen_stage" level="project" />
+    <orderEntry type="library" name="telemetry_registry" level="project" />
   </component>
 </module>
