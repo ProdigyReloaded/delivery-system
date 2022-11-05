@@ -55,14 +55,14 @@ defmodule Import do
 
     Repo.transaction(fn ->
       count =
-      Enum.flat_map(argv, fn arg -> Path.wildcard(arg) end)
-      |> Enum.map(fn f ->
-        File.read!(f)
-        |> parse_object
-        |> change
-        |> Repo.insert
-      end)
-      |> Enum.count
+        Enum.flat_map(argv, fn arg -> Path.wildcard(arg) end)
+        |> Enum.map(fn f ->
+          File.read!(f)
+          |> parse_object
+          |> change
+          |> Repo.insert()
+        end)
+        |> Enum.count()
 
       IO.puts("- Imported #{count} objects")
     end)
