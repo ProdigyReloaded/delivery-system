@@ -20,6 +20,7 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
   alias Prodigy.Server.Router
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Service.Messaging
   alias Prodigy.Core.Data.{User, Household, Message}
   require Logger
 
@@ -36,23 +37,35 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     ])
     |> Repo.insert!()
 
+    # TODO could we just use the router for one single test, or should we use it for all?
     {:ok, router_pid} = GenServer.start_link(Router, nil)
+
+    # would like to put logon here, and logoff in a callback, but there is only on_exit which is called after
+    # the Router is terminated by ExUnit, which would mean the logoff would get called after the Repo supervisor is
+    # shutdown
+
     [router_pid: router_pid]
   end
 
-  def make_logon_request(user, pass, ver) do
-    %Fm0{
+  defp logon(context) do
+    Router.handle_packet(context.router_pid, %Fm0{
       src: 0x0,
       dest: 0x2200,
       logon_seq: 0,
       message_id: 0,
       function: Fm0.Function.APPL_0,
-      payload: <<0x1, user::binary, String.length(pass)::8, pass::binary, ver::binary>>
-    }
+      payload: <<0x1, "AAAA12A", 6, "foobaz", "06.03.17">>
+    })
   end
 
-  defp logon(context) do
-    Router.handle_packet(context.router_pid, make_logon_request("AAAA12A", "foobaz", "06.03.17"))
+  defp logoff(context) do
+    Router.handle_packet(context.router_pid, %Fm0{
+      src: 0x0,
+      dest: 0xD201,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0
+    })
   end
 
   test "send message", context do
@@ -94,25 +107,29 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
     # there should now be two messages, one to BBBB12B and one to CCCC12C
     assert(length(messages) == 2)
+
+    logoff(context)
   end
 
-  test "retrieve mailbox" do
-    flunk("not yet implemented")
-  end
-
-  test "retrieve message" do
-    flunk("not yet implemented")
-  end
-
+#  test "retrieve mailbox" do
+#    flunk("not yet implemented")
+#  end
+#
+#  test "retrieve message" do
+#    flunk("not yet implemented")
+#  end
+#
   test "check for unread messages" do
-    flunk("not yet implemented")
+    assert Messaging.unread_messages?(%User{id: "BBBB12B"}) == false
+    Messaging.send_message("AAAA12A", "John Doe", ["BBBB12B"], [], "Test", "Foo Bar Baz")
+    assert Messaging.unread_messages?(%User{id: "BBBB12B"}) == true
   end
-
-  test "expunge unread messages" do
-    flunk("not yet implemented")
-  end
-
-  test "expunge read messages" do
-    flunk("not yet implemented")
-  end
+#
+#  test "expunge unread messages" do
+#    flunk("not yet implemented")
+#  end
+#
+#  test "expunge read messages" do
+#    flunk("not yet implemented")
+#  end
 end
