@@ -111,10 +111,10 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     logoff(context)
   end
 
-#  test "retrieve mailbox" do
-#    flunk("not yet implemented")
-#  end
-#
+  test "retrieve mailbox" do
+    flunk("not yet implemented")
+  end
+
 #  test "retrieve message" do
 #    flunk("not yet implemented")
 #  end
