@@ -66,6 +66,11 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
     {:fragment, need: length, have: byte_size(payload)}
   end
 
+  @spec decode(binary()) :: {:error, atom()}
+  def decode(_) do
+    {:error, :no_match}
+  end
+
   @spec decode(binary(), Fm0.t()) :: {:ok, Fm0.t()}
   def decode(<<length, 4, user_id::binary-size(7), "0", rest::binary>> = _data, fm0) do
     correlation_id_length = length - 10
@@ -112,10 +117,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
      }}
   end
 
-  @spec decode(binary()) :: {:error, atom()}
-  def decode(_) do
-    {:error, :no_match}
-  end
+
 
   @spec encode(Fm0.t()) :: {:ok, binary()}
   def encode(%Fm0{} = packet) do

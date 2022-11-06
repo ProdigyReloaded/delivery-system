@@ -141,6 +141,7 @@ defmodule Prodigy.OdbUtil.CLI do
     args = Enum.into(parsed, %{})
 
     target = Map.get(args, :dest, ".")
+
     target =
       case File.exists?(target) do
         true ->
@@ -158,7 +159,6 @@ defmodule Prodigy.OdbUtil.CLI do
         _ ->
           usage(:terse, "Destination path '#{target}' does not exist.")
       end
-
 
     if Map.get(args, :help, false), do: usage(:verbose)
 

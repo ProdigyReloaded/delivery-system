@@ -25,7 +25,8 @@ defmodule Prodigy.Server.Application do
 
     children = [
       {Prodigy.Server.RanchSup, {}},
-      {Prodigy.Core.Data.Repo, []}
+      {Prodigy.Core.Data.Repo, []},
+      Prodigy.Server.Scheduler
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)
