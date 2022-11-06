@@ -77,13 +77,12 @@ defmodule Create do
 
     IO.puts("- Created Household #{new_household}")
     IO.puts("- Created User #{new_household <> "A"} with password #{new_password}")
-
   end
 
   defp random(x) do
     Enum.to_list(x)
     |> Enum.chunk_every(1)
-    |> Enum.random
+    |> Enum.random()
   end
 
   defp random_char() do
@@ -95,7 +94,7 @@ defmodule Create do
   end
 
   defp random_both() do
-    random(Enum.chunk_every(?0..?9, 1) ++ Enum.chunk_every(?A..?Z,1))
+    random(Enum.chunk_every(?0..?9, 1) ++ Enum.chunk_every(?A..?Z, 1))
   end
 
   defp random_id() do

@@ -18,6 +18,12 @@ import Config
 #
 
 config :server, ecto_repos: [Prodigy.Core.Data.Repo]
+
+config :server, Prodigy.Server.Scheduler,
+  jobs: [
+    {"@daily", fn -> Prodigy.Server.Service.Messaging.expunge() end}
+  ]
+
 config :core, ecto_repos: [Prodigy.Core.Data.Repo], ecto_adapter: Ecto.Adapters.Postgres
 
 config :logger, :console, format: "$time $metadata[$level] $message\n"

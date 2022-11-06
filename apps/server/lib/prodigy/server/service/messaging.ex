@@ -28,6 +28,35 @@ defmodule Prodigy.Server.Service.Messaging do
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Core.Data.{Repo, User, Message}
 
+  def expunge() do
+    Logger.debug("Expunging messages ...")
+
+    Repo.transaction(fn ->
+      now = DateTime.utc_now()
+
+      {count_read, _} =
+        Message
+        |> Ecto.Query.where([message], message.read == true)
+        |> Ecto.Query.where([message], message.retain_date < ^now)
+        |> Repo.delete_all()
+
+      # 3 days old
+      oldest_unread_date = DateTime.add(now, 3 * 24 * 60 * 60, :second)
+
+      {count_unread, _} =
+        Message
+        |> Ecto.Query.where([message], message.read == false)
+        |> Ecto.Query.where([message], message.sent_date <= ^oldest_unread_date)
+        |> Repo.delete_all()
+
+      total = count_read + count_unread
+
+      Logger.info(
+        "Expunged #{count_read} read and #{count_unread} unread messages (#{total} total)"
+      )
+    end)
+  end
+
   def send_message(from_id, from_name, to_ids, _other_ids, subject, body) do
     send_date = DateTime.truncate(Timex.now(), :second)
     expunge_date = Timex.shift(send_date, days: 14)
@@ -196,7 +225,7 @@ defmodule Prodigy.Server.Service.Messaging do
 
   # TODO better understand the format of this message
   def handle(%Fm0{payload: <<0x1, payload::binary>>} = request, %Session{} = session) do
-    Logger.info("messaging got payload: #{inspect(payload, base: :hex, limit: :infinity)}")
+    Logger.debug("messaging got payload: #{inspect(payload, base: :hex, limit: :infinity)}")
 
     response =
       case payload do

@@ -28,7 +28,7 @@ defmodule Prodigy.OmsUtil.MixProject do
     [
       {:core, in_umbrella: true},
       {:exprintf, "~> 0.2.0"},
-      {:pbkdf2_elixir, "~> 1.0"},
+      {:pbkdf2_elixir, "~> 1.0"}
     ]
   end
 end
