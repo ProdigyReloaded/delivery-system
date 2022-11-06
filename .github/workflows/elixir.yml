@@ -2,9 +2,9 @@ name: Elixir CI
 
 on:
   push:
-    branches: [ "messaging" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "messaging" ]
+    branches: [ "main" ]
 
 env:
   MIX_ENV: test
