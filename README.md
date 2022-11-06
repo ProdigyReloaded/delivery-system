@@ -7,12 +7,12 @@ The _Delivery System_, as it was called by Prodigy, initially consisted of:
 * The Central _switch_, operating on an IBM Mainframe running TPF (routing functions and fast transactions)
 * The High Function Host, another IBM Mainframe running CICS (more complex transactions)
 
-The _Reception System_ was the client of the services provided by the _Delivery System_, and the content that comprised
-the service was created by the _Producer System_.
-
 The Prodigy Reloaded _Delivery System_ combines these software components into a single application
 (found in **apps/server**) and utilizes the Postgres database (supported by an associated component found in 
 **apps/core**).
+
+The _Reception System_ was the client of the services provided by the _Delivery System_, and the content that comprised
+the service was created by the _Producer System_.
 
 # Start the service
 ```
