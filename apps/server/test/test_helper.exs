@@ -38,4 +38,41 @@ defmodule WaitFor do
   end
 end
 
+defmodule Server do
+  alias Prodigy.Server.Router
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Core.Data.{Repo, User}
+
+  import Ecto.Query
+
+  def logon(pid, user, pass, version) do
+    Router.handle_packet(pid, %Fm0{
+      src: 0x0,
+      dest: 0x2200,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0,
+      payload: <<0x1, user::binary, String.length(pass), pass::binary, version::binary>>
+    })
+  end
+
+  def logoff(pid) do
+    Router.handle_packet(pid, %Fm0{
+      src: 0x0,
+      dest: 0xD201,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0
+    })
+  end
+
+  def logged_on?(user_id) do
+    User
+    |> where([u], u.id == ^user_id)
+    |> first()
+    |> Repo.one()
+    |> Map.get(:logged_on)
+  end
+end
+
 ExUnit.start(exclude: [:skip])
