@@ -20,11 +20,10 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
   import Ecto.Changeset
 
-  alias Prodigy.Server.Router
+  alias Prodigy.Core.Data.{Household, Message, User}
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Router
   alias Prodigy.Server.Service.Messaging
-  alias Prodigy.Core.Data.{User, Household, Message}
-
 
   require Logger
 
@@ -52,55 +51,63 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
   defp get_mailbox_page(context, page) do
     # general pattern here is:
-    #:ok - the Router returns this first as an indication to DIA to respond to the RS
+    # :ok - the Router returns this first as an indication to DIA to respond to the RS
     #     vvvv--- this is the binary response
     #        vvvvvvvvvvvvvvvvvv--- there is a 16 byte DIA FM0 header we ignore
     #                            vvvvvvvvvvvvv--- total messages in the user's mailbox
     #                                           vvvvvvvvv--- messages on the requested mailbox page
     #                                                      vvvvvvvvvvvv--- headers for the messages on this page
-    {:ok, << _::binary-size(16), total::16-big, this_page, rest::binary >>} =
-    Router.handle_packet(context.router_pid, %Fm0{
-      src: 0x0,
-      dest: 0x00D200,
-      logon_seq: 0,
-      message_id: 0,
-      function: Fm0.Function.APPL_0,
-      payload: << 0x01, 0x0A, page, "this is ignored"::binary >>
-    })
-    {total, this_page, rest}
-  end
-
-  defp get_message(context, index) do
-    {:ok, <<_::binary-size(16), 0::104, length::16-big, content::binary-size(length) >>} =
+    {:ok, <<_::binary-size(16), total::16-big, this_page, rest::binary>>} =
       Router.handle_packet(context.router_pid, %Fm0{
         src: 0x0,
         dest: 0x00D200,
         logon_seq: 0,
         message_id: 0,
         function: Fm0.Function.APPL_0,
-        payload: << 0x01, 0x03, 0x03, index::16-big, 0x01, 0xF4 >>
+        payload: <<0x01, 0x0A, page, "this is ignored"::binary>>
       })
+
+    {total, this_page, rest}
+  end
+
+  defp get_message(context, index) do
+    {:ok, <<_::binary-size(16), 0::104, length::16-big, content::binary-size(length)>>} =
+      Router.handle_packet(context.router_pid, %Fm0{
+        src: 0x0,
+        dest: 0x00D200,
+        logon_seq: 0,
+        message_id: 0,
+        function: Fm0.Function.APPL_0,
+        payload: <<0x01, 0x03, 0x03, index::16-big, 0x01, 0xF4>>
+      })
+
     content
   end
 
   test "send message", context do
     logon(context.router_pid, "AAAA12A", "foobaz", "06.03.17")
 
-    messages = Message
-               |> Repo.all()
+    messages =
+      Message
+      |> Repo.all()
 
-    assert(length(messages) == 0)
+    assert(Enum.empty?(messages))
 
     message_payload = <<
       0x01,
-      0x02,           # indicates "Send a message" to the messaging service
-      2::16-big,      # send to 2 user ids
+      # indicates "Send a message" to the messaging service
+      0x02,
+      # send to 2 user ids
+      2::16-big,
       "BBBB12B",
       "CCCC12C",
-      21::16-big,     # length of all the "others" to follow
-      8,              # length of "JOHN DOE"
+      # length of all the "others" to follow
+      21::16-big,
+      # length of "JOHN DOE"
+      8,
       "JOHN DOE",
-      11,             # length of "SALLY SMITH"
+      # length of "SALLY SMITH"
+      11,
       "SALLY SMITH",
       11,
       "Testing 123",
@@ -114,11 +121,12 @@ defmodule Prodigy.Server.Service.Messaging.Test do
       logon_seq: 0,
       message_id: 0,
       function: Fm0.Function.APPL_0,
-      payload: << 0x01 >> <> message_payload
+      payload: <<0x01>> <> message_payload
     })
 
-    messages = Message
-               |> Repo.all()
+    messages =
+      Message
+      |> Repo.all()
 
     # there should now be two messages, one to BBBB12B and one to CCCC12C
     assert(length(messages) == 2)
@@ -154,9 +162,10 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
     # Timex mock above not working as expected; will ignore values for now
     # sent_date = Timex.format!(epoch(), "{0M}/{0D}")
-    #u retain_date = Timex.format!(Timex.shift(epoch(), days: 14), "{0M}/{0D}")
-    << 5::16-big, "ZZZZ00A", 0, 0, sent_date::binary-size(5), retain_date::binary-size(5), 9, "Test User", 6, "Test 5",
-       6::16-big, "ZZZZ00A", 0, 0, sent_date::binary-size(5), retain_date::binary-size(5), 9, "Test User", 6, "Test 6" >> = rest
+    # u retain_date = Timex.format!(Timex.shift(epoch(), days: 14), "{0M}/{0D}")
+    <<5::16-big, "ZZZZ00A", 0, 0, sent_date::binary-size(5), retain_date::binary-size(5), 9,
+      "Test User", 6, "Test 5", 6::16-big, "ZZZZ00A", 0, 0, sent_date::binary-size(5),
+      retain_date::binary-size(5), 9, "Test User", 6, "Test 6">> = rest
 
     logoff(context.router_pid)
   end
@@ -167,15 +176,22 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     {0, 0, _rest} = get_mailbox_page(context, 1)
 
     Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 1", "Test 1")
-    {1, 1, <<index::16-big, "ZZZZ00A", 0::16, _dates::binary-size(10), 9, "Test User", 6, "Test 1">>} = get_mailbox_page(context, 1)
+
+    {1, 1,
+     <<index::16-big, "ZZZZ00A", 0::16, _dates::binary-size(10), 9, "Test User", 6, "Test 1">>} =
+      get_mailbox_page(context, 1)
 
     # check a second time to be sure the read flag isn't set
-    {1, 1, <<^index::16-big, "ZZZZ00A", 0::16, _dates::binary-size(10), 9, "Test User", 6, "Test 1">>} = get_mailbox_page(context, 1)
+    {1, 1,
+     <<^index::16-big, "ZZZZ00A", 0::16, _dates::binary-size(10), 9, "Test User", 6, "Test 1">>} =
+      get_mailbox_page(context, 1)
 
     "Test 1" = get_message(context, index)
 
     # check a third time and the read flag should be set
-    {1, 1, <<^index::16-big, "ZZZZ00A", 0::3, 1::1, 0::12, _dates::binary-size(10), 9, "Test User", 6, "Test 1">>} = get_mailbox_page(context, 1)
+    {1, 1,
+     <<^index::16-big, "ZZZZ00A", 0::3, 1::1, 0::12, _dates::binary-size(10), 9, "Test User", 6,
+       "Test 1">>} = get_mailbox_page(context, 1)
 
     logoff(context.router_pid)
   end
@@ -185,16 +201,17 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     Messaging.send_message("AAAA12A", "John Doe", ["BBBB12B"], [], "Test", "Foo Bar Baz")
     assert Messaging.unread_messages?(%User{id: "BBBB12B"}) == true
   end
-#
-#  test "delete & retain" do
-#    flunk("not yet implemented")
-#  end
-#
-#  test "expunge unread messages" do
-#    flunk("not yet implemented")
-#  end
-#
-#  test "expunge read messages" do
-#    flunk("not yet implemented")
-#  end
+
+  #
+  #  test "delete & retain" do
+  #    flunk("not yet implemented")
+  #  end
+  #
+  #  test "expunge unread messages" do
+  #    flunk("not yet implemented")
+  #  end
+  #
+  #  test "expunge read messages" do
+  #    flunk("not yet implemented")
+  #  end
 end

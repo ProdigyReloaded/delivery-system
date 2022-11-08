@@ -14,13 +14,17 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Protocol.Dia.Packet do
-  @moduledoc false
+  @moduledoc """
+  DIA Protocol packet decoding functions
+  """
   require Logger
-  alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm4, Fm9, Fm64}
+  alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm4, Fm64, Fm9}
 
   import Prodigy.Server.Util
 
   # concatenated FM0
+  # TODO constrain this dialyzer warning to "overlapping_contract"
+  @dialyzer {:nowarn_function, {:decode, 1}}
   @spec decode(binary()) :: {:ok, Fm0.t()} | {:error, atom()}
   def decode(
         <<16, 1::1, 0::7, function, mode::binary-size(1), src::32, logon_seq, message_id,
@@ -71,6 +75,8 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
     {:error, :no_match}
   end
 
+  # TODO constrain this dialyzer warning to "overlapping_contract"
+  @dialyzer {:nowarn_function, {:decode, 2}}
   @spec decode(binary(), Fm0.t()) :: {:ok, Fm0.t()}
   def decode(<<length, 4, user_id::binary-size(7), "0", rest::binary>> = _data, fm0) do
     correlation_id_length = length - 10
@@ -117,9 +123,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
      }}
   end
 
-
-
-  @spec encode(Fm0.t()) :: {:ok, binary()}
+  @spec encode(Fm0.t()) :: binary()
   def encode(%Fm0{} = packet) do
     fm4 = encode(packet.fm4)
     fm9 = encode(packet.fm9)
@@ -151,6 +155,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
       byte_size(packet.payload)::16, packet.payload::binary>>
   end
 
+  @spec encode(nil) :: binary()
   def encode(nil) do
     <<>>
   end

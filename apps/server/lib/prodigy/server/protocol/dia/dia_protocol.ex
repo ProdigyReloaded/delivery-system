@@ -14,14 +14,31 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Protocol.Dia do
-  @moduledoc false
+  @moduledoc """
+  The DIA Protocol (Network & Transport Layers)
+
+  DIA packet structures are described in:
+  * `Prodigy.Server.Protocol.Dia.Packet.Fm0`
+  * `Prodigy.Server.Protocol.Dia.Packet.Fm4`
+  * `Prodigy.Server.Protocol.Dia.Packet.Fm9`
+  * `Prodigy.Server.Protocol.Dia.Packet.Fm64`
+
+  The DIA protocol is responsible for:
+  * Consuming consecutive `Prodigy.Server.Protocol.Tcs.Packet` packets always beginning with a
+  `Prodigy.Server.Protocol.Tcs.Packet.Type.UD1ACK` and followed by 0 or more
+  `Prodigy.Server.Protocol.Tcs.Packet.Type.UD2ACK` until the the length specified in the `Fm0` has been reached.
+  * utilizing `Prodigy.Server.Protocol.Dia.Packet.decode/1` function to decode the buffer and produce packet structures
+  * pass decoded packets along to the Router
+
+  """
+
   require Logger
   use EnumType
   use GenServer
 
-  alias Prodigy.Server.Protocol.Tcs.Packet, as: TcsPacket
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Protocol.Tcs.Packet, as: TcsPacket
 
   defmodule Options do
     @moduledoc false

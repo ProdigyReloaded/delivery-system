@@ -4,6 +4,17 @@ defmodule Server.MixProject do
   def project do
     [
       app: :server,
+      name: "Server",
+      #      docs: [
+      #        api_reference: false,
+      #        extras: ["README.md"],
+      #        main: "README",
+      #        nest_modules_by_prefix: [
+      #          Prodigy.Server,
+      #          Prodigy.Server.Protocol,
+      #          Prodigy.Server.Service,
+      #        ]
+      #      ],
       version: "0.1.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
@@ -40,7 +51,8 @@ defmodule Server.MixProject do
       {:number, "~> 1.0.3"},
       {:quantum, "~> 3.0"},
       {:core, in_umbrella: true},
-      {:mock, "~> 0.3.0", only: :test}
+      {:mock, "~> 0.3.0", only: :test},
+      {:ex_doc, "~> 0.21", only: :dev, runtime: false}
     ]
   end
 end

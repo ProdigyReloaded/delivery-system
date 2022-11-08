@@ -15,28 +15,24 @@
 
 defmodule ListAccount do
   @moduledoc false
-  alias Prodigy.Core.Data.{Repo, User, Household}
+
+  alias Prodigy.Core.Data.{Household, Repo, User}
 
   import Ecto.Query
   import ExPrintf
-  import Config
 
-  defp pre(:user, source) do
+  defp pre(:user) do
     IO.puts(
       String.trim("""
-      Source: #{source}
-
       User ID
       -------
       """)
     )
   end
 
-  defp pre(:household, source) do
+  defp pre(:household) do
     IO.puts(
       String.trim("""
-      Source: #{source}
-
       Household ID
       ------------
       """)
@@ -51,15 +47,10 @@ defmodule ListAccount do
     IO.puts(sprintf("%6s", [id]))
   end
 
-  defp post do
-  end
-
   def exec(type, argv, args \\ %{})
 
-  def exec(:user, argv, args) do
-    {database, user, hostname, port} = Prodigy.OmsUtil.DbUtil.start(argv)
-
-    pre(:user, sprintf("podb://%s@%s:%d/%s", [user, hostname, port, database]))
+  def exec(:user, _argv, args) do
+    pre(:user)
 
     User
     |> where([user], like(user.id, ^Map.get(args, :like, "%")))
@@ -69,10 +60,8 @@ defmodule ListAccount do
     end)
   end
 
-  def exec(:household, argv, args) do
-    {database, user, hostname, port} = Prodigy.OmsUtil.DbUtil.start(argv)
-
-    pre(:household, sprintf("podb://%s@%s:%d/%s", [user, hostname, port, database]))
+  def exec(:household, _argv, args) do
+    pre(:household)
 
     Household
     |> where([household], like(household.id, ^Map.get(args, :like, "%")))

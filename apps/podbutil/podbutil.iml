@@ -19,5 +19,18 @@
     <orderEntry type="library" name="exprintf" level="project" />
     <orderEntry type="library" name="ex_doc" level="project" />
     <orderEntry type="library" name="objectutil" level="project" />
+    <orderEntry type="library" name="earmark_parser" level="project" />
+    <orderEntry type="library" name="makeup_elixir" level="project" />
+    <orderEntry type="library" name="makeup_erlang" level="project" />
+    <orderEntry type="library" name="makeup_html" level="project" />
+    <orderEntry type="library" name="jason" level="project" />
+    <orderEntry type="library" name="floki" level="project" />
+    <orderEntry type="library" name="makeup" level="project" />
+    <orderEntry type="library" name="nimble_parsec" level="project" />
+    <orderEntry type="library" name="unicode_set" level="project" />
+    <orderEntry type="library" name="benchee" level="project" />
+    <orderEntry type="library" name="benchee_markdown" level="project" />
+    <orderEntry type="library" name="assert_value" level="project" />
+    <orderEntry type="library" name="stream_data" level="project" />
   </component>
 </module>

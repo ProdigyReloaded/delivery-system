@@ -14,7 +14,9 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Core.Util do
-  @moduledoc false
+  @moduledoc """
+  General helper functions
+  """
 
   # TODO it may not be a good idea to translate nil, but I'm doing it since the data collection fields in the database
   # come back as "nil" when they are unset

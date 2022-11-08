@@ -3,6 +3,7 @@ defmodule DeliverySystem.MixProject do
 
   def project do
     [
+      name: "Delivery System",
       apps_path: "apps",
       version: "0.1.0",
       start_permanent: Mix.env() == :prod,
@@ -24,6 +25,18 @@ defmodule DeliverySystem.MixProject do
             server: :permanent
           ]
         ]
+      ],
+      docs: [
+        api_reference: false,
+        extras: ["README.md"],
+        main: "README",
+        nest_modules_by_prefix: [
+          Prodigy.Core,
+          Prodigy.Core.Data,
+          Prodigy.Server,
+          Prodigy.Server.Protocol,
+          Prodigy.Server.Service
+        ]
       ]
     ]
   end
@@ -37,7 +50,8 @@ defmodule DeliverySystem.MixProject do
     [
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
-      {:excoveralls, "~> 0.10", only: :test}
+      {:excoveralls, "~> 0.10", only: :test},
+      {:ex_doc, "~> 0.21", only: :dev, runtime: false}
     ]
   end
 end

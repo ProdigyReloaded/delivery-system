@@ -53,5 +53,16 @@
     <orderEntry type="library" name="crontab" level="project" />
     <orderEntry type="library" name="gen_stage" level="project" />
     <orderEntry type="library" name="telemetry_registry" level="project" />
+    <orderEntry type="library" name="earmark_parser" level="project" />
+    <orderEntry type="library" name="makeup_elixir" level="project" />
+    <orderEntry type="library" name="makeup_erlang" level="project" />
+    <orderEntry type="library" name="makeup_html" level="project" />
+    <orderEntry type="library" name="floki" level="project" />
+    <orderEntry type="library" name="makeup" level="project" />
+    <orderEntry type="library" name="nimble_parsec" level="project" />
+    <orderEntry type="library" name="unicode_set" level="project" />
+    <orderEntry type="library" name="benchee" level="project" />
+    <orderEntry type="library" name="benchee_markdown" level="project" />
+    <orderEntry type="library" name="assert_value" level="project" />
   </component>
 </module>

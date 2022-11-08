@@ -14,7 +14,9 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Protocol.Dia.Packet.Fm9 do
-  @moduledoc false
+  @moduledoc """
+  The DIA Fm9 Packet
+  """
   alias __MODULE__
 
   use EnumType
@@ -22,19 +24,40 @@ defmodule Prodigy.Server.Protocol.Dia.Packet.Fm9 do
   import Prodigy.Server.Util
 
   defenum Function do
-    value(COMMAND, 0x1)
-    value(STATISTICS, 0x2)
-    value(ALERT, 0x3)
-    value(CONTROL, 0x4)
+    @moduledoc "An enumeration of Fm9 Functions"
+
+    value COMMAND, 0x1 do
+      @moduledoc false
+    end
+
+    value STATISTICS, 0x2 do
+      @moduledoc false
+    end
+
+    value ALERT, 0x3 do
+      @moduledoc false
+    end
+
+    value CONTROL, 0x4 do
+      @moduledoc false
+    end
   end
 
   defenum Reason do
-    value(BACKBONE, 0x1)
-    value(RECEPTION_SYSTEM, 0x2)
+    @moduledoc "An enumeration of Fm9 Reasons"
+
+    value BACKBONE, 0x1 do
+      @moduledoc false
+    end
+
+    value RECEPTION_SYSTEM, 0x2 do
+      @moduledoc false
+    end
   end
 
   defmodule Flags do
-    @moduledoc false
+    @moduledoc "Fm9 Header Flags"
+
     defstruct store_by_key: false,
               retrieve_by_key: false,
               binary_data: false,
@@ -66,9 +89,9 @@ defmodule Prodigy.Server.Protocol.Dia.Packet.Fm9 do
 
   @type t :: %Fm9{
           concatenated: boolean,
-          function: Function,
-          reason: Reason,
-          flags: Flags,
+          function: Function.t(),
+          reason: Reason.t(),
+          flags: Flags.t(),
           payload: binary
         }
 end

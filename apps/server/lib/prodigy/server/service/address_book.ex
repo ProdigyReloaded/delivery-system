@@ -15,13 +15,15 @@
 
 defmodule Prodigy.Server.Service.AddressBook do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle Address Book Retrieval and Update requests
+  """
 
   require Logger
 
-  alias Prodigy.Server.Session
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Session
 
   def handle(%Fm0{payload: <<0xD, payload::binary>>} = request, %Session{} = session) do
     response =

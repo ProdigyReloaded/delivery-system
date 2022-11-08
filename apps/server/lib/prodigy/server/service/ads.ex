@@ -15,13 +15,15 @@
 
 defmodule Prodigy.Server.Service.Ads do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle Advertisement list retrieval requests
+  """
 
   require Logger
 
-  alias Prodigy.Server.Session
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0, as: Fm0
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Session
 
   # TODO better understand the format of this message
   def handle(%Fm0{} = request, %Session{} = session) do

@@ -15,13 +15,15 @@
 
 defmodule Prodigy.Server.Service.DowJones do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle Dow Jones requests
+  """
 
   require Logger
 
-  alias Prodigy.Server.Session
-  alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
+  alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
+  alias Prodigy.Server.Session
 
   defmodule YahooFinanceData do
     @moduledoc false
@@ -46,6 +48,19 @@ defmodule Prodigy.Server.Service.DowJones do
 
   # TODO this module is now a hot mess
 
+  defp get_quote(symbol) do
+    YahooFinance.custom_quote(String.trim(symbol), [
+      :longName,
+      :shortName,
+      :regularMarketChange,
+      :regularMarketOpen,
+      :regularMarketDayHigh,
+      :regularMarketDayLow,
+      :regularMarketPrice,
+      :regularMarketVolume
+    ])
+  end
+
   def handle(
         %Fm0{dest: _dest, payload: <<0x2C, symbol::binary-size(5), 0xD>>} = request,
         %Session{user: _user} = session
@@ -56,29 +71,31 @@ defmodule Prodigy.Server.Service.DowJones do
       try do
         # TODO caching?  support resolving the quote to the short name?
         # TODO need to prepend chage with - if last < previous close
+        # TODO need to creat the task in the supervision tree, then Process.trap exits.
+        #   The problem here is that the task is exiting and that :EXIT is going to the router's handle_info
+        # want code to look like:
+        #
+        # reply = try
+        #   call_yahoo_api(symbol, 3000)
+        #   |> deserialize_yahoo_response
+        #   |> extract_quote_data
+        #   |> transform_quote_data
+        #   |> dia_success_reply(request)
+        # rescue
+        #   dia_error_reply(request)
+        # end
+        # |> DiaPacket.encode
+        # {:ok, session, reply}
+        #
+
         json =
           try do
-            task =
-              Task.async(fn ->
-                {:ok, {_symbol, _json}} =
-                  YahooFinance.custom_quote(String.trim(symbol), [
-                    :longName,
-                    :shortName,
-                    :regularMarketChange,
-                    :regularMarketOpen,
-                    :regularMarketDayHigh,
-                    :regularMarketDayLow,
-                    :regularMarketPrice,
-                    :regularMarketVolume
-                  ])
-              end)
-
-            _json =
-              case Task.yield(task, 3000) do
-                nil -> raise RuntimeError, message: "Timeout"
-                {:exit, _reason} -> raise RuntimeError, message: "Timeout"
-                {:ok, {:ok, {_symbol, json}}} -> json
-              end
+            case Task.async(fn -> get_quote(symbol) end)
+                 |> Task.yield(3000) do
+              nil -> raise RuntimeError, message: "Timeout"
+              {:exit, _reason} -> raise RuntimeError, message: "Timeout"
+              {:ok, {:ok, {_symbol, json}}} -> json
+            end
           catch
             :exit, _reason -> raise RuntimeError, message: "Timeout"
           end

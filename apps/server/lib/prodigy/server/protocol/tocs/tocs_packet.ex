@@ -14,7 +14,10 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Protocol.Tocs.Packet do
-  @moduledoc false
+  @moduledoc """
+  TOCS Packet Structure and encoding function.
+  """
+
   alias __MODULE__
   use EnumType
   require Logger

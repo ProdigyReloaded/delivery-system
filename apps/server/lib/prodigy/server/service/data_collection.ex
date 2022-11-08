@@ -15,12 +15,14 @@
 
 defmodule Prodigy.Server.Service.DataCollection do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle data collection messages
+  """
 
   require Logger
 
-  alias Prodigy.Server.Session
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Session
 
   defmodule ObjectRecord do
     @moduledoc false

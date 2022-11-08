@@ -14,26 +14,37 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Protocol.Tcs do
-  @moduledoc false
+  @moduledoc """
+  The TCS Protocol (Data Link Layer)
+
+  TCS packet structure is described in Prodigy.Server.Protocl.Tcs.Packet
+
+  The TCS protocol is responsible for:
+  * append bytes from the reception system (in this case, via TCP connection) to a buffer
+  * utilizing Prodigy.Server.Protocol.Tcs.Packet to decode the buffer and produce packet structures
+  * handle protocol packets (Supervisory functions; send / receive ACKs, WACKs, etc)
+  * pass data packets along to the DIA Protocol
+  """
+
   require Logger
   use GenServer
   use EnumType
 
-  alias Prodigy.Server.Protocol.Tcs.Packet, as: Packet
-  alias Prodigy.Server.Protocol.Tcs.Packet.Type, as: Type
+  alias Prodigy.Server.Protocol.Tcs.Packet
+  alias Prodigy.Server.Protocol.Tcs.Packet.Type
 
   @behaviour :ranch_protocol
   @timeout 6_000_000
   @max_payload_size 128
 
   defmodule Options do
-    @moduledoc false
+    @moduledoc "An options module used for mocking the DIA protocol instance in tests"
     alias Prodigy.Server.Protocol.Dia, as: DiaProtocol
     defstruct dia_module: DiaProtocol, ranch_module: :ranch
   end
 
   defmodule State do
-    @moduledoc false
+    @moduledoc "A structure containing the state utilized through the lifecycle of a TCS connection"
     @enforce_keys [:socket, :transport, :dia_module, :dia_pid]
     defstruct [:socket, :transport, :dia_module, dia_pid: nil, buffer: <<>>, tx_seq: 0, rx_seq: 0]
   end

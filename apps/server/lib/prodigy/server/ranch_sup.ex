@@ -14,7 +14,9 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.RanchSup do
-  @moduledoc false
+  @moduledoc """
+  This is the base supervisor for all TCP connections to prodigyd.
+  """
 
   use Supervisor
   require Logger
@@ -25,6 +27,9 @@ defmodule Prodigy.Server.RanchSup do
     Supervisor.start_link(__MODULE__, args)
   end
 
+  @doc """
+  Start a child supervisor that listens for incoming TCP connections on the specified port.
+  """
   @impl Supervisor
   def init({}) do
     Logger.debug("setting up the ranch supervision tree")

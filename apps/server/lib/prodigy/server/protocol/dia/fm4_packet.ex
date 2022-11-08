@@ -14,7 +14,12 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Protocol.Dia.Packet.Fm4 do
-  @moduledoc false
+  @moduledoc """
+  The DIA Fm4 Packet (External Gateways)
+
+  The DIA Fm4 Header is used to manage state when communicating with DIA destinations that are external to the Prodigy
+  network.
+  """
   alias __MODULE__
 
   use EnumType

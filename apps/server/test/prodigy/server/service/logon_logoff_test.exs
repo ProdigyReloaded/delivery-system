@@ -25,16 +25,16 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
   require Logger
 
   alias Prodigy.Core.Data.{Household, User}
-  alias Prodigy.Server.Service.Logon
-  alias Prodigy.Server.Router
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Router
+  alias Prodigy.Server.Service.Logon.Status
 
   @moduletag :capture_log
 
   #  doctest Logon
 
-  defp epoch() do
+  defp epoch do
     {:ok, result} = DateTime.from_unix(0)
     result
   end
@@ -63,7 +63,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     {:ok, %Fm0{payload: <<status, 0x0::80, "010170000000", 0x0::56>>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.BAD_VERSION.value()
+    assert status == Status.BAD_VERSION.value()
   end
 
   test "logon fails on incorrect password", context do
@@ -80,7 +80,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     {:ok, %Fm0{payload: <<status, 0x0::80, "010170000000", 0x0::56>>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.BAD_PASSWORD.value()
+    assert status == Status.BAD_PASSWORD.value()
   end
 
   test "logon fails when no such user", context do
@@ -89,7 +89,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     {:ok, %Fm0{payload: <<status, 0x0::80, "010170000000", 0x0::56>>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.BAD_PASSWORD.value()
+    assert status == Status.BAD_PASSWORD.value()
   end
 
   test "logon succeeds for un-enrolled subscriber", context do
@@ -106,7 +106,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     {:ok, %Fm0{payload: <<status, 0x0::80, "010170000000", 0x0::56>>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.ENROLL_SUBSCRIBER.value()
+    assert status == Status.ENROLL_SUBSCRIBER.value()
   end
 
   test "logon succeeds for un-enrolled member", context do
@@ -123,7 +123,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     {:ok, %Fm0{payload: <<status, 0x0::80, "010170000000", 0x0::56>>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.ENROLL_OTHER.value()
+    assert status == Status.ENROLL_OTHER.value()
   end
 
   test "logon fails for deleted user", context do
@@ -140,7 +140,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     {:ok, %Fm0{payload: <<status, 0x0::80, "010170000000", 0x0::56>>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.ACCOUNT_PROBLEM.value()
+    assert status == Status.ACCOUNT_PROBLEM.value()
   end
 
   test "logon fails if account already logged on", context do
@@ -155,17 +155,17 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     {:ok, response} = logon(context.router_pid, "AAAA12D", "test", "06.03.10")
 
     {:ok,
-      %Fm0{payload: <<status, _gender, 0x0::72, "010170000000", 0x0, 0x0::128, "             ">>}} =
+     %Fm0{payload: <<status, _gender, 0x0::72, "010170000000", 0x0, 0x0::128, "             ">>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.SUCCESS.value()
+    assert status == Status.SUCCESS.value()
 
     {:ok, response} = logon(context.router_pid, "AAAA12D", "test", "06.03.10")
 
     {:ok, %Fm0{payload: <<status, 0x0::80, "010170000000", 0x0::56>>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.ID_IN_USE.value()
+    assert status == Status.ID_IN_USE.value()
   end
 
   test "disabled household prohibits logon", context do
@@ -182,7 +182,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     {:ok, %Fm0{payload: <<status, 0x0::80, "010170000000", 0x0::56>>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.ACCOUNT_PROBLEM.value()
+    assert status == Status.ACCOUNT_PROBLEM.value()
   end
 
   test "logged_on set on logon and cleared on normal logoff", context do
@@ -199,10 +199,10 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     {:ok, response} = logon(context.router_pid, "AAAA12D", "test", "06.03.10")
 
     {:ok,
-      %Fm0{payload: <<status, _gender, 0x0::72, "010170000000", 0x0, 0x0::128, "             ">>}} =
+     %Fm0{payload: <<status, _gender, 0x0::72, "010170000000", 0x0, 0x0::128, "             ">>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.SUCCESS.value()
+    assert status == Status.SUCCESS.value()
 
     assert logged_on?("AAAA12D")
 
@@ -225,10 +225,10 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     {:ok, response} = logon(context.router_pid, "AAAA12D", "test", "06.03.10")
 
     {:ok,
-      %Fm0{payload: <<status, _gender, 0x0::72, "010170000000", 0x0, 0x0::128, "             ">>}} =
+     %Fm0{payload: <<status, _gender, 0x0::72, "010170000000", 0x0, 0x0::128, "             ">>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.SUCCESS.value()
+    assert status == Status.SUCCESS.value()
 
     assert logged_on?("AAAA12D")
 

@@ -15,6 +15,9 @@
 
 defmodule Prodigy.OmsUtil.CLI do
   @moduledoc false
+
+  alias Prodigy.Core.Data.Util
+
   def usage(mode, message \\ "")
 
   def usage(:terse, message) do
@@ -117,6 +120,8 @@ defmodule Prodigy.OmsUtil.CLI do
     [command | rest] = rest
     command = String.downcase(command)
 
+    Util.start_repo()
+
     case command do
       "list-households" ->
         ListAccount.exec(:household, rest, args)
@@ -131,7 +136,7 @@ defmodule Prodigy.OmsUtil.CLI do
               :assign
 
             _ ->
-              [id | rest] = rest
+              [id | _rest] = rest
               id
           end
 
@@ -142,13 +147,16 @@ defmodule Prodigy.OmsUtil.CLI do
         Create.exec(rest, args)
 
       "delete" ->
-        Delete.exec(rest, args)
+        #        Delete.exec(rest, args)
+        IO.puts("unimplemented")
 
       "reset" ->
-        Reset.exec(rest, args)
+        #        Reset.exec(rest, args)
+        IO.puts("unimplemented")
 
       "clear" ->
-        Clear.exec(rest, args)
+        #        Clear.exec(rest, args)
+        IO.puts("unimplemented")
 
       _ ->
         usage(:verbose)

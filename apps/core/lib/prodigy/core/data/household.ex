@@ -15,7 +15,10 @@
 
 defmodule Prodigy.Core.Data.Household do
   use Ecto.Schema
-  @moduledoc false
+
+  @moduledoc """
+  Schema specific to Households and related change functions
+  """
 
   @primary_key {:id, :string, []}
   schema "household" do

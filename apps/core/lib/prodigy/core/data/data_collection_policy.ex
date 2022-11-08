@@ -15,7 +15,10 @@
 
 defmodule Prodigy.Core.Data.DataCollectionPolicy do
   use Ecto.Schema
-  @moduledoc false
+
+  @moduledoc """
+  Schema specific to user-specific Data Collection elements
+  """
 
   @primary_key false
   schema "data_collection_policy" do

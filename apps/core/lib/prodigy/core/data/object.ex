@@ -15,7 +15,10 @@
 
 defmodule Prodigy.Core.Data.Object do
   use Ecto.Schema
-  @moduledoc false
+
+  @moduledoc """
+  Schema specific objects
+  """
 
   @primary_key false
   schema "object" do

@@ -15,7 +15,9 @@
 
 defmodule Prodigy.Server.Service.Cmc do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle error messages to the CMC
+  """
 
   require Logger
 

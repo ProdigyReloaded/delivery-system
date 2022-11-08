@@ -22,20 +22,22 @@ defmodule Prodigy.Server.Service.Tocs.Test do
   require Logger
 
   alias Prodigy.Core.Data.Object
-  alias Prodigy.Server.Router
-  alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
+  alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
+  alias Prodigy.Server.Router
 
   defp get_object(pid, object_id, seq, type, version \\ nil) do
-    payload = if version == nil do
-      <<object_id::binary-size(11), seq, type>>
-    else
-      <<object_id::binary-size(11), seq, type, version::16-little>>
-    end
+    payload =
+      if version == nil do
+        <<object_id::binary-size(11), seq, type>>
+      else
+        <<object_id::binary-size(11), seq, type, version::16-little>>
+      end
 
     random_id = Enum.random(0..255)
 
-    response = Router.handle_packet(pid, %Fm0{
+    response =
+      Router.handle_packet(pid, %Fm0{
         src: 0x0,
         dest: 0x0200,
         logon_seq: 0,
@@ -43,6 +45,7 @@ defmodule Prodigy.Server.Service.Tocs.Test do
         function: Fm0.Function.APPL_0,
         payload: payload
       })
+
     {random_id, response}
   end
 

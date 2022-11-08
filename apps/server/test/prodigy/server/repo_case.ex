@@ -17,6 +17,8 @@ defmodule Prodigy.Server.RepoCase do
   @moduledoc false
   use ExUnit.CaseTemplate
 
+  alias Ecto.Adapters.SQL.Sandbox
+
   using do
     quote do
       alias Prodigy.Core.Data.Repo
@@ -28,10 +30,10 @@ defmodule Prodigy.Server.RepoCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Prodigy.Core.Data.Repo)
+    :ok = Sandbox.checkout(Prodigy.Core.Data.Repo)
 
     unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(Prodigy.Core.Data.Repo, {:shared, self()})
+      Sandbox.mode(Prodigy.Core.Data.Repo, {:shared, self()})
     end
 
     :ok

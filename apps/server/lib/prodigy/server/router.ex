@@ -14,7 +14,19 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Router do
-  @moduledoc false
+  @moduledoc """
+  The Router implements the service invocation function and stores session data.
+
+  An instance of the Router is created for each active connection.
+
+  The Router is responsible for:
+  * Storing an instance of `Prodigy.Server.Session`
+  * receiving packets from `Prodigy.Server.Protocol.Dia`
+  * invoking the appropriate Service (that implements `Prodigy.Server.Service`) and passing to it the packet itself and
+    the session
+  * Storing the updated Session as received from the Service
+  * Returning any response received from the service to the reception system (note, DIA vs TOCS)
+  """
 
   require Logger
   use GenServer
@@ -22,17 +34,17 @@ defmodule Prodigy.Server.Router do
   alias Prodigy.Server.Session
 
   alias Prodigy.Server.Service.{
-    Logon,
-    Logoff,
-    Profile,
-    Tocs,
-    Ads,
-    Enrollment,
-    Cmc,
-    Messaging,
     AddressBook,
+    Ads,
+    Cmc,
+    DataCollection,
     DowJones,
-    DataCollection
+    Enrollment,
+    Logoff,
+    Logon,
+    Messaging,
+    Profile,
+    Tocs
   }
 
   defmodule State do
@@ -49,6 +61,7 @@ defmodule Prodigy.Server.Router do
   end
 
   defmodule Default do
+    @moduledoc "A default implementation of Prodigy.Server.Service to handle packets to unknown destinations"
     @behaviour Prodigy.Server.Service
 
     def handle(%Fm0{dest: dest} = packet, state) do
@@ -58,9 +71,26 @@ defmodule Prodigy.Server.Router do
     end
   end
 
-  # TODO apps like TOCS, etc.  need to return errors or just force a disconnect if they are called without an active session
+  # TODO apps like TOCS, etc. should force a disconnect when called without an active session
   # TODO refactor handle so that it returns the same thing from every application
 
+  @doc """
+  Dispatch packets to the relevant service module.
+
+  The service module is selected by the following:
+  * DIA destination ID
+  * When necessary, the first byte of the DIA packet payload
+
+  The entire deserialized DIA Fm0 packet (`Prodigy.Server.Protocol.Dia.Packet.Fm0`) and the `Prodigy.Server.Session` is
+  passed to the service.  The service returns:
+  * A status atom (:ok, :error, or :disconnect)
+  * The `Prodigy.Server.Session` struct, updated as appropriate
+  * Optionally, A binary response payload
+
+  The router will update the stored `Prodigy.Server.Session` with the value returned, and the binary response payload
+  will be returned to `Prodigy.Server.Protocol.Dia`, then to `Prodigy.Server.Protocol.Tcs` where it will ultimately be
+  chunked, encapsulated, and sent to the Reception System.
+  """
   # credo:disable-for-lines:2 Credo.Check.Refactor.CyclomaticComplexity
   @impl GenServer
   def handle_call({:handle_packet, %Fm0{dest: dest, payload: payload} = packet}, _from, state) do

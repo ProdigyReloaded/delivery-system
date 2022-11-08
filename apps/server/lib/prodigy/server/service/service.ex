@@ -14,7 +14,9 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Service do
-  @moduledoc false
+  @moduledoc """
+  Reference implementation for a Prodigy service.
+  """
 
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Session

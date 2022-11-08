@@ -15,7 +15,9 @@
 
 defmodule Prodigy.Server.Service.Messaging do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle Mailbox Access
+  """
 
   require Logger
   require Ecto.Query
@@ -23,12 +25,12 @@ defmodule Prodigy.Server.Service.Messaging do
 
   import Prodigy.Server.Util
 
-  alias Prodigy.Server.Session
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0, as: Fm0
+  alias Prodigy.Core.Data.{Message, Repo, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
-  alias Prodigy.Core.Data.{Repo, User, Message}
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Session
 
-  def expunge() do
+  def expunge do
     Logger.debug("Expunging messages ...")
 
     Repo.transaction(fn ->
@@ -93,7 +95,8 @@ defmodule Prodigy.Server.Service.Messaging do
     # TODO if there are delivery failures,
   end
 
-  # TODO there is an issue with replies from mailbox; they seem to be addressed to the from_id of the last item shown on the mailbox page
+  # TODO there is an issue with replies from mailbox; they seem to be addressed to the from_id of the last item shown
+  #   on the mailbox page
   defp internal_send_message(
          %User{id: from_id, first_name: first_name, last_name: last_name},
          payload

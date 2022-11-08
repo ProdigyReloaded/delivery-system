@@ -15,52 +15,16 @@
 
 defmodule Create do
   @moduledoc false
-  alias Prodigy.Core.Data.{Repo, User, Household}
 
-  import Ecto.Query
+  alias Prodigy.Core.Data.{Household, Repo, User}
+
   import Ecto.Changeset
-  import ExPrintf
-  import Config
 
-  defp pre(:user, source) do
-    IO.puts(
-      String.trim("""
-      Source: #{source}
-
-      User ID
-      -------
-      """)
-    )
-  end
-
-  defp pre(:household, source) do
-    IO.puts(
-      String.trim("""
-      Source: #{source}
-
-      Household ID
-      ------------
-      """)
-    )
-  end
-
-  defp each(:user, id) do
-    IO.puts(sprintf("%7s", [id]))
-  end
-
-  defp each(:household, id) do
-    IO.puts(sprintf("%6s", [id]))
-  end
-
-  defp post do
-  end
-
-  def exec(argv, args \\ %{}) do
+  def exec(_argv, _args \\ %{}) do
     # TODO add support for arguments [XXXX[YY]] [password]
     # TODO retry in the case we try to insert an already existing value
     # TODO use a sequence to create in predictable order and avoid retries
     # TODO add mechanism for excluded IDs
-    {database, user, hostname, port} = Prodigy.OmsUtil.DbUtil.start(argv)
 
     new_household = random_id()
     new_password = random_password()
@@ -85,25 +49,25 @@ defmodule Create do
     |> Enum.random()
   end
 
-  defp random_char() do
+  defp random_char do
     random(?A..?Z)
   end
 
-  defp random_int() do
+  defp random_int do
     random(?0..?9)
   end
 
-  defp random_both() do
+  defp random_both do
     random(Enum.chunk_every(?0..?9, 1) ++ Enum.chunk_every(?A..?Z, 1))
   end
 
-  defp random_id() do
-    random_4 = Enum.map(0..3, fn _ -> random_char() end) |> Enum.join("")
-    random_2 = Enum.map(0..1, fn _ -> random_int() end) |> Enum.join("")
+  defp random_id do
+    random_4 = Enum.map_join(0..3, fn _ -> random_char() end)
+    random_2 = Enum.map_join(0..1, fn _ -> random_int() end)
     Enum.join([random_4, random_2], "")
   end
 
-  defp random_password() do
-    Enum.map(0..5, fn _ -> random_both() end) |> Enum.join("")
+  defp random_password do
+    Enum.map_join(0..5, fn _ -> random_both() end)
   end
 end

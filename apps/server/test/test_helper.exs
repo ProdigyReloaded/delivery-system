@@ -15,7 +15,7 @@
 
 defmodule WaitFor do
   # returns the number of milliseconds since January 1, 1970
-  defp epoch_ms(), do: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+  defp epoch_ms, do: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
 
   @doc """
   Wait for the `condition` process to return true.
@@ -39,8 +39,8 @@ defmodule WaitFor do
 end
 
 defmodule Server do
-  alias Prodigy.Server.Router
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Router
   alias Prodigy.Core.Data.{Repo, User}
 
   import Ecto.Query

@@ -15,7 +15,9 @@
 
 defmodule Prodigy.Server.Service.Logon do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle Logon requests
+  """
 
   require Logger
   require Ecto.Query
@@ -23,20 +25,43 @@ defmodule Prodigy.Server.Service.Logon do
 
   import Prodigy.Server.Util
 
+  alias Comeonin.Ecto.Password
   alias Prodigy.Core.Data.{Repo, User}
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0, as: Fm0
   alias Prodigy.Server.Protocol.Dia.Packet
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Service.Messaging
+  alias Prodigy.Server.Session
 
   defenum Status do
-    value(SUCCESS, 0x0)
-    value(ENROLL_OTHER, 0x1)
-    value(ENROLL_SUBSCRIBER, 0x2)
-    value(BAD_PASSWORD, 0x5)
-    value(ID_IN_USE, 0x7)
-    value(BAD_VERSION, 0x9)
-    value(ACCOUNT_PROBLEM, 0xD)
+    @moduledoc "An enumeration of Logon service responses"
+
+    value SUCCESS, 0x0 do
+      @moduledoc false
+    end
+
+    value ENROLL_OTHER, 0x1 do
+      @moduledoc false
+    end
+
+    value ENROLL_SUBSCRIBER, 0x2 do
+      @moduledoc false
+    end
+
+    value BAD_PASSWORD, 0x5 do
+      @moduledoc false
+    end
+
+    value ID_IN_USE, 0x7 do
+      @moduledoc false
+    end
+
+    value BAD_VERSION, 0x9 do
+      @moduledoc false
+    end
+
+    value ACCOUNT_PROBLEM, 0xD do
+      @moduledoc false
+    end
   end
 
   def make_response_payload({Status.SUCCESS, user}) do
@@ -190,7 +215,8 @@ defmodule Prodigy.Server.Service.Logon do
 
     # TODO it is a case insensitive match from the user perspective; RS uppercases whatever is given, so we should
     #   do the same.
-    # TODO need to add a migration to hash all the passwords in the database, and also a tool to manipulate users/households
+    # TODO need to add a migration to hash all the passwords in the database, and also a tool to manipulate
+    #   users/households
     if user == nil do
       Logger.warn("User #{user_id} attempted to logon, but does not exist in the database")
       :bad_password
@@ -202,7 +228,7 @@ defmodule Prodigy.Server.Service.Logon do
           false -> Pbkdf2.hash_pwd_salt(user.password)
         end
 
-      case Comeonin.Ecto.Password.valid?(password, encrypted_pw) do
+      case Password.valid?(password, encrypted_pw) do
         true ->
           Logger.debug("retrieved user with matching password")
           {:ok, user}

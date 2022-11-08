@@ -24,10 +24,10 @@ defmodule Prodigy.Server.Service.Enrollment.Test do
   require Logger
 
   alias Prodigy.Core.Data.{Household, User}
-  alias Prodigy.Server.Service.Logon
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Router
+  alias Prodigy.Server.Service.Logon.Status
 
   @moduletag :capture_log
 
@@ -39,7 +39,7 @@ defmodule Prodigy.Server.Service.Enrollment.Test do
     [router_pid: router_pid]
   end
 
-  defp epoch() do
+  defp epoch do
     {:ok, result} = DateTime.from_unix(0)
     result
   end
@@ -81,7 +81,7 @@ defmodule Prodigy.Server.Service.Enrollment.Test do
     {:ok, %Fm0{payload: <<status, 0x0::80, "010170000000", 0x0::56>>}} =
       DiaPacket.decode(response)
 
-    assert status == Logon.Status.ENROLL_SUBSCRIBER.value()
+    assert status == Status.ENROLL_SUBSCRIBER.value()
 
     # send enrollment request gets proper response
     # TODO add the right tacs in the make_enrollment_request method below -------------v
@@ -93,7 +93,7 @@ defmodule Prodigy.Server.Service.Enrollment.Test do
          <<status, _gender, 0x0::72, "010170000000", 0x1, 0x0::128, "             "::binary>>
      }} = DiaPacket.decode(response)
 
-    assert status == Logon.Status.SUCCESS.value()
+    assert status == Status.SUCCESS.value()
 
     # assert the user now appears to be logged on
     assert logged_on?("AAAA12A")
@@ -106,7 +106,6 @@ defmodule Prodigy.Server.Service.Enrollment.Test do
 
     {:ok, response} = logon(router_pid, "AAAA12A", "foobaz", "06.03.10")
 
-
     # TODO properly mock/assert last logon date/time
     {:ok,
      %Fm0{
@@ -116,6 +115,6 @@ defmodule Prodigy.Server.Service.Enrollment.Test do
     # TODO -> the gender  ---------^ in the response is fixed; fix this to expect whatever was sent in
     #    the enrollment request
 
-    assert status == Logon.Status.SUCCESS.value()
+    assert status == Status.SUCCESS.value()
   end
 end

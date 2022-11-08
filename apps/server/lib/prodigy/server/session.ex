@@ -14,7 +14,12 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Session do
-  @moduledoc false
+  @moduledoc """
+  Structure containing information for an individual Prodigy Session.
+
+  The Session structure is established when the `Prodigy.Server.Router` instance is created upon client connection, and
+  persists until the connection is terminated.
+  """
 
   defstruct [:user, :rs_version]
 end

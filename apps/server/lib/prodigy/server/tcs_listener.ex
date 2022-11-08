@@ -14,7 +14,10 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.TcsListener do
-  @moduledoc false
+  @moduledoc """
+  For each connection, an instance of Prodigy.Server.Protocol.Tcs is executed.  This module implements the Ranch
+  specified behaviors.
+  """
 
   def child_spec([ranch_opts, tcs_opts]) do
     :ranch.child_spec(__MODULE__, :ranch_tcp, ranch_opts, Prodigy.Server.Protocol.Tcs, tcs_opts)

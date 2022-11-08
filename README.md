@@ -17,7 +17,7 @@ the service was created by the _Producer System_.
 # Start the service
 ```
 docker compose up
-docker compose run server /prod/rel/server/bin/server eval "Core.Release.migrate()"
+docker compose run server /prod/rel/server/bin/server eval "Prodigy.Core.Release.migrate()"
 ```
 
 # Install the objects

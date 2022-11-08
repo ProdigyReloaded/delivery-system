@@ -16,43 +16,28 @@
 defmodule Import do
   @moduledoc false
 
-  alias Prodigy.Core.Data.{Repo, Object}
+  alias Prodigy.Core.Data.{Object, Repo}
 
   import Ecto.Changeset
-  import Ecto.Query
-  import ExPrintf
-  import Config
-  import Logger
-
-  defp pre(source, _endian, _prologue) do
-  end
-
-  defp each(filename, sequence, type, version, comment, data, _args) do
-  end
-
-  defp post do
-  end
 
   def parse_object(content) do
     <<
       object_id::binary-size(11),
       sequence,
       type,
-      length::16-little,
+      _length::16-little,
       candidacy_version_high,
-      set_size,
+      _set_size,
       candidacy_version_low,
-      rest::binary
+      _rest::binary
     >> = content
 
-    <<candidacy::3, version::13>> = <<candidacy_version_high, candidacy_version_low>>
+    <<_candidacy::3, version::13>> = <<candidacy_version_high, candidacy_version_low>>
 
     %Object{name: object_id, sequence: sequence, type: type, version: version, contents: content}
   end
 
-  def exec(argv, args \\ %{}) do
-    {database, user, hostname, port} = Prodigy.OdbUtil.DbUtil.start(argv)
-
+  def exec(argv, _args \\ %{}) do
     Repo.transaction(fn ->
       count =
         Enum.flat_map(argv, fn arg -> Path.wildcard(arg) end)

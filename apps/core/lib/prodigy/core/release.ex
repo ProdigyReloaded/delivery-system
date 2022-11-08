@@ -13,8 +13,10 @@
 # You should have received a copy of the GNU Affero General Public License along with prodigyd. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Core.Release do
-  @moduledoc false
+defmodule Prodigy.Core.Release do
+  @moduledoc """
+  Facilities to perform database migrations within a Mix release
+  """
 
   @app :core
 
