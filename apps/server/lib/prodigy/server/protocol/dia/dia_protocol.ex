@@ -24,12 +24,12 @@ defmodule Prodigy.Server.Protocol.Dia do
   * `Prodigy.Server.Protocol.Dia.Packet.Fm64`
 
   The DIA protocol is responsible for:
-  * Consuming consecutive `Prodigy.Server.Protocol.Tcs.Packet` packets always beginning with a
+  * Consuming consecutive `Prodigy.Server.Protocol.Tcs.Packet` structures always beginning with a
   `Prodigy.Server.Protocol.Tcs.Packet.Type.UD1ACK` and followed by 0 or more
-  `Prodigy.Server.Protocol.Tcs.Packet.Type.UD2ACK` until the the length specified in the `Fm0` has been reached.
-  * utilizing `Prodigy.Server.Protocol.Dia.Packet.decode/1` function to decode the buffer and produce packet structures
-  * pass decoded packets along to the Router
-
+  `Prodigy.Server.Protocol.Tcs.Packet.Type.UD2ACK` until the length specified in the
+  `Prodigy.Server.Protocol.Dia.Packet.Fm0` has been reached.
+  * Utilizing `Prodigy.Server.Protocol.Dia.Packet.decode/1` function to decode the buffer and produce packet structures
+  * Passing decoded packets along to the `Prodigy.Server.Router`
   """
 
   require Logger
@@ -41,11 +41,12 @@ defmodule Prodigy.Server.Protocol.Dia do
   alias Prodigy.Server.Protocol.Tcs.Packet, as: TcsPacket
 
   defmodule Options do
-    @moduledoc false
+    @moduledoc "An options module used for mocking `Prodigy.Server.Router` in tests"
     alias Prodigy.Server.Router
     defstruct router_module: Router
   end
 
+  # TODO why is router_module specified twice here?
   defmodule State do
     @moduledoc false
     defstruct router_module: Prodigy.Server.Router, router_pid: nil, buffer: <<>>
@@ -79,6 +80,18 @@ defmodule Prodigy.Server.Protocol.Dia do
     {:reply, {:ok, state.router_pid}, state}
   end
 
+  @doc """
+  Receive function for DIA packets.
+
+  handle_call is called by `Prodigy.Server.Protocol.Tcs` with complete TCS packets, concatenates these packets
+  together as necessary, decodes them into DIA packet structures, then passes the resulting packet along to
+  `Prodigy.Server.Router` for dispatch to the relevant Service.
+
+  Any response from the Service will be returned here.  It is the responsibility of the Service to encode the
+  response as response protocols may differ.  (E.g., `Prodigy.Server.Service.Tocs` replies with a
+  `Prodigy.Server.Protocol.Tocs.Packet`, whereas `Prodigy.Server.Service.Messaging` replies with a
+  `Prodigy.Server.Protocol.Dia.Fm0`.
+  """
   @impl GenServer
   def handle_call({:packet, payload}, _from, %State{buffer: buffer} = state) do
     Logger.debug("DIA server got a packet")
@@ -97,7 +110,6 @@ defmodule Prodigy.Server.Protocol.Dia do
 
       {:ok, response, new_state} ->
         {:reply, {:ok, response}, new_state}
-        #      {:error, _reason, new_state} -> {:reply, :error, new_state}
     end
   end
 
@@ -106,9 +118,6 @@ defmodule Prodigy.Server.Protocol.Dia do
       {:ok, response} -> {:ok, response, %{state | buffer: <<>>}}
       _ -> {:ok, %{state | buffer: <<>>}}
     end
-
-    # TODO handle router replies
-    #    {:ok, %{state | buffer: <<>>}}
   end
 
   defp handle_fragment(need, have, state) do
@@ -125,7 +134,12 @@ defmodule Prodigy.Server.Protocol.Dia do
   @impl GenServer
   def terminate(reason, state) do
     Logger.debug("DIA server shutting down: #{inspect(reason)}")
-    Process.exit(state.router_pid, :shutdown)
+    #    Process.exit(state.router_pid, :shutdown)
     :normal
+  end
+
+  @impl GenServer
+  def handle_info({:EXIT, _pid, _reason}, state) do
+    {:stop, :normal, state}
   end
 end

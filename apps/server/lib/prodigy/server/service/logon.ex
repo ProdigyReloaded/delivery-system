@@ -74,7 +74,6 @@ defmodule Prodigy.Server.Service.Logon do
     Logger.debug("user record: #{inspect(user, limit: :infinity)}")
     new_mail_indicator = bool2int(Messaging.unread_messages?(user))
 
-    # TODO this is probably not the idiomatic ecto way to do this
     data_collection =
       cond do
         Ecto.assoc_loaded?(user.data_collection_policy) == false ->
@@ -158,7 +157,6 @@ defmodule Prodigy.Server.Service.Logon do
       # PRF_USER_CLASS
       0x0::unsigned-integer-size(16),
 
-      # TODO 7/11/22
       # tlpeadds shows some more, including the last logon date and time, let's see
       # yup! works for 6.03.17.  what about older? yup, works for 6.03.10
       #
@@ -215,8 +213,6 @@ defmodule Prodigy.Server.Service.Logon do
 
     # TODO it is a case insensitive match from the user perspective; RS uppercases whatever is given, so we should
     #   do the same.
-    # TODO need to add a migration to hash all the passwords in the database, and also a tool to manipulate
-    #   users/households
     if user == nil do
       Logger.warn("User #{user_id} attempted to logon, but does not exist in the database")
       :bad_password
@@ -297,9 +293,6 @@ defmodule Prodigy.Server.Service.Logon do
   end
 
   defp mark_id_in_use(user) do
-    # TODO add session logging; maybe change "logged_on" in db to "session_id" that stores a UUID
-    #   on login create a row in session_log table with "on_time"
-    #   on logoff update the row with "off_time" and "off_reason" (normal, abnormal, etc)
     user
     |> Ecto.Changeset.change(%{logged_on: true})
     |> Repo.update!()
@@ -324,7 +317,7 @@ defmodule Prodigy.Server.Service.Logon do
             <<_, user_id::binary-size(7)-unit(8), pwlen, password::binary-size(pwlen)-unit(8),
               version::binary-size(8)-unit(8), _rest::binary>>
         } = request,
-        _ \\ %Session{}
+        %Session{auth_timeout: auth_timeout}
       ) do
     result =
       with true <- version_ok(version),
@@ -351,14 +344,17 @@ defmodule Prodigy.Server.Service.Logon do
 
     case result do
       {Status.SUCCESS, user} ->
+        Session.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Normal)")
         {:ok, %Session{user: user, rs_version: version}, response}
 
       {Status.ENROLL_SUBSCRIBER, user} ->
+        Session.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Enroll Subscriber)")
         {:ok, %Session{user: user, rs_version: version}, response}
 
       {Status.ENROLL_OTHER, user} ->
+        Session.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Enroll Other)")
         {:ok, %Session{user: user, rs_version: version}, response}
 

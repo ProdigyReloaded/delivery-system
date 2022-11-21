@@ -57,7 +57,7 @@ defmodule Prodigy.Server.Router do
   def init(_) do
     Logger.debug("router started")
     Process.flag(:trap_exit, true)
-    {:ok, %State{}}
+    {:ok, %State{session: %Session{auth_timeout: Session.set_auth_timer()}}}
   end
 
   defmodule Default do
@@ -70,9 +70,6 @@ defmodule Prodigy.Server.Router do
       {:ok, state, <<>>}
     end
   end
-
-  # TODO apps like TOCS, etc. should force a disconnect when called without an active session
-  # TODO refactor handle so that it returns the same thing from every application
 
   @doc """
   Dispatch packets to the relevant service module.
@@ -117,7 +114,7 @@ defmodule Prodigy.Server.Router do
         0x00D201 ->
           Logoff
 
-        # This is for subsequent logons, so no disconnect
+        # This is for subsequent logons, so no disconnect, but set the auth_timeout
         0x00D202 ->
           Logoff
 
@@ -131,6 +128,10 @@ defmodule Prodigy.Server.Router do
         # 0x060201 -> Banking
         # 0x063201 -> EaasySabre
         0x067201 ->
+          DowJones
+
+        # this is the made up destination for the dow jones ticket to name resolve function
+        0x009900 ->
           DowJones
 
         _ ->
@@ -166,5 +167,16 @@ defmodule Prodigy.Server.Router do
     Logger.debug("router state: #{inspect(state)}")
     Logger.debug("Router shutting down: #{inspect(reason)}")
     :normal
+  end
+
+  @impl true
+  def handle_info(:auth_timeout, state) do
+    Logger.warn("authentication timeout")
+    {:stop, :normal, state}
+  end
+
+  @impl GenServer
+  def handle_info({:EXIT, _pid, _reason}, state) do
+    {:noreply, state}
   end
 end

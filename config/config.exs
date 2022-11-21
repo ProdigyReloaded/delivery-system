@@ -17,7 +17,9 @@ import Config
 #       metadata: [:user_id]
 #
 
-config :server, ecto_repos: [Prodigy.Core.Data.Repo]
+config :server,
+  ecto_repos: [Prodigy.Core.Data.Repo],
+  auth_timeout: 60 * 1000
 
 config :server, Prodigy.Server.Scheduler,
   jobs: [
@@ -30,6 +32,6 @@ config :server, Prodigy.Server.Scheduler,
 config :core, ecto_repos: [Prodigy.Core.Data.Repo], ecto_adapter: Ecto.Adapters.Postgres
 
 config :logger, :console, format: "$time $metadata[$level] $message\n"
-config :logger, level: :info
+config :logger, level: :debug
 
 import_config "#{Mix.env()}.exs"

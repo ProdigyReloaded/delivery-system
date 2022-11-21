@@ -23,7 +23,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
   import Prodigy.Server.Util
 
   # concatenated FM0
-  # TODO constrain this dialyzer warning to "overlapping_contract"
+  @doc "Decode Fm0 packets"
   @dialyzer {:nowarn_function, {:decode, 1}}
   @spec decode(binary()) :: {:ok, Fm0.t()} | {:error, atom()}
   def decode(
@@ -75,7 +75,6 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
     {:error, :no_match}
   end
 
-  # TODO constrain this dialyzer warning to "overlapping_contract"
   @dialyzer {:nowarn_function, {:decode, 2}}
   @spec decode(binary(), Fm0.t()) :: {:ok, Fm0.t()}
   def decode(<<length, 4, user_id::binary-size(7), "0", rest::binary>> = _data, fm0) do
@@ -86,6 +85,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
      %Fm0{fm0 | fm4: %Fm4{user_id: user_id, correlation_id: correlation_id}, payload: payload}}
   end
 
+  @doc "Decode embedded Dia headers"
   @spec decode(binary(), Fm0.t()) :: {:ok, Fm0.t()}
   def decode(
         <<6, 0::1, 9::7, function, reason, flags::binary-size(1), length,
@@ -123,6 +123,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
      }}
   end
 
+  @doc "Encode Dia packets"
   @spec encode(Fm0.t()) :: binary()
   def encode(%Fm0{} = packet) do
     fm4 = encode(packet.fm4)

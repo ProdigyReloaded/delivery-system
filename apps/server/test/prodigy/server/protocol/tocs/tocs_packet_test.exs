@@ -20,8 +20,6 @@ defmodule Prodigy.Server.Protocol.Tocs.Packet.Test do
 
   alias Prodigy.Server.Protocol.Tocs.Packet
 
-  # TODO make these packets go through the router for best coverage
-
   test "encoding" do
     packet = Packet.encode(%Packet{seq: 22, blocknum: 33, blockstot: 44, payload: <<"foobar">>})
     assert <<0, 22, 33, 44, 6::16-big, "foobar"::binary>> = packet

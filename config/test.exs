@@ -7,4 +7,7 @@ config :core, Prodigy.Core.Data.Repo,
   hostname: "localhost",
   pool: Ecto.Adapters.SQL.Sandbox
 
+config :server,
+  auth_timeout: 1000
+
 config :logger, level: :error

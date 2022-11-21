@@ -32,7 +32,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
 
   @moduletag :capture_log
 
-  #  doctest Logon
+  # These tests are all somewhat fragile since they are timing sensitive
 
   defp epoch do
     {:ok, result} = DateTime.from_unix(0)
@@ -48,6 +48,77 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
   end
 
   @today DateTime.to_date(DateTime.utc_now())
+
+  test "Router terminates when no logon before authentication timeout", context do
+    assert Process.alive?(context.router_pid) == true
+    Process.sleep(1100)
+    assert Process.alive?(context.router_pid) == false
+  end
+
+  test "Authentication timeout remains after failed logon", context do
+    assert Process.alive?(context.router_pid) == true
+
+    %Household{id: "AAAA12", enabled_date: @today}
+    |> change
+    |> put_assoc(:users, [
+      %User{id: "AAAA12A", gender: "F", date_enrolled: @today}
+      |> User.changeset(%{password: "foobaz"})
+    ])
+    |> Repo.insert()
+
+    {:ok, _response} = logon(context.router_pid, "AAAA12A", "other", "06.03.11")
+    Process.sleep(1100)
+    assert Process.alive?(context.router_pid) == false
+  end
+
+  test "Authentication timeout canceled after un-enrolled subscriber logon", context do
+    assert Process.alive?(context.router_pid) == true
+
+    %Household{id: "AAAA12", enabled_date: @today}
+    |> change
+    |> put_assoc(:users, [
+      %User{id: "AAAA12A", gender: "F"}
+      |> User.changeset(%{password: "foobaz"})
+    ])
+    |> Repo.insert!()
+
+    {:ok, _response} = logon(context.router_pid, "AAAA12A", "foobaz", "06.03.10")
+
+    Process.sleep(1100)
+    assert Process.alive?(context.router_pid) == true
+  end
+
+  test "Authentication timeout reset after logoff (for re-logon)", context do
+    assert Process.alive?(context.router_pid) == true
+
+    %Household{id: "AAAA12", enabled_date: @today}
+    |> change
+    |> put_assoc(:users, [
+      %User{id: "AAAA12D", gender: "M", date_enrolled: @today}
+      |> User.changeset(%{password: "test"})
+    ])
+    |> Repo.insert()
+
+    assert !logged_on?("AAAA12D")
+
+    {:ok, response} = logon(context.router_pid, "AAAA12D", "test", "06.03.10")
+
+    {:ok,
+     %Fm0{payload: <<status, _gender, 0x0::72, "010170000000", 0x0, 0x0::128, "             ">>}} =
+      DiaPacket.decode(response)
+
+    assert status == Status.SUCCESS.value()
+
+    Process.sleep(1100)
+    assert Process.alive?(context.router_pid) == true
+
+    assert logged_on?("AAAA12D")
+    logoff_relogon(context.router_pid)
+    assert !logged_on?("AAAA12D")
+
+    Process.sleep(1100)
+    assert Process.alive?(context.router_pid) == false
+  end
 
   test "logon fails on unsupported client version", context do
     %Household{id: "AAAA12", enabled_date: @today}

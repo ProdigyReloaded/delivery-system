@@ -87,7 +87,6 @@ defmodule Prodigy.Server.Service.Enrollment do
       "Welcome to Prodigy!"
     )
 
-    # TODO need to compare and contrast responses in ENPHSTAC.PGM/TLPEADDS.PGM/TLPI*010.PGM between RS versions
     response =
       Logon.make_response_payload({Logon.Status.SUCCESS, user})
       |> Fm0.make_response(request)

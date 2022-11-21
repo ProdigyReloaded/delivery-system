@@ -67,7 +67,7 @@ defmodule Prodigy.Server.Service.Logoff do
         end
       end)
 
-    {result, %Session{},
+    {result, %Session{auth_timeout: Session.set_auth_timer()},
      DiaPacket.encode(Fm0.make_response(<<0, "xxxxxxxx01011988124510">>, request))}
   end
 

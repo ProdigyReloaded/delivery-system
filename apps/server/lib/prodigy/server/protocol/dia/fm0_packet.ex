@@ -17,7 +17,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet.Fm0 do
   @moduledoc """
   The DIA Fm0 Packet (Network)
 
-  The DIA Fm0 Header is roughly equivalent to the OSI layer 3 network layer and bears source and destination address
+  The DIA Fm0 Header is roughly equivalent to the OSI network layer and bears source and destination address
   fields, among others.
   """
   alias __MODULE__
@@ -214,6 +214,10 @@ defmodule Prodigy.Server.Protocol.Dia.Packet.Fm0 do
           payload: binary
         }
 
+  @doc """
+  A helper function that given a received `Prodigy.Server.Protocol.Dia.Packet.Fm0` will prepare the response packet by
+  adjusting the packet fields as required.
+  """
   @spec make_response(binary(), Fm0.t(), Fm4.t() | Fm9.t() | Fm64.t() | nil) :: Fm0.t()
   def make_response(payload, packet, next_header \\ nil) do
     packet =

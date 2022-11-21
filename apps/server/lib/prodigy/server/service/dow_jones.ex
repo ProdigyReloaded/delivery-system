@@ -61,6 +61,41 @@ defmodule Prodigy.Server.Service.DowJones do
     ])
   end
 
+  def handle(%Fm0{dest: 0x009900, payload: symbol} = request, %Session{} = session) do
+    Logger.debug("dow jones resolve symbol '#{symbol}' to short name")
+
+    json =
+      try do
+        case Task.async(fn -> get_quote(symbol) end)
+             |> Task.yield(3000) do
+          nil -> raise RuntimeError, message: "Timeout"
+          {:exit, _reason} -> raise RuntimeError, message: "Timeout"
+          {:ok, {:ok, {_symbol, json}}} -> json
+        end
+      catch
+        :exit, _reason -> raise RuntimeError, message: "Timeout"
+      end
+
+    yahoo_data =
+      Poison.decode!(json, as: %YahooFinanceData{quoteResponse: %Response{result: [%Quote{}]}})
+
+    quote = Enum.at(yahoo_data.quoteResponse.result, 0)
+
+    response = %{
+      request
+      | concatenated: false,
+        src: request.dest,
+        dest: request.src,
+        mode: %Fm0.Mode{response: true},
+        fm4: nil,
+        fm9: nil,
+        fm64: nil,
+        payload: quote.shortName
+    }
+
+    {:ok, session, DiaPacket.encode(response)}
+  end
+
   def handle(
         %Fm0{dest: _dest, payload: <<0x2C, symbol::binary-size(5), 0xD>>} = request,
         %Session{user: _user} = session

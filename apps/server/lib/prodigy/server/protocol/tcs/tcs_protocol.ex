@@ -65,9 +65,8 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
     Logger.debug("TCS server completing the client handshake")
     {:ok, socket} = options.ranch_module.handshake(ref)
-    # TODO write a test over this code; more than once I've commented the line below that
     # results in what appears to be an RS hangup, but it isn't - it's that the socket doesn't
-    # continue to poll.
+    # continue to poll - need active true to poll continuously
     :ok = transport.setopts(socket, active: true)
 
     Logger.debug("TCS server entering genserver loop")
@@ -211,7 +210,13 @@ defmodule Prodigy.Server.Protocol.Tcs do
   @impl GenServer
   def terminate(reason, state) do
     Logger.debug("TCS server shutting down: #{inspect(reason)}")
-    Process.exit(state.dia_pid, :shutdown)
+    #    Process.exit(state.dia_pid, :shutdown)
+    #    Process.exit(self(), :shutdown)
     :normal
+  end
+
+  @impl GenServer
+  def handle_info({:EXIT, _pid, _reason}, state) do
+    {:stop, :normal, state}
   end
 end

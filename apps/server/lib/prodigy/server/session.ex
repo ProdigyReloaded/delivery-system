@@ -21,5 +21,13 @@ defmodule Prodigy.Server.Session do
   persists until the connection is terminated.
   """
 
-  defstruct [:user, :rs_version]
+  defstruct [:user, :rs_version, :auth_timeout]
+
+  def set_auth_timer do
+    Process.send_after(self(), :auth_timeout, Application.fetch_env!(:server, :auth_timeout))
+  end
+
+  def cancel_auth_timer(ref) do
+    Process.cancel_timer(ref)
+  end
 end

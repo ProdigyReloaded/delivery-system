@@ -32,11 +32,10 @@ defmodule Prodigy.Core.Data.Util do
     end
   end
 
-  defp validate_arguments(user, password, hostname, port, database) do
+  defp validate_arguments(user, password, hostname, database) do
     if user == nil or user == "" or
          password == nil or password == "" or
          hostname == nil or hostname == "" or
-         port == nil or port == "" or
          database == nil or database == "" do
       IO.puts("A username, password, hostname, port number, and database name must be specified.")
       exit(:shutdown)
@@ -50,7 +49,7 @@ defmodule Prodigy.Core.Data.Util do
     hostname = System.get_env("DB_HOST", "localhost")
     port = String.to_integer(System.get_env("DB_PORT", "5432"))
 
-    validate_arguments(user, password, hostname, port, database)
+    validate_arguments(user, password, hostname, database)
 
     Repo.start_link(
       database: database,

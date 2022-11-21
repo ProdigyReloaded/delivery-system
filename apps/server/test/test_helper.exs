@@ -66,6 +66,16 @@ defmodule Server do
     })
   end
 
+  def logoff_relogon(pid) do
+    Router.handle_packet(pid, %Fm0{
+      src: 0x0,
+      dest: 0xD202,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0
+    })
+  end
+
   def logged_on?(user_id) do
     User
     |> where([u], u.id == ^user_id)
