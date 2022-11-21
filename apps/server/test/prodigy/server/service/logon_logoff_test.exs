@@ -51,7 +51,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
 
   test "Router terminates when no logon before authentication timeout", context do
     assert Process.alive?(context.router_pid) == true
-    Process.sleep(1100)
+    Process.sleep(4000)
     assert Process.alive?(context.router_pid) == false
   end
 
@@ -67,7 +67,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     |> Repo.insert()
 
     {:ok, _response} = logon(context.router_pid, "AAAA12A", "other", "06.03.11")
-    Process.sleep(1100)
+    Process.sleep(4000)
     assert Process.alive?(context.router_pid) == false
   end
 
@@ -84,7 +84,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
 
     {:ok, _response} = logon(context.router_pid, "AAAA12A", "foobaz", "06.03.10")
 
-    Process.sleep(1100)
+    Process.sleep(4000)
     assert Process.alive?(context.router_pid) == true
   end
 
@@ -109,14 +109,14 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
 
     assert status == Status.SUCCESS.value()
 
-    Process.sleep(1100)
+    Process.sleep(4000)
     assert Process.alive?(context.router_pid) == true
 
     assert logged_on?("AAAA12D")
     logoff_relogon(context.router_pid)
     assert !logged_on?("AAAA12D")
 
-    Process.sleep(1100)
+    Process.sleep(4000)
     assert Process.alive?(context.router_pid) == false
   end
 
