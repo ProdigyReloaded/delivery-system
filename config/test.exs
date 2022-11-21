@@ -8,6 +8,6 @@ config :core, Prodigy.Core.Data.Repo,
   pool: Ecto.Adapters.SQL.Sandbox
 
 config :server,
-  auth_timeout: 1000
+  auth_timeout: 3000
 
 config :logger, level: :error
