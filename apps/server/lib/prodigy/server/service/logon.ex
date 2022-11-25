@@ -317,7 +317,7 @@ defmodule Prodigy.Server.Service.Logon do
             <<_, user_id::binary-size(7)-unit(8), pwlen, password::binary-size(pwlen)-unit(8),
               version::binary-size(8)-unit(8), _rest::binary>>
         } = request,
-        %Session{auth_timeout: auth_timeout}
+        %Session{auth_timeout: auth_timeout} = session
       ) do
     result =
       with true <- version_ok(version),
@@ -359,7 +359,7 @@ defmodule Prodigy.Server.Service.Logon do
         {:ok, %Session{user: user, rs_version: version}, response}
 
       _ ->
-        {:error, %Session{}, response}
+        {:error, session, response}
     end
   end
 end

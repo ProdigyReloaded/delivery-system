@@ -309,4 +309,31 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
 
     assert !logged_on?("AAAA12D")
   end
+
+  test "authenication timer survives bad password then cancelled with good password", context do
+    %Household{id: "AAAA12", enabled_date: @today}
+    |> change
+    |> put_assoc(:users, [
+      %User{id: "AAAA12D", gender: "M", date_enrolled: @today}
+      |> User.changeset(%{password: "good"})
+    ])
+    |> Repo.insert()
+
+    assert !logged_on?("AAAA12D")
+
+    {:ok, response} = logon(context.router_pid, "AAAA12D", "bad", "06.03.10")
+    {:ok, %Fm0{payload: <<status, _rest::binary>>}} = DiaPacket.decode(response)
+    assert status == Status.BAD_PASSWORD.value()
+
+    assert !logged_on?("AAAA12D")
+
+    {:ok, response} = logon(context.router_pid, "AAAA12D", "good", "06.03.10")
+    {:ok, %Fm0{payload: <<status, _rest::binary>>}} = DiaPacket.decode(response)
+    assert status == Status.SUCCESS.value()
+
+    assert logged_on?("AAAA12D")
+
+    Process.sleep(4000)
+    assert Process.alive?(context.router_pid) == true
+  end
 end
