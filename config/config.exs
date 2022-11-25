@@ -32,6 +32,6 @@ config :server, Prodigy.Server.Scheduler,
 config :core, ecto_repos: [Prodigy.Core.Data.Repo], ecto_adapter: Ecto.Adapters.Postgres
 
 config :logger, :console, format: "$time $metadata[$level] $message\n"
-config :logger, level: :debug
+config :logger, level: :info
 
 import_config "#{Mix.env()}.exs"
