@@ -16,12 +16,10 @@
 defmodule Dir do
   @moduledoc false
 
-  alias Prodigy.Core.Data.Repo
-  alias Prodigy.Core.Data.Object
+  alias Prodigy.Core.Data.{Object, Repo}
 
   import Ecto.Query
   import ExPrintf
-  import Config
 
   # TODO expand the object schema in the database; currently only holds:
   #    field :name, :string, primary_key: true
@@ -34,11 +32,9 @@ defmodule Dir do
   #    length in bytes
   #    storage field
   #    keyword (?)
-  defp pre(source, _endian, _prologue) do
+  defp pre do
     IO.puts(
       String.trim("""
-      Source: #{source}
-
       Name          Seq Type Version
       ------------  --- ---- -------
       """)
@@ -49,13 +45,8 @@ defmodule Dir do
     IO.puts(sprintf("%-12s  %3d %4x %7d", [filename, sequence, type, version]))
   end
 
-  defp post do
-  end
-
-  def exec(argv, args \\ %{}) do
-    {database, user, hostname, port} = Prodigy.OdbUtil.DbUtil.start(argv)
-
-    pre(sprintf("podb://%s@%s:%d/%s", [user, hostname, port, database]), nil, nil)
+  def exec(_argv, args \\ %{}) do
+    pre()
 
     try do
       Object
@@ -66,7 +57,7 @@ defmodule Dir do
         each(sprintf("%8s.%3s", [name, ext]), obj.sequence, obj.type, obj.version, nil, nil)
       end)
     rescue
-      e ->
+      _e ->
         # Logger.error(Exception.format(:error, e, __STACKTRACE__))
         # reraise e, __STACKTRACE__
         exit(:shutdown)

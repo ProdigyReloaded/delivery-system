@@ -15,7 +15,10 @@
 
 defmodule Prodigy.Core.Data.Message do
   use Ecto.Schema
-  @moduledoc false
+
+  @moduledoc """
+  Schema specific to messaging and related change functions
+  """
 
   # set this by select count(*) from messages where to = 'AAAA12A'
   # next message slot will be count + 1 % 2^16

@@ -15,12 +15,14 @@
 
 defmodule Prodigy.Server.Service.DataCollection do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle data collection messages
+  """
 
   require Logger
 
-  alias Prodigy.Server.Session
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Session
 
   defmodule ObjectRecord do
     @moduledoc false
@@ -70,7 +72,7 @@ defmodule Prodigy.Server.Service.DataCollection do
 
     Logger.debug("data collection records: #{inspect(entries, pretty: true)}")
 
-    # TODO write these to a log file along with a session identifier
+    # TODO log these to a database and associate with relevant user session
     {:ok, session}
   end
 end

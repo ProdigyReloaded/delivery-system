@@ -15,7 +15,7 @@
 
 defmodule WaitFor do
   # returns the number of milliseconds since January 1, 1970
-  defp epoch_ms(), do: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+  defp epoch_ms, do: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
 
   @doc """
   Wait for the `condition` process to return true.
@@ -35,6 +35,53 @@ defmodule WaitFor do
 
   def wait_for(condition, timeout) do
     wait_for(condition, {:deadline, epoch_ms() + timeout})
+  end
+end
+
+defmodule Server do
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Router
+  alias Prodigy.Core.Data.{Repo, User}
+
+  import Ecto.Query
+
+  def logon(pid, user, pass, version) do
+    Router.handle_packet(pid, %Fm0{
+      src: 0x0,
+      dest: 0x2200,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0,
+      payload: <<0x1, user::binary, String.length(pass), pass::binary, version::binary>>
+    })
+  end
+
+  def logoff(pid) do
+    Router.handle_packet(pid, %Fm0{
+      src: 0x0,
+      dest: 0xD201,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0
+    })
+  end
+
+  def logoff_relogon(pid) do
+    Router.handle_packet(pid, %Fm0{
+      src: 0x0,
+      dest: 0xD202,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0
+    })
+  end
+
+  def logged_on?(user_id) do
+    User
+    |> where([u], u.id == ^user_id)
+    |> first()
+    |> Repo.one()
+    |> Map.get(:logged_on)
   end
 end
 

@@ -15,18 +15,20 @@
 
 defmodule Prodigy.Server.Service.Tocs do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle TOCS Object Requests
+  """
 
   require Logger
   require Ecto.Query
   use EnumType
   import Bitwise
 
-  alias Prodigy.Core.Data.{Repo, Object}
-  alias Prodigy.Server.Session
+  alias Prodigy.Core.Data.{Object, Repo}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
   alias Prodigy.Server.Protocol.Tocs.Packet, as: TocsPacket
+  alias Prodigy.Server.Session
 
   def handle(
         %Fm0{

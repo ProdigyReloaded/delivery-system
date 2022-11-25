@@ -14,9 +14,11 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Core.Data.Repo do
-  @moduledoc false
+  @moduledoc """
+  The Ecto-backed Database repository
+  """
 
   use Ecto.Repo,
     otp_app: :core,
-    adapter: Application.get_env(:core, :ecto_adapter)
+    adapter: Application.compile_env!(:core, :ecto_adapter)
 end

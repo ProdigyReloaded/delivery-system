@@ -15,16 +15,18 @@
 
 defmodule Prodigy.Server.Service.Profile do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle Profile Requests
+  """
 
   require Logger
   require Ecto.Query
   use EnumType
 
-  alias Prodigy.Server.Session
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Core.Data.{Household, Repo, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
-  alias Prodigy.Core.Data.{Repo, User, Household}
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Session
 
   defp identity(input) do
     input

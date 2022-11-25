@@ -15,7 +15,9 @@
 
 defmodule Prodigy.Server.Service.Messaging do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle Mailbox Access
+  """
 
   require Logger
   require Ecto.Query
@@ -23,12 +25,12 @@ defmodule Prodigy.Server.Service.Messaging do
 
   import Prodigy.Server.Util
 
-  alias Prodigy.Server.Session
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0, as: Fm0
+  alias Prodigy.Core.Data.{Message, Repo, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
-  alias Prodigy.Core.Data.{Repo, User, Message}
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Session
 
-  def expunge() do
+  def expunge do
     Logger.debug("Expunging messages ...")
 
     Repo.transaction(fn ->
@@ -62,7 +64,6 @@ defmodule Prodigy.Server.Service.Messaging do
     expunge_date = Timex.shift(send_date, days: 14)
 
     Enum.each(to_ids, fn to_id ->
-      # TODO also need to Enum.each(to_others, ...
       # TODO extract the logic below into a function
       Repo.transaction(fn ->
         # TODO probably instead just want an primary key that is just an autoincrement index, and
@@ -89,15 +90,11 @@ defmodule Prodigy.Server.Service.Messaging do
         })
       end)
     end)
-
-    # TODO if there are delivery failures,
   end
 
-  # TODO there is an issue with replies from mailbox; they seem to be addressed to the from_id of the last item shown on the mailbox page
-  defp internal_send_message(
-         %User{id: from_id, first_name: first_name, last_name: last_name},
-         payload
-       ) do
+  # TODO there is an issue with replies from mailbox; they seem to be addressed to the from_id of the last item shown
+  #   on the mailbox page
+  defp internal_send_message(%User{} = from, payload) do
     <<count::16-big, rest::binary>> = payload
     bytes = count * 7
     <<user_ids::binary-size(bytes), rest::binary>> = rest
@@ -109,9 +106,15 @@ defmodule Prodigy.Server.Service.Messaging do
 
     to_others = length_value_chunk(others)
 
-    # TODO need to properly set from_id and from_name
-    from_name = "#{first_name} #{last_name}"
-    send_message(from_id, from_name, to_ids, to_others, subject, message)
+    send_message(
+      from.id,
+      "#{from.first_name} #{from.last_name}",
+      to_ids,
+      to_others,
+      subject,
+      message
+    )
+
     :ok
   end
 
@@ -124,7 +127,6 @@ defmodule Prodigy.Server.Service.Messaging do
           |> Ecto.Query.where([m], m.index == ^index)
           |> Repo.one()
 
-        # TODO update the read flag
         changeset = Message.changeset(message, %{read: true})
         Repo.update(changeset)
 
@@ -146,8 +148,6 @@ defmodule Prodigy.Server.Service.Messaging do
   defp get_mailbox_page(page, user_id) do
     # TODO handle case where page is out of range
     # TODO put these queries in a transaction so that newly arriving mail doesn't mess things up
-    # TODO join from_id to user and get the from name, or on send, insert the user's name.  Thinking to not denormalize
-    #      this so we can have internet email.
 
     total_messages =
       Message
@@ -223,7 +223,6 @@ defmodule Prodigy.Server.Service.Messaging do
     # TODO no matter, the messaging application doesn't handle this yet anyways.
   end
 
-  # TODO better understand the format of this message
   def handle(%Fm0{payload: <<0x1, payload::binary>>} = request, %Session{} = session) do
     Logger.debug("messaging got payload: #{inspect(payload, base: :hex, limit: :infinity)}")
 

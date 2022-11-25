@@ -16,7 +16,9 @@
 defmodule Prodigy.Core.Data.User do
   use Ecto.Schema
 
-  @moduledoc false
+  @moduledoc """
+  Schema specific to individual users and related change functions
+  """
 
   @primary_key {:id, :string, []}
   schema "user" do

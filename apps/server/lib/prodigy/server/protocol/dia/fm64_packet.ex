@@ -14,30 +14,55 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Protocol.Dia.Packet.Fm64 do
-  @moduledoc false
+  @moduledoc """
+  The DIA Fm64 Packet
+  """
   alias __MODULE__
 
   use EnumType
 
   defenum StatusType do
-    value(INFORMATION, 0x0)
-    value(STATUS_REQUEST, 0x4)
-    value(ERROR, 0x8)
-    value(TERMINATE, 0xC)
+    @moduledoc "An enumeration of Fm64 Status Types"
+
+    value INFORMATION, 0x0 do
+      @moduledoc false
+    end
+
+    value STATUS_REQUEST, 0x4 do
+      @moduledoc false
+    end
+
+    value ERROR, 0x8 do
+      @moduledoc false
+    end
+
+    value TERMINATE, 0xC do
+      @moduledoc false
+    end
   end
 
   defenum DataMode do
-    value(EBCDIC, 0x0)
-    value(ASCII, 0x10)
-    value(BINARY, 0x20)
+    @moduledoc "An enumeration of Fm64 Data Modes"
+
+    value EBCDIC, 0x0 do
+      @moduledoc false
+    end
+
+    value ASCII, 0x10 do
+      @moduledoc false
+    end
+
+    value BINARY, 0x20 do
+      @moduledoc false
+    end
   end
 
   defstruct concatenated: false, status_type: nil, data_mode: nil, payload: nil
 
   @type t :: %Fm64{
           concatenated: boolean,
-          status_type: StatusType,
-          data_mode: DataMode,
+          status_type: StatusType.t(),
+          data_mode: DataMode.t(),
           payload: binary
         }
 end

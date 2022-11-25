@@ -14,11 +14,16 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Application do
-  @moduledoc false
+  @moduledoc """
+  The entry point for the Prodigy Delivery System, aka `prodigyd`.
+  """
 
   use Application
   require Logger
 
+  @doc """
+  Start supervision tree and Delivery System components.
+  """
   @impl Application
   def start(_type, _args) do
     Logger.info("Starting Prodigy Server")

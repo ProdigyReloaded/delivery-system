@@ -15,15 +15,17 @@
 
 defmodule Prodigy.Server.Service.Logoff do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle Logoff requests
+  """
 
   require Logger
   require Ecto.Query
   import Ecto.Changeset
 
   alias Prodigy.Core.Data.{Repo, User}
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0, as: Fm0
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Session
 
   defp clear_id_in_use(user_id, reason \\ "normal") do
@@ -65,7 +67,7 @@ defmodule Prodigy.Server.Service.Logoff do
         end
       end)
 
-    {result, %Session{},
+    {result, %Session{auth_timeout: Session.set_auth_timer()},
      DiaPacket.encode(Fm0.make_response(<<0, "xxxxxxxx01011988124510">>, request))}
   end
 

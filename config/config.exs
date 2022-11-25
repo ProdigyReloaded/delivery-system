@@ -17,11 +17,16 @@ import Config
 #       metadata: [:user_id]
 #
 
-config :server, ecto_repos: [Prodigy.Core.Data.Repo]
+config :server,
+  ecto_repos: [Prodigy.Core.Data.Repo],
+  auth_timeout: 60 * 1000
 
 config :server, Prodigy.Server.Scheduler,
   jobs: [
-    {"@daily", fn -> Prodigy.Server.Service.Messaging.expunge() end}
+    expunge_job: [
+      schedule: "@daily",
+      task: {Prodigy.Server.Service.Messaging, :expunge, []}
+    ]
   ]
 
 config :core, ecto_repos: [Prodigy.Core.Data.Repo], ecto_adapter: Ecto.Adapters.Postgres

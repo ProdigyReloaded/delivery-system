@@ -14,7 +14,20 @@
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Session do
-  @moduledoc false
+  @moduledoc """
+  Structure containing information for an individual Prodigy Session.
 
-  defstruct [:user, :rs_version]
+  The Session structure is established when the `Prodigy.Server.Router` instance is created upon client connection, and
+  persists until the connection is terminated.
+  """
+
+  defstruct [:user, :rs_version, :auth_timeout]
+
+  def set_auth_timer do
+    Process.send_after(self(), :auth_timeout, Application.fetch_env!(:server, :auth_timeout))
+  end
+
+  def cancel_auth_timer(ref) do
+    Process.cancel_timer(ref)
+  end
 end

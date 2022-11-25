@@ -15,18 +15,20 @@
 
 defmodule Prodigy.Server.Service.Enrollment do
   @behaviour Prodigy.Server.Service
-  @moduledoc false
+  @moduledoc """
+  Handle enrollment requests
+  """
 
   require Logger
   require Ecto.Query
 
   import Ecto.Changeset
 
-  alias Prodigy.Server.Session
+  alias Prodigy.Core.Data.{Household, Repo, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
-  alias Prodigy.Server.Service.{Logon, Profile, Messaging}
-  alias Prodigy.Core.Data.{Repo, Household, User}
+  alias Prodigy.Server.Service.{Logon, Messaging, Profile}
+  alias Prodigy.Server.Session
 
   def handle(%Fm0{payload: payload} = request, %Session{user: user} = session) do
     Logger.debug("received enrollment packet: #{inspect(request, base: :hex, limit: :infinity)}")
@@ -85,7 +87,6 @@ defmodule Prodigy.Server.Service.Enrollment do
       "Welcome to Prodigy!"
     )
 
-    # TODO need to compare and contrast responses in ENPHSTAC.PGM/TLPEADDS.PGM/TLPI*010.PGM between RS versions
     response =
       Logon.make_response_payload({Logon.Status.SUCCESS, user})
       |> Fm0.make_response(request)

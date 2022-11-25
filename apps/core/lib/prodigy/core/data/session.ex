@@ -15,7 +15,10 @@
 
 defmodule Prodigy.Core.Data.Session do
   use Ecto.Schema
-  @moduledoc false
+
+  @moduledoc """
+  Schema specific to individual user sessions and related change functions
+  """
 
   schema "session" do
     belongs_to(:user, Prodigy.Core.Data.User)

@@ -16,12 +16,11 @@
 defmodule Export do
   @moduledoc false
 
-  alias Prodigy.Core.Data.Repo
-  alias Prodigy.Core.Data.Object
+  #  alias Prodigy.OdbUtil.DbUtil
+  alias Prodigy.Core.Data.{Object, Repo}
 
   import Ecto.Query
   import ExPrintf
-  import Config
 
   # TODO expand the object schema in the database; currently only holds:
   #    field :name, :string, primary_key: true
@@ -34,8 +33,6 @@ defmodule Export do
   #    length in bytes
   #    storage field
   #    keyword (?)
-  defp pre(source, _endian, _prologue) do
-  end
 
   defp each(filename, sequence, type, version, data, args) do
     filename = sprintf("%s_%d_%x_%d", [String.trim(filename), sequence, type, version])
@@ -45,11 +42,8 @@ defmodule Export do
     IO.puts(sprintf("Wrote %d bytes to %s", [byte_size(data), filename]))
   end
 
-  defp post do
-  end
-
-  def exec(argv, args \\ %{}) do
-    {database, user, hostname, port} = Prodigy.OdbUtil.DbUtil.start(argv)
+  def exec(_argv, args \\ %{}) do
+    #    {_database, _user, _hostname, _port} = DbUtil.start(argv)
 
     Object
     |> where([o], like(o.name, ^args.like))

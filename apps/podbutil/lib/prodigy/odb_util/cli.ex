@@ -16,6 +16,8 @@
 defmodule Prodigy.OdbUtil.CLI do
   @moduledoc false
 
+  alias Prodigy.Core.Data.Util
+
   def usage(mode, message \\ "")
 
   def usage(:terse, message) do
@@ -105,7 +107,7 @@ defmodule Prodigy.OdbUtil.CLI do
     exit(:shutdown)
   end
 
-  def list_object_types() do
+  def list_object_types do
     IO.puts("""
     Object Types
 
@@ -166,6 +168,8 @@ defmodule Prodigy.OdbUtil.CLI do
 
     [command | rest] = rest
     command = String.downcase(command)
+
+    Util.start_repo()
 
     case command do
       "list-object-types" ->

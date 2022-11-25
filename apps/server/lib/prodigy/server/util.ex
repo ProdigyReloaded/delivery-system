@@ -18,18 +18,22 @@ defmodule Prodigy.Server.Util do
 
   # TODO it may not be a good idea to translate nil, but I'm doing it since the data collection fields in the database
   # come back as "nil" when they are unset
+  @doc "Given an integer 1, return true; 0 or nil, return false"
   def int2bool(1), do: true
   def int2bool(0), do: false
   def int2bool(nil), do: false
 
+  @doc "Given boolean true, return integer 1; false or nil, return 0"
   def bool2int(true), do: 1
   def bool2int(false), do: 0
   def bool2int(nil), do: 0
 
+  @doc "Split a binary payload into size byte chunks"
   def fixed_chunk(size, payload) do
     for <<value::binary-size(size) <- payload>>, do: value
   end
 
+  @doc "Recursively split a binary payload by a length byte followed by length bytes of data"
   def length_value_chunk(payload, values \\ [])
 
   def length_value_chunk(<<>>, values) do
@@ -41,6 +45,7 @@ defmodule Prodigy.Server.Util do
     length_value_chunk(rest, values ++ [value])
   end
 
+  @doc "Helper to return a value if not nil, otherwise an alternative"
   def val_or_else(val, other) do
     if is_nil(val), do: other, else: val
   end
