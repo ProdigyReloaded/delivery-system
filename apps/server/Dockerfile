@@ -27,6 +27,7 @@ COPY config config
 RUN mix release server
 
 RUN cd apps/pomsutil && mix escript.build
+RUN cd apps/podbutil && mix escript.build
 
 FROM elixir:1.13.4-otp-25-slim AS run_stage
 
