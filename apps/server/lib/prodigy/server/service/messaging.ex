@@ -1,16 +1,16 @@
 # Copyright 2022, Phillip Heller
 #
-# This file is part of prodigyd.
+# This file is part of Prodigy Reloaded.
 #
-# prodigyd is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+# Prodigy Reloaded is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
 #
-# prodigyd is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# Prodigy Reloaded is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 # the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU Affero General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License along with prodigyd. If not,
+# You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Service.Messaging do
@@ -23,7 +23,7 @@ defmodule Prodigy.Server.Service.Messaging do
   require Ecto.Query
   use EnumType
 
-  import Prodigy.Server.Util
+  import Prodigy.Core.Util
 
   alias Prodigy.Core.Data.{Message, Repo, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
@@ -64,11 +64,7 @@ defmodule Prodigy.Server.Service.Messaging do
     expunge_date = Timex.shift(send_date, days: 14)
 
     Enum.each(to_ids, fn to_id ->
-      # TODO extract the logic below into a function
       Repo.transaction(fn ->
-        # TODO probably instead just want an primary key that is just an autoincrement index, and
-        #    use some pagination or just limit/offset on the view side and leave the maximum number of
-        #    messages problem for another day.
         max_index =
           Message
           |> Ecto.Query.where([m], m.to_id == ^to_id)
@@ -79,7 +75,6 @@ defmodule Prodigy.Server.Service.Messaging do
           from_id: from_id,
           from_name: from_name |> String.slice(0..17),
           to_id: to_id,
-          # TODO handle rolling index over ; e.g., max_index + 1 % 2^16
           index: max_index + 1,
           subject: subject |> String.slice(0..19),
           sent_date: send_date,
@@ -92,8 +87,6 @@ defmodule Prodigy.Server.Service.Messaging do
     end)
   end
 
-  # TODO there is an issue with replies from mailbox; they seem to be addressed to the from_id of the last item shown
-  #   on the mailbox page
   defp internal_send_message(%User{} = from, payload) do
     <<count::16-big, rest::binary>> = payload
     bytes = count * 7
@@ -133,7 +126,6 @@ defmodule Prodigy.Server.Service.Messaging do
         message
       end)
 
-    # TODO rename "contents" to "body"
     length = byte_size(message.contents)
 
     res = <<
@@ -146,9 +138,6 @@ defmodule Prodigy.Server.Service.Messaging do
   end
 
   defp get_mailbox_page(page, user_id) do
-    # TODO handle case where page is out of range
-    # TODO put these queries in a transaction so that newly arriving mail doesn't mess things up
-
     total_messages =
       Message
       |> Ecto.Query.where([m], m.to_id == ^user_id)
@@ -218,9 +207,6 @@ defmodule Prodigy.Server.Service.Messaging do
 
     _delete_indices = fixed_chunk(1, deletes)
     _retain_indices = fixed_chunk(1, retains)
-
-    # TODO the spec shows 1 byte slots, but I think it evolved to two bytes as shown for "index" in the mailbox retrieva
-    # TODO no matter, the messaging application doesn't handle this yet anyways.
   end
 
   def handle(%Fm0{payload: <<0x1, payload::binary>>} = request, %Session{} = session) do

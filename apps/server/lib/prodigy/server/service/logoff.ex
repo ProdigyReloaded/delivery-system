@@ -1,16 +1,16 @@
 # Copyright 2022, Phillip Heller
 #
-# This file is part of prodigyd.
+# This file is part of Prodigy Reloaded.
 #
-# prodigyd is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+# Prodigy Reloaded is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
 #
-# prodigyd is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# Prodigy Reloaded is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 # the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU Affero General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License along with prodigyd. If not,
+# You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Service.Logoff do
@@ -46,12 +46,10 @@ defmodule Prodigy.Server.Service.Logoff do
     })
     |> Repo.update()
 
-    # TODO find the current session for the user and set the off time
     Logger.info("User #{user_id} logged off (#{reason})")
     :ok
   end
 
-  # TODO better understand the format of this message
   def handle(%Fm0{} = request, %Session{user: nil}) do
     {:ok, %Session{}, DiaPacket.encode(Fm0.make_response(<<>>, request))}
   end

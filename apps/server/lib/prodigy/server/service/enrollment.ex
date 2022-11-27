@@ -1,16 +1,16 @@
 # Copyright 2022, Phillip Heller
 #
-# This file is part of prodigyd.
+# This file is part of Prodigy Reloaded.
 #
-# prodigyd is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+# Prodigy Reloaded is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
 #
-# prodigyd is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# Prodigy Reloaded is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 # the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU Affero General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License along with prodigyd. If not,
+# You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Service.Enrollment do
@@ -34,9 +34,6 @@ defmodule Prodigy.Server.Service.Enrollment do
     Logger.debug("received enrollment packet: #{inspect(request, base: :hex, limit: :infinity)}")
     user_id = user.id
 
-    # TODO add user enrollment (accounts ending B-F, vs subscriber; e.g., account ending in A)
-    # type 0x1 == subscriber
-    # type 0x2 == user
     <<0x2, type, 0x1, ^user_id::binary-size(7), _::40, _count::16-big, rest::binary>> = payload
 
     entries = Profile.parse_request_values(rest)
@@ -46,10 +43,10 @@ defmodule Prodigy.Server.Service.Enrollment do
     # normalized out ouf the household, workarounds like this won't be needed.
     user_changeset =
       case type do
-        0x2 ->
+        0x2 ->  # user
           %{}
 
-        0x1 ->
+        0x1 ->  # subscriber
           %{
             last_name: Map.get(household_changeset, :user_a_last),
             first_name: Map.get(household_changeset, :user_a_first),

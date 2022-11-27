@@ -1,16 +1,16 @@
 # Copyright 2022, Phillip Heller
 #
-# This file is part of prodigyd.
+# This file is part of Prodigy Reloaded.
 #
-# prodigyd is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+# Prodigy Reloaded is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
 #
-# prodigyd is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# Prodigy Reloaded is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 # the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU Affero General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License along with prodigyd. If not,
+# You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Service.Logon do
@@ -23,7 +23,7 @@ defmodule Prodigy.Server.Service.Logon do
   require Ecto.Query
   use EnumType
 
-  import Prodigy.Server.Util
+  import Prodigy.Core.Util
 
   alias Comeonin.Ecto.Password
   alias Prodigy.Core.Data.{Repo, User}
@@ -89,37 +89,23 @@ defmodule Prodigy.Server.Service.Logon do
           <<
             1::1,
             0::3,
-            # 'A'
-            bool2int(user.data_collection_policy.ad)::1,
-            # 'W'
-            bool2int(user.data_collection_policy.pwindow)::1,
-            # 'E'
-            bool2int(user.data_collection_policy.element)::1,
-            # 'T'
-            bool2int(user.data_collection_policy.template)::1,
+            bool2int(user.data_collection_policy.ad)::1,        # 'A'
+            bool2int(user.data_collection_policy.pwindow)::1,   # 'W'
+            bool2int(user.data_collection_policy.element)::1,   # 'E'
+            bool2int(user.data_collection_policy.template)::1,  # 'T'
 
             # function codes
-            # 'E'
-            bool2int(user.data_collection_policy.exit)::1,
-            # 'U'
-            bool2int(user.data_collection_policy.undo)::1,
-            # 'P'
-            bool2int(user.data_collection_policy.path)::1,
-            # 'H'
-            bool2int(user.data_collection_policy.help)::1,
-            # 'J'
-            bool2int(user.data_collection_policy.jump)::1,
-            # 'B'
-            bool2int(user.data_collection_policy.back)::1,
-            # 'N'
-            bool2int(user.data_collection_policy.next)::1,
-            # 'C'
-            bool2int(user.data_collection_policy.commit)::1,
+            bool2int(user.data_collection_policy.exit)::1,      # 'E'
+            bool2int(user.data_collection_policy.undo)::1,      # 'U'
+            bool2int(user.data_collection_policy.path)::1,      # 'P'
+            bool2int(user.data_collection_policy.help)::1,      # 'H'
+            bool2int(user.data_collection_policy.jump)::1,      # 'J'
+            bool2int(user.data_collection_policy.back)::1,      # 'B'
+            bool2int(user.data_collection_policy.next)::1,      # 'N'
+            bool2int(user.data_collection_policy.commit)::1,    # 'C'
             0::6,
-            # 'A'
-            bool2int(user.data_collection_policy.action)::1,
-            # 'L'
-            bool2int(user.data_collection_policy.look)::1,
+            bool2int(user.data_collection_policy.action)::1,    # 'A'
+            bool2int(user.data_collection_policy.look)::1,      # 'L'
             0::8
           >>
       end
@@ -129,50 +115,29 @@ defmodule Prodigy.Server.Service.Logon do
 
     res = <<
       0x0,
-      # TODO set PRF_GENDER from user record, N.B. nil breaks encoding
-      "M",
-      #      0x0::unsigned-integer-size(32), # TODO implement data collection
+      "M",                              # TODO set PRF_GENDER from user record, N.B. nil breaks encoding
       data_collection::binary,
-      # unknown
-      0x0,
-      # PRF_BUSINESS_CLIENT_CODE
-      0x0,
-      # PRF_USER_SECURITY_LEVEL
-      0x0,
-      # PRF_AUTO_SKIP
-      0x0,
-      # PRF_GAME_PROFILE
-      0x0,
-      # SYS_DATE
-      date::binary-size(6)-unit(8),
-      # SYS_TIME
-      time::binary-size(6)-unit(8),
+      0x0,                              # unknown
+      0x0,                              # PRF_BUSINESS_CLIENT_CODE
+      0x0,                              # PRF_USER_SECURITY_LEVEL
+      0x0,                              # PRF_AUTO_SKIP
+      0x0,                              # PRF_GAME_PROFILE
+      date::binary-size(6)-unit(8),     # SYS_DATE
+      time::binary-size(6)-unit(8),     # SYS_TIME
       new_mail_indicator,
-      # PRF_CUG_ID
-      0x0::16,
-      # ??
-      0x0::16,
-      # "TL",                           # PRF_CUG_SERVICE_ID
-      0x0::16,
-      # PRF_USER_CLASS
-      0x0::unsigned-integer-size(16),
+      0x0::16,                          # PRF_CUG_ID
+      0x0::16,                          # ??
+      0x0::16,                          # PRF_CUG_SERVICE_ID
+      0x0::unsigned-integer-size(16),   # PRF_USER_CLASS
 
-      # tlpeadds shows some more, including the last logon date and time, let's see
-      # yup! works for 6.03.17.  what about older? yup, works for 6.03.10
-      #
-      0::16,
-      # PRF_TIER_OF_SERVICE
-      0::16,
-      # PRF_CCL_VERSION_NUM
+      # Additional information expected by TLPEADDS
+      0::16,                            # PRF_TIER_OF_SERVICE
+      0::16,                            # PRF_CCL_VERSION_NUM
+      0,                                # PRF_SEL_NUM_ITEMS
       0,
-      # PRF_SEL_NUM_ITEMS
-      0,
-      #
       0::16,
-      # PRF_LAST_LOGON_DATE
-      last_logon_date::binary-size(8),
-      # PRF_LAST_LOGON_TIME
-      last_logon_time::binary-size(5)
+      last_logon_date::binary-size(8),  # PRF_LAST_LOGON_DATE
+      last_logon_time::binary-size(5)   # PRF_LAST_LOGON_TIME
       # PRF_SEL_ITEM_LIST::2
     >>
 
@@ -182,18 +147,14 @@ defmodule Prodigy.Server.Service.Logon do
 
   def make_response_payload({status, _}) do
     now = Calendar.DateTime.now_utc()
-    # TODO refactor to use Timex
     date = now |> Calendar.strftime("%m%d%y")
-    # TODO refactor to use Timex
     time = now |> Calendar.strftime("%H%M%S")
 
     <<
       status.value,
       0x0::unsigned-integer-size(80),
-      # SYS_DATE
-      date::binary-size(6)-unit(8),
-      # SYS_TIME
-      time::binary-size(6)-unit(8),
+      date::binary-size(6)-unit(8),   # SYS_DATE
+      time::binary-size(6)-unit(8),   # SYS_TIME
       0x0::unsigned-integer-size(56)
     >>
   end
@@ -211,13 +172,11 @@ defmodule Prodigy.Server.Service.Logon do
     Logger.debug("retrieving user '#{user_id} (password: '#{password}')")
     Logger.debug("#{inspect(user)}")
 
-    # TODO it is a case insensitive match from the user perspective; RS uppercases whatever is given, so we should
-    #   do the same.
     if user == nil do
       Logger.warn("User #{user_id} attempted to logon, but does not exist in the database")
       :bad_password
-      #      true -> case Comeonin.Ecto.Password.valid?(password, user.password) do
     else
+      # TODO remove this once tooling supports creating users with initial password hashed
       encrypted_pw =
         case String.starts_with?(user.password, "$pbkdf2-sha512$") do
           true -> user.password
@@ -231,7 +190,6 @@ defmodule Prodigy.Server.Service.Logon do
 
         false ->
           Logger.warn("User #{user_id} attempted logon, but failed authentication")
-          # should match when password doesn't match or no user
           :bad_password
       end
     end

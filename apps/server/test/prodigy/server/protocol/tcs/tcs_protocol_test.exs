@@ -1,16 +1,16 @@
 # Copyright 2022, Phillip Heller
 #
-# This file is part of prodigyd.
+# This file is part of Prodigy Reloaded.
 #
-# prodigyd is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+# Prodigy Reloaded is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
 #
-# prodigyd is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# Prodigy Reloaded is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 # the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU Affero General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License along with prodigyd. If not,
+# You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Protocol.Tcs.Test do
@@ -168,16 +168,6 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
     assert packet.seq == 0
     assert packet.payload == <<0>>
   end
-
-  #  test "TcsProtocol parses a valid TCS type 2 packet with sequence 0", context do
-  #    send(context.tcsp, {:tcp, nil, Packet.ackpkt(42)})
-  #
-  #     TODO use exmock or something around the socket so we can assert that transport.send wasn't called
-  #     TODO also need to implement the supervisory stuff so we can test that the ack'd packet is removed from the
-  #       wack queue
-  #  end
-
-  # TODO need to add a test that a disconnect sends a message to the router to dispose of the session
 
   test "out of sequence packet causes NAKNCC", context do
     send(

@@ -1,16 +1,16 @@
 # Copyright 2022, Phillip Heller
 #
-# This file is part of prodigyd.
+# This file is part of Prodigy Reloaded.
 #
-# prodigyd is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+# Prodigy Reloaded is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
 #
-# prodigyd is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# Prodigy Reloaded is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 # the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU Affero General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License along with prodigyd. If not,
+# You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Service.Profile do
@@ -28,6 +28,7 @@ defmodule Prodigy.Server.Service.Profile do
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Session
 
+
   defp identity(input) do
     input
   end
@@ -36,7 +37,6 @@ defmodule Prodigy.Server.Service.Profile do
     String.trim(input)
   end
 
-  # TODO BUG if user doesn't give a birthdate on enrollment, this fails
   defp todate(input) do
     Timex.parse!(input, "{0M}{0D}{YY}") |> Timex.to_date()
   end
@@ -174,286 +174,98 @@ defmodule Prodigy.Server.Service.Profile do
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   def get_value(tac, user, household) do
     case tac do
-      0x102 ->
-        household.address_1
-
-      0x103 ->
-        household.address_2
-
-      0x104 ->
-        household.city
-
-      0x105 ->
-        household.state
-
-      0x106 ->
-        household.zipcode
-
-      0x107 ->
-        household.telephone
-
-      # &todate/1}
-      0x10E ->
-        household.enabled_date
-
-      # &todate/1}
-      0x10F ->
-        household.disabled_date
-
-      0x110 ->
-        household.disabled_reason
-
-      0x111 ->
-        household.id
-
-      0x112 ->
-        household.subscriber_suffix
-
-      0x113 ->
-        household.household_password
-
-      0x114 ->
-        household.household_income_range_code
-
-      0x115 ->
-        household.suffix_in_use_indicators
-
-      0x116 ->
-        household.account_status_flag
-
-      0x11A ->
-        household.user_a_last
-
-      0x11B ->
-        household.user_a_first
-
-      0x11C ->
-        household.user_a_middle
-
-      0x11D ->
-        household.user_a_title
-
-      0x11F ->
-        household.user_a_access_level
-
-      0x120 ->
-        household.user_a_indicators
-
-      0x123 ->
-        household.user_b_last
-
-      0x124 ->
-        household.user_b_first
-
-      0x125 ->
-        household.user_b_middle
-
-      0x126 ->
-        household.user_b_title
-
-      0x128 ->
-        household.user_b_access_level
-
-      0x129 ->
-        household.user_b_indicators
-
-      0x12C ->
-        household.user_c_last
-
-      0x12D ->
-        household.user_c_first
-
-      0x12E ->
-        household.user_c_middle
-
-      0x12F ->
-        household.user_c_title
-
-      0x131 ->
-        household.user_c_access_level
-
-      0x132 ->
-        household.user_c_indicators
-
-      0x135 ->
-        household.user_d_last
-
-      0x136 ->
-        household.user_d_first
-
-      0x137 ->
-        household.user_d_middle
-
-      0x138 ->
-        household.user_d_title
-
-      0x13A ->
-        household.user_d_access_level
-
-      0x13B ->
-        household.user_d_indicators
-
-      0x13E ->
-        household.user_e_last
-
-      0x13F ->
-        household.user_e_first
-
-      0x140 ->
-        household.user_e_middle
-
-      0x141 ->
-        household.user_e_title
-
-      0x143 ->
-        household.user_e_access_level
-
-      0x144 ->
-        household.user_e_indicators
-
-      0x147 ->
-        household.user_f_last
-
-      0x148 ->
-        household.user_f_first
-
-      0x149 ->
-        household.user_f_middle
-
-      0x14A ->
-        household.user_f_title
-
-      0x14C ->
-        household.user_f_access_level
-
-      0x14D ->
-        household.user_f_indicators
-
-      0x14E ->
-        user.id
-
-      0x14F ->
-        user.password
-
-      0x150 ->
-        user.region
-
-      0x152 ->
-        user.mail_count
-
-      0x153 ->
-        user.access_control
-
-      0x154 ->
-        user.pw_change_try_count
-
-      0x155 ->
-        user.port_index_id
-
-      0x156 ->
-        user.indicators_for_application_usage
-
-      0x157 ->
-        user.gender
-
-      # &todate/1
-      0x159 ->
-        user.date_enrolled
-
-      # &todate/1
-      0x15A ->
-        user.date_deleted
-
-      0x15B ->
-        user.delete_reason
-
-      0x15C ->
-        user.delete_source
-
-      0x15E ->
-        user.last_name
-
-      0x15F ->
-        user.first_name
-
-      0x160 ->
-        user.middle_name
-
-      0x161 ->
-        user.title
-
-      # &todate/1
-      0x162 ->
-        user.birthdate
-
-      0x20A ->
-        user.prf_path_jumpword_13
-
-      0x20B ->
-        user.prf_path_jumpword_14
-
-      0x20C ->
-        user.prf_path_jumpword_15
-
-      0x20D ->
-        user.prf_path_jumpword_16
-
-      0x20E ->
-        user.prf_path_jumpword_17
-
-      0x20F ->
-        user.prf_path_jumpword_18
-
-      0x210 ->
-        user.prf_path_jumpword_19
-
-      0x211 ->
-        user.prf_path_jumpword_20
-
-      0x23F ->
-        user.prf_path_jumpword_1
-
-      0x240 ->
-        user.prf_path_jumpword_2
-
-      0x241 ->
-        user.prf_path_jumpword_3
-
-      0x242 ->
-        user.prf_path_jumpword_4
-
-      0x243 ->
-        user.prf_path_jumpword_5
-
-      0x244 ->
-        user.prf_path_jumpword_6
-
-      0x245 ->
-        user.prf_path_jumpword_7
-
-      0x246 ->
-        user.prf_path_jumpword_8
-
-      0x247 ->
-        user.prf_path_jumpword_9
-
-      0x248 ->
-        user.prf_path_jumpword_10
-
-      0x249 ->
-        user.prf_path_jumpword_11
-
-      0x24A ->
-        user.prf_path_jumpword_12
-
-      0x2C2 ->
-        user.prf_last_logon_date
-
-      0x2C4 ->
-        user.prf_last_logon_time
-
-      0x2FB ->
-        user.prf_madmaze_save
+      0x102 -> household.address_1
+      0x103 -> household.address_2
+      0x104 -> household.city
+      0x105 -> household.state
+      0x106 -> household.zipcode
+      0x107 -> household.telephone
+      0x10E -> household.enabled_date
+      0x10F -> household.disabled_date
+      0x110 -> household.disabled_reason
+      0x111 -> household.id
+      0x112 -> household.subscriber_suffix
+      0x113 -> household.household_password
+      0x114 -> household.household_income_range_code
+      0x115 -> household.suffix_in_use_indicators
+      0x116 -> household.account_status_flag
+      0x11A -> household.user_a_last
+      0x11B -> household.user_a_first
+      0x11C -> household.user_a_middle
+      0x11D -> household.user_a_title
+      0x11F -> household.user_a_access_level
+      0x120 -> household.user_a_indicators
+      0x123 -> household.user_b_last
+      0x124 -> household.user_b_first
+      0x125 -> household.user_b_middle
+      0x126 -> household.user_b_title
+      0x128 -> household.user_b_access_level
+      0x129 -> household.user_b_indicators
+      0x12C -> household.user_c_last
+      0x12D -> household.user_c_first
+      0x12E -> household.user_c_middle
+      0x12F -> household.user_c_title
+      0x131 -> household.user_c_access_level
+      0x132 -> household.user_c_indicators
+      0x135 -> household.user_d_last
+      0x136 -> household.user_d_first
+      0x137 -> household.user_d_middle
+      0x138 -> household.user_d_title
+      0x13A -> household.user_d_access_level
+      0x13B -> household.user_d_indicators
+      0x13E -> household.user_e_last
+      0x13F -> household.user_e_first
+      0x140 -> household.user_e_middle
+      0x141 -> household.user_e_title
+      0x143 -> household.user_e_access_level
+      0x144 -> household.user_e_indicators
+      0x147 -> household.user_f_last
+      0x148 -> household.user_f_first
+      0x149 -> household.user_f_middle
+      0x14A -> household.user_f_title
+      0x14C -> household.user_f_access_level
+      0x14D -> household.user_f_indicators
+      0x14E -> user.id
+      0x14F -> user.password
+      0x150 -> user.region
+      0x152 -> user.mail_count
+      0x153 -> user.access_control
+      0x154 -> user.pw_change_try_count
+      0x155 -> user.port_index_id
+      0x156 -> user.indicators_for_application_usage
+      0x157 -> user.gender
+      0x159 -> user.date_enrolled
+      0x15A -> user.date_deleted
+      0x15B -> user.delete_reason
+      0x15C -> user.delete_source
+      0x15E -> user.last_name
+      0x15F -> user.first_name
+      0x160 -> user.middle_name
+      0x161 -> user.title
+      0x162 -> user.birthdate
+      0x20A -> user.prf_path_jumpword_13
+      0x20B -> user.prf_path_jumpword_14
+      0x20C -> user.prf_path_jumpword_15
+      0x20D -> user.prf_path_jumpword_16
+      0x20E -> user.prf_path_jumpword_17
+      0x20F -> user.prf_path_jumpword_18
+      0x210 -> user.prf_path_jumpword_19
+      0x211 -> user.prf_path_jumpword_20
+      0x23F -> user.prf_path_jumpword_1
+      0x240 -> user.prf_path_jumpword_2
+      0x241 -> user.prf_path_jumpword_3
+      0x242 -> user.prf_path_jumpword_4
+      0x243 -> user.prf_path_jumpword_5
+      0x244 -> user.prf_path_jumpword_6
+      0x245 -> user.prf_path_jumpword_7
+      0x246 -> user.prf_path_jumpword_8
+      0x247 -> user.prf_path_jumpword_9
+      0x248 -> user.prf_path_jumpword_10
+      0x249 -> user.prf_path_jumpword_11
+      0x24A -> user.prf_path_jumpword_12
+      0x2C2 -> user.prf_last_logon_date
+      0x2C4 -> user.prf_last_logon_time
+      0x2FB -> user.prf_madmaze_save
 
       _ ->
         Logger.error("User requested profile value for unhandled TAC #{inspect(tac, base: :hex)}")
@@ -476,20 +288,13 @@ defmodule Prodigy.Server.Service.Profile do
     Logger.debug("[profile] request packet: #{inspect(request, base: :hex, limit: :infinity)}")
 
     <<
-      # pac
-      0x13,
-      # sac
-      action,
-      # 1 for the same user as is logged in
-      which_user,
-      # if ^ not 1, then user_id here
-      other_user_id::binary-size(7),
-      # some filler bytes
-      filler::binary-size(5),
-      # number of tacs (tertiary action codes) requested
-      _count::16-big,
-      # the tertiary action codes
-      rest::binary
+      0x13,                           # pac
+      action,                         # sac
+      which_user,                     # 1 for same user as is logged in
+      other_user_id::binary-size(7),  # if not same user, then user_id here
+      filler::binary-size(5),         # some filler bytes
+      _count::16-big,                 # number of tacs (tertiary action codes) requested
+      rest::binary                    # the tertiary action codes
     >> = payload
 
     entries = parse_request_values(rest)
@@ -499,8 +304,6 @@ defmodule Prodigy.Server.Service.Profile do
     # rest is in the form of:  << tac::16-little, length, value::binary-size(length) >>
     # parse it into a list of tuples in the form { tac, value }
     # then, the list will be passed into the retrieve or update method
-
-    # for personal path / viewpath, it seems 6.03.10 wanted blank spaces, but 6.03.17 wants nulls?
 
     values =
       case action do
@@ -514,7 +317,6 @@ defmodule Prodigy.Server.Service.Profile do
         0x04 ->
           Logger.info("Profile update received for user #{user.id}")
 
-          # TODO extract these bits into something common that enrollment can also call
           household_changeset = get_household_changeset(entries)
 
           user_changeset =

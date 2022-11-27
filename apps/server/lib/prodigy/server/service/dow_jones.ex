@@ -1,16 +1,16 @@
 # Copyright 2022, Phillip Heller
 #
-# This file is part of prodigyd.
+# This file is part of Prodigy Reloaded.
 #
-# prodigyd is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+# Prodigy Reloaded is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
 #
-# prodigyd is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# Prodigy Reloaded is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 # the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU Affero General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License along with prodigyd. If not,
+# You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
 defmodule Prodigy.Server.Service.DowJones do
@@ -46,8 +46,6 @@ defmodule Prodigy.Server.Service.DowJones do
               regularMarketVolume: nil
   end
 
-  # TODO this module is now a hot mess
-
   defp get_quote(symbol) do
     YahooFinance.custom_quote(String.trim(symbol), [
       :longName,
@@ -61,6 +59,9 @@ defmodule Prodigy.Server.Service.DowJones do
     ])
   end
 
+  @doc """
+  This method handles Stock Symbol to Company Name resolution requests from the newly created logic in BNB00037.PGM.
+  """
   def handle(%Fm0{dest: 0x009900, payload: symbol} = request, %Session{} = session) do
     Logger.debug("dow jones resolve symbol '#{symbol}' to short name")
 
@@ -104,24 +105,6 @@ defmodule Prodigy.Server.Service.DowJones do
 
     response =
       try do
-        # TODO caching?  support resolving the quote to the short name?
-        # TODO need to prepend chage with - if last < previous close
-        # TODO need to creat the task in the supervision tree, then Process.trap exits.
-        #   The problem here is that the task is exiting and that :EXIT is going to the router's handle_info
-        # want code to look like:
-        #
-        # reply = try
-        #   call_yahoo_api(symbol, 3000)
-        #   |> deserialize_yahoo_response
-        #   |> extract_quote_data
-        #   |> transform_quote_data
-        #   |> dia_success_reply(request)
-        # rescue
-        #   dia_error_reply(request)
-        # end
-        # |> DiaPacket.encode
-        # {:ok, session, reply}
-        #
 
         json =
           try do
