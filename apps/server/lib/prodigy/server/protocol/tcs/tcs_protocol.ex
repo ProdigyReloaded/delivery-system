@@ -210,8 +210,6 @@ defmodule Prodigy.Server.Protocol.Tcs do
   @impl GenServer
   def terminate(reason, state) do
     Logger.debug("TCS server shutting down: #{inspect(reason)}")
-    #    Process.exit(state.dia_pid, :shutdown)
-    #    Process.exit(self(), :shutdown)
     :normal
   end
 

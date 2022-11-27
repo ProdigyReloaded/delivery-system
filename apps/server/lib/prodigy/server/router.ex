@@ -130,7 +130,7 @@ defmodule Prodigy.Server.Router do
         0x067201 ->
           DowJones
 
-        # this is the made up destination for the dow jones ticket to name resolve function
+        # this is the made up destination for the dow jones symbol to name resolve function
         0x009900 ->
           DowJones
 

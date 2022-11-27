@@ -39,7 +39,7 @@ defmodule Prodigy.Server.Service.Enrollment do
     entries = Profile.parse_request_values(rest)
     household_changeset = Profile.get_household_changeset(entries)
 
-    # propogate ther subscriber given name/title to the related user account.  If the "user" data is
+    # propogate the subscriber given name/title to the related user account.  If the "user" data is
     # normalized out ouf the household, workarounds like this won't be needed.
     user_changeset =
       case type do
