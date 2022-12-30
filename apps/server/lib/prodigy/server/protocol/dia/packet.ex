@@ -145,8 +145,8 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
 
   @spec encode(Fm9.t()) :: binary()
   def encode(%Fm9{} = packet) do
-    <<6, 0::1, 9::7, packet.function.value, packet.reason.value, packet.flags.store_by_key::1,
-      packet.flags.retrieve_by_key::1, packet.flags.binary_data::1, packet.flags.ascii_data::1,
+    <<6, 0::1, 9::7, packet.function.value, packet.reason.value, bool2int(packet.flags.store_by_key)::1,
+      bool2int(packet.flags.retrieve_by_key)::1, bool2int(packet.flags.binary_data)::1, bool2int(packet.flags.ascii_data)::1,
       0::4, byte_size(packet.payload), packet.payload::binary>>
   end
 
