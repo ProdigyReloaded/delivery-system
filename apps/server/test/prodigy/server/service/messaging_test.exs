@@ -201,11 +201,124 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     assert Messaging.unread_messages?(%User{id: "BBBB12B"}) == true
   end
 
-  #
-  #  test "delete & retain" do
-  #    flunk("not yet implemented")
-  #  end
-  #
+  test "delete", context do
+    logon(context.router_pid, "AAAA12A", "foobaz", "06.03.17")
+
+    assert 0 == Message |> Repo.aggregate(:count)
+
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 1", "Test 1")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 2", "Test 2")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 3", "Test 3")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 4", "Test 4")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 5", "Test 5")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 6", "Test 6")
+
+    assert 6 ==  Message |> Repo.aggregate(:count)
+
+    message_payload = <<
+      0x04,       # delete
+      2::16-big,  # delete 2 messages
+      1::16-big,
+      3::16-big,
+      0xFF        # done
+    >>
+
+    Router.handle_packet(context.router_pid, %Fm0{
+      src: 0x0,
+      dest: 0x00D200,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0,
+      payload: <<0x01>> <> message_payload
+    })
+
+    assert 4 == Message |> Repo.aggregate(:count)
+    assert 0 == Message |> Ecto.Query.where([m], m.index in [1, 3]) |> Repo.aggregate(:count)
+
+    logoff(context.router_pid)
+  end
+
+  test "retain", context do
+    logon(context.router_pid, "AAAA12A", "foobaz", "06.03.17")
+
+    assert 0 == Message |> Repo.aggregate(:count)
+
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 1", "Test 1")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 2", "Test 2")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 3", "Test 3")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 4", "Test 4")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 5", "Test 5")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 6", "Test 6")
+
+    assert 6 == Message |> Ecto.Query.where([m], m.retain == false) |> Repo.aggregate(:count)
+
+    message_payload = <<
+      0x05,       # retain
+      3::16-big,  # retain 3 messages
+      2::16-big,
+      4::16-big,
+      6::16-big,
+      0xFF        # done
+    >>
+
+    Router.handle_packet(context.router_pid, %Fm0{
+      src: 0x0,
+      dest: 0x00D200,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0,
+      payload: <<0x01>> <> message_payload
+    })
+
+    assert 6 == Message |> Repo.aggregate(:count)
+    assert 3 == Message |> Ecto.Query.where([m], m.retain == true) |> Repo.aggregate(:count)
+
+    logoff(context.router_pid)
+  end
+
+  test "delete and retain", context do
+    logon(context.router_pid, "AAAA12A", "foobaz", "06.03.17")
+
+    assert 0 == Message |> Repo.aggregate(:count)
+
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 1", "Test 1")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 2", "Test 2")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 3", "Test 3")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 4", "Test 4")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 5", "Test 5")
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 6", "Test 6")
+
+    assert 6 == Message |> Ecto.Query.where([m], m.retain == false) |> Repo.aggregate(:count)
+
+    message_payload = <<
+      0x04,       # delete
+      2::16-big,  # delete 2 messages
+      1::16-big,
+      3::16-big,
+      0x05,       # retain
+      3::16-big,  # retain 3 messages
+      2::16-big,
+      4::16-big,
+      6::16-big,
+      0xFF        # done
+    >>
+
+    Router.handle_packet(context.router_pid, %Fm0{
+      src: 0x0,
+      dest: 0x00D200,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0,
+      payload: <<0x01>> <> message_payload
+    })
+
+    assert 4 == Message |> Repo.aggregate(:count)
+    assert 0 == Message |> Ecto.Query.where([m], m.index in [1, 3]) |> Repo.aggregate(:count)
+    assert 3 == Message |> Ecto.Query.where([m], m.retain == true) |> Repo.aggregate(:count)
+
+    logoff(context.router_pid)
+  end
+
   #  test "expunge unread messages" do
   #    flunk("not yet implemented")
   #  end

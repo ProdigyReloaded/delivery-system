@@ -201,12 +201,55 @@ defmodule Prodigy.Server.Service.Messaging do
     unread_message_count > 0
   end
 
-  defp handle_message_disposition(payload) do
-    <<0x4, delete_count, deletes::binary-size(delete_count), 0x5, retain_count,
-      retains::binary-size(retain_count), 0xFF>> = payload
+  defp do_disposition(<< 0x4, count::16-big, rest::binary >>, user) do
+    byte_count = count * 2
+    << data::binary-size(byte_count), rest::binary >> = rest
 
-    _delete_indices = fixed_chunk(1, deletes)
-    _retain_indices = fixed_chunk(1, retains)
+    indices = for << index::16-big <- data >>, do: index
+
+    Logger.debug("delete message indices: #{inspect indices}")
+
+    {:ok, message} =
+      Repo.transaction(fn ->
+        Message
+        |> Ecto.Query.where([m], m.to_id == ^user.id)
+        |> Ecto.Query.where([m], m.index in ^indices)
+        |> Repo.delete_all()
+      end)
+
+    do_disposition(rest, user)
+  end
+
+  defp do_disposition(<< 0x5, count::16-big, rest::binary >>, user) do
+    byte_count = count * 2
+    << data::binary-size(byte_count), rest::binary >> = rest
+
+    indices = for << index::16-big <- data >>, do: index
+
+    Logger.debug("retain message indices: #{inspect indices}")
+
+    Repo.transaction(fn ->
+      messages = Message
+      |> Ecto.Query.where([m], m.to_id == ^user.id)
+      |> Ecto.Query.where([m], m.index in ^indices)
+      |> Ecto.Query.where([m], m.retain == false)
+      |> Repo.all()
+
+      Enum.each(messages, fn message ->
+        # set the retain date
+        retain_date = DateTime.add(message.sent_date, 28 * 24 * 60 * 60, :second)
+
+        changeset = Message.changeset(message, %{retain: true, retain_date: retain_date})
+        Repo.update(changeset)
+      end)
+    end)
+
+    do_disposition(rest, user)
+  end
+
+  defp do_disposition(<< 0xff >>, user) do
+    # done
+    Logger.debug("done processing dispositions")
   end
 
   def handle(%Fm0{payload: <<0x1, payload::binary>>} = request, %Session{} = session) do
@@ -231,8 +274,10 @@ defmodule Prodigy.Server.Service.Messaging do
         <<0x1, 0x2, payload::binary>> ->
           internal_send_message(session.user, payload)
 
-        <<0x4, payload::binary>> ->
-          handle_message_disposition(payload)
+        <<0x4, rest::binary>> ->
+          do_disposition(payload, session.user) # deletes
+        <<0x5, rest::binary>> ->
+          do_disposition(payload, session.user) # retains
 
         _ ->
           Logger.warn(
