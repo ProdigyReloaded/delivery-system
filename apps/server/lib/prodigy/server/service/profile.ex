@@ -41,6 +41,15 @@ defmodule Prodigy.Server.Service.Profile do
     Timex.parse!(input, "{0M}{0D}{YY}") |> Timex.to_date()
   end
 
+  defp to2digitdate(input) do
+    parsed_date = todate(input)
+    if parsed_date.year >= 2039 do
+      %{ parsed_date | year: parsed_date.year - 100}
+    else
+      parsed_date
+    end
+  end
+
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   def get_user_changeset(entries) do
     Enum.reduce(entries, %{}, fn entry, changeset ->
@@ -65,7 +74,7 @@ defmodule Prodigy.Server.Service.Profile do
           0x15F -> {:first_name, &identity/1}
           0x160 -> {:middle_name, &identity/1}
           0x161 -> {:title, &identity/1}
-          0x162 -> {:birthdate, &todate/1}
+          0x162 -> {:birthdate, &to2digitdate/1}
           0x20A -> {:prf_path_jumpword_13, &trim_whitespace/1}
           0x20B -> {:prf_path_jumpword_14, &trim_whitespace/1}
           0x20C -> {:prf_path_jumpword_15, &trim_whitespace/1}
