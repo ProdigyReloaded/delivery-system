@@ -32,6 +32,10 @@ defmodule Prodigy.Server.RanchSup do
   """
   @impl Supervisor
   def init({}) do
+
+    Logger.debug("Setting up Down Jones company name lookup")
+    :ets.new(:dow_jones, [:set, :public, :named_table])
+
     Logger.debug("setting up the ranch supervision tree")
 
     children = [

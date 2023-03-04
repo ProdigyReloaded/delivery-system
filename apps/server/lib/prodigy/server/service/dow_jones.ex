@@ -46,6 +46,25 @@ defmodule Prodigy.Server.Service.DowJones do
               regularMarketVolume: nil
   end
 
+  defp decode_quote(symbol) do
+    json =
+      try do
+        case Task.async(fn -> get_quote(symbol) end)
+             |> Task.yield(3000) do
+          nil -> raise RuntimeError, message: "Timeout"
+          {:exit, _reason} -> raise RuntimeError, message: "Timeout"
+          {:ok, {:ok, {_symbol, json}}} -> json
+        end
+      catch
+        :exit, _reason -> raise RuntimeError, message: "Timeout"
+      end
+
+    yahoo_data =
+      Poison.decode!(json, as: %YahooFinanceData{quoteResponse: %Response{result: [%Quote{}]}})
+
+    Enum.at(yahoo_data.quoteResponse.result, 0)
+  end
+
   defp get_quote(symbol) do
     YahooFinance.custom_quote(String.trim(symbol), [
       :longName,
@@ -65,22 +84,19 @@ defmodule Prodigy.Server.Service.DowJones do
   def handle(%Fm0{dest: 0x009900, payload: symbol} = request, %Session{} = session) do
     Logger.debug("dow jones resolve symbol '#{symbol}' to short name")
 
-    json =
-      try do
-        case Task.async(fn -> get_quote(symbol) end)
-             |> Task.yield(3000) do
-          nil -> raise RuntimeError, message: "Timeout"
-          {:exit, _reason} -> raise RuntimeError, message: "Timeout"
-          {:ok, {:ok, {_symbol, json}}} -> json
-        end
-      catch
-        :exit, _reason -> raise RuntimeError, message: "Timeout"
+    shortName =
+      case(:ets.lookup(:dow_jones, symbol)) do
+        [{_key, value}] ->
+          value
+
+        _ ->
+          quote = decode_quote(symbol)
+          Logger.info("Symbol #{symbol} not found in table, adding.")
+          :ets.insert_new(:dow_jones, {symbol, quote.shortName})
+          quote.shortName
       end
 
-    yahoo_data =
-      Poison.decode!(json, as: %YahooFinanceData{quoteResponse: %Response{result: [%Quote{}]}})
-
-    quote = Enum.at(yahoo_data.quoteResponse.result, 0)
+    Logger.debug("short name is #{shortName}")
 
     response = %{
       request
@@ -91,7 +107,7 @@ defmodule Prodigy.Server.Service.DowJones do
         fm4: nil,
         fm9: nil,
         fm64: nil,
-        payload: quote.shortName
+        payload: shortName
     }
 
     {:ok, session, DiaPacket.encode(response)}
@@ -105,23 +121,8 @@ defmodule Prodigy.Server.Service.DowJones do
 
     response =
       try do
-
-        json =
-          try do
-            case Task.async(fn -> get_quote(symbol) end)
-                 |> Task.yield(3000) do
-              nil -> raise RuntimeError, message: "Timeout"
-              {:exit, _reason} -> raise RuntimeError, message: "Timeout"
-              {:ok, {:ok, {_symbol, json}}} -> json
-            end
-          catch
-            :exit, _reason -> raise RuntimeError, message: "Timeout"
-          end
-
-        yahoo_data =
-          Poison.decode!(json, as: %YahooFinanceData{quoteResponse: %Response{result: [%Quote{}]}})
-
-        quote = Enum.at(yahoo_data.quoteResponse.result, 0)
+        quote = decode_quote(symbol)
+        :ets.insert_new(:dow_jones, {symbol, quote.shortName})
 
         data =
           List.to_string(
