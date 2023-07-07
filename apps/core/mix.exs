@@ -26,7 +26,7 @@ defmodule Prodigy.Core.MixProject do
   defp deps do
     [
       {:ecto_sql, "~> 3.0"},
-      {:postgrex, "~> 0.16.3"},
+      {:postgrex, "~> 0.17.1"},
       {:comeonin_ecto_password, "~> 3.0.0"}
     ]
   end
