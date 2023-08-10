@@ -5,7 +5,7 @@ defmodule RecipeUtil.File do
 
   alias Prodigy.Core.Data.{Object, Repo}
 
-  @subst_map2  %{
+  @subst_map  %{
     "Body" =>
     << 0xA1, 0xC8, 0xC0, 0xC0, 0xD2, 0xA3, 0xC4, 0xC0,
    0xD2, 0xC0, 0xBE, 0xC0, 0xC8, 0xB3, 0xC2, 0xC6,
@@ -21,7 +21,7 @@ defmodule RecipeUtil.File do
     "Go to next page"
   }
 
-  @subst_map  %{
+  @subst_map2  %{
     "Body" =>
     "This is line 1 that has been changed" <> << 0x0D, 0x0A, 0x20 >> <>
     "This is line 2" <> << 0x0D, 0x0A, 0x20 >> <>
