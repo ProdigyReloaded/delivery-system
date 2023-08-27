@@ -27,6 +27,10 @@ config :server, Prodigy.Server.Scheduler,
     ]
   ]
 
+config :recipe,
+  cook_location: "/Users/rrc/recipe",
+  dosbox_location: "/Applications/DOSBox Staging.app/Contents/MacOS/dosbox"
+
 config :core, ecto_repos: [Prodigy.Core.Data.Repo], ecto_adapter: Ecto.Adapters.Postgres
 
 config :logger, :console, format: "$time $metadata[$level] $message\n"
