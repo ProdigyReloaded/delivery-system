@@ -193,6 +193,13 @@ defmodule Prodigy.OdbUtil.CLI do
       "import" ->
         Import.exec(rest, args)
 
+      "importraw" ->
+        args = %{
+          raw: true
+        }
+
+        Import.exec(rest, args)
+
       _ ->
         usage(:verbose)
     end

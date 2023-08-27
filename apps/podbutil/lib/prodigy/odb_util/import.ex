@@ -20,7 +20,7 @@ defmodule Import do
 
   import Ecto.Changeset
 
-  def parse_object(content) do
+  def parse_object(content, _filename) do
     <<
       object_id::binary-size(11),
       sequence,
@@ -37,13 +37,32 @@ defmodule Import do
     %Object{name: object_id, sequence: sequence, type: type, version: version, contents: content}
   end
 
-  def exec(argv, _args \\ %{}) do
+  def parse_object_raw(content, filename) do
+    [filename_prefix, filename_suffix] = String.split(Path.basename(filename), ".")
+    [ext, sequence, type, version] = String.split(filename_suffix, "_")
+
+    object_id = String.pad_trailing(filename_prefix <> ext, 11)
+
+    %Object{name: object_id,
+            sequence: String.to_integer(sequence),
+            type: String.to_integer(type),
+            version: String.to_integer(version),
+            contents: content}
+  end
+
+  def exec(argv, args \\ %{}) do
+
+    parse_fn = case Map.get(args, :raw) do
+      true -> &Import.parse_object_raw/2
+      _ -> &Import.parse_object/2
+    end
+
     Repo.transaction(fn ->
       count =
         Enum.flat_map(argv, fn arg -> Path.wildcard(arg) end)
         |> Enum.map(fn f ->
           File.read!(f)
-          |> parse_object
+          |> parse_fn.(f)
           |> change
           |> Repo.insert()
         end)
