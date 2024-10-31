@@ -107,80 +107,9 @@ defmodule Prodigy.Server.Protocol.Tcs do
     {new_buffer, new_tx_seq, new_rx_seq} =
       case Packet.decode(state.buffer <> data) do
         {:ok, packet, excess} ->
-          # data packet
-          if packet.type in [Type.UD1ACK, Type.UD1NAK, Type.UD2ACK, Type.UD2NAK] do
-            if packet.seq != state.rx_seq do
-              Logger.debug("incorrect receive sequence #{packet.seq}; expected #{state.rx_seq}")
-              transport.send(socket, Packet.nakncc(packet.seq))
-              {excess, state.tx_seq, state.rx_seq}
-            else
-              new_rx_seq = next_seq(state.rx_seq)
+          handle_packet_in({packet, excess}, packet.type, state)
 
-              Logger.debug(
-                "received packet in sequence, next expected receive sequence #{new_rx_seq}"
-              )
-
-              if packet.type in [Type.UD1ACK, Type.UD2ACK] do
-                Logger.debug("sending ack of packet sequence #{packet.seq}")
-                transport.send(socket, Packet.ackpkt(packet.seq))
-              end
-
-              new_tx_seq =
-                case state.dia_module.handle_packet(state.dia_pid, packet) do
-                  :ok ->
-                    Logger.debug("nothing to return to client")
-                    state.tx_seq
-
-                  {:ok, response} ->
-                    [first | rest] = binary_chunk_every(response, @max_payload_size)
-                    out_packet = %Packet{seq: state.tx_seq, type: Type.UD1ACK, payload: first}
-
-                    Logger.debug(
-                      "sending packet: #{inspect(out_packet, base: :hex, limit: :infinity)}"
-                    )
-
-                    transport.send(socket, Packet.encode(out_packet))
-
-                    new_tx_seq = next_seq(state.tx_seq)
-
-                    Enum.reduce(rest, new_tx_seq, fn chunk, tx_seq ->
-                      out_packet = %Packet{seq: tx_seq, type: Type.UD2ACK, payload: chunk}
-
-                      Logger.debug(
-                        "sending packet: #{inspect(out_packet, base: :hex, limit: :infinity)}"
-                      )
-
-                      transport.send(socket, Packet.encode(out_packet))
-                      next_seq(tx_seq)
-                    end)
-                end
-
-              {excess, new_tx_seq, new_rx_seq}
-            end
-          else
-            case packet.type do
-              Type.ACKPKT ->
-                Logger.debug("ackpkt")
-
-              Type.NAKCCE ->
-                Logger.error("nakcce")
-
-              Type.NAKNCC ->
-                Logger.error("nakncc")
-
-              Type.RXMITP ->
-                Logger.error("rxmitp")
-
-              Type.WACKPK ->
-                Logger.error("wackpk")
-                transport.send(socket, Packet.rxmitp(packet.seq))
-
-              Type.TXABOD ->
-                Logger.error("txabod")
-            end
-
-            {excess, state.tx_seq, state.rx_seq}
-          end
+        # data packet
 
         {:error, :crc, seq, excess} ->
           transport.send(socket, Packet.nakcce(seq))
@@ -208,13 +137,92 @@ defmodule Prodigy.Server.Protocol.Tcs do
   end
 
   @impl GenServer
-  def terminate(reason, state) do
-    Logger.debug("TCS server shutting down: #{inspect(reason)}")
-    :normal
+  def handle_info({:EXIT, _pid, _reason}, state) do
+    {:stop, :normal, state}
+  end
+
+  def handle_packet_in({packet, excess}, packet_type, state)
+      when packet_type in [Type.UD1ACK, Type.UD1NAK, Type.UD2ACK, Type.UD2NAK] do
+    if packet.seq != state.rx_seq do
+      Logger.debug("incorrect receive sequence #{packet.seq}; expected #{state.rx_seq}")
+      state.transport.send(state.socket, Packet.nakncc(packet.seq))
+      {excess, state.tx_seq, state.rx_seq}
+    else
+      new_rx_seq = next_seq(state.rx_seq)
+
+      Logger.debug("received packet in sequence, next expected receive sequence #{new_rx_seq}")
+
+      if packet.type in [Type.UD1ACK, Type.UD2ACK] do
+        Logger.debug("sending ack of packet sequence #{packet.seq}")
+        state.transport.send(state.socket, Packet.ackpkt(packet.seq))
+      end
+
+      new_tx_seq = handle_packet_out(packet, state)
+      {excess, new_tx_seq, new_rx_seq}
+    end
+  end
+
+  def handle_packet_in({_packet, excess}, Type.ACKPKT, state) do
+    Logger.debug("ackpkt")
+    {excess, state.tx_seq, state.rx_seq}
+  end
+
+  def handle_packet_in({_packet, excess}, Type.NAKCCE, state) do
+    Logger.error("nakcce")
+    {excess, state.tx_seq, state.rx_seq}
+  end
+
+  def handle_packet_in({_packet, excess}, Type.NAKNCC, state) do
+    Logger.error("nakncc")
+    {excess, state.tx_seq, state.rx_seq}
+  end
+
+  def handle_packet_in({_packet, excess}, Type.RXMITP, state) do
+    Logger.error("rxmitp")
+    {excess, state.tx_seq, state.rx_seq}
+  end
+
+  def handle_packet_in({packet, excess}, Type.WACKPK, state) do
+    Logger.error("wackpk")
+    state.transport.send(state.socket, Packet.rxmitp(packet.seq))
+    {excess, state.tx_seq, state.rx_seq}
+  end
+
+  def handle_packet_in({_packet, excess}, Type.TXABOD, state) do
+    Logger.error("txabod")
+    {excess, state.tx_seq, state.rx_seq}
+  end
+
+  def handle_packet_out(packet, state) do
+    case state.dia_module.handle_packet(state.dia_pid, packet) do
+      :ok ->
+        Logger.debug("nothing to return to client")
+        state.tx_seq
+
+      {:ok, response} ->
+        [first | rest] = binary_chunk_every(response, @max_payload_size)
+        out_packet = %Packet{seq: state.tx_seq, type: Type.UD1ACK, payload: first}
+
+        Logger.debug("sending packet: #{inspect(out_packet, base: :hex, limit: :infinity)}")
+
+        state.transport.send(state.socket, Packet.encode(out_packet))
+
+        new_tx_seq = next_seq(state.tx_seq)
+
+        Enum.reduce(rest, new_tx_seq, fn chunk, tx_seq ->
+          out_packet = %Packet{seq: tx_seq, type: Type.UD2ACK, payload: chunk}
+
+          Logger.debug("sending packet: #{inspect(out_packet, base: :hex, limit: :infinity)}")
+
+          state.transport.send(state.socket, Packet.encode(out_packet))
+          next_seq(tx_seq)
+        end)
+    end
   end
 
   @impl GenServer
-  def handle_info({:EXIT, _pid, _reason}, state) do
-    {:stop, :normal, state}
+  def terminate(reason, _state) do
+    Logger.debug("TCS server shutting down: #{inspect(reason)}")
+    :normal
   end
 end
