@@ -84,6 +84,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
     {:reply, state.dia_pid, state}
   end
 
+  @spec next_seq(integer()) :: integer()
   defp next_seq(seq) do
     Integer.mod(seq + 1, 256)
   end
@@ -141,6 +142,12 @@ defmodule Prodigy.Server.Protocol.Tcs do
     {:stop, :normal, state}
   end
 
+  @doc """
+  Called when handle_info has a complete TCS packet. The TCS packet is passed to send_tcs_packet_to_dia
+  which will determine if this completes a DIA packet or if we need more TCS packets.
+  Checks on the receive window are done here and acks or nacks, or 'we need more packets' are
+  sent from here.
+  """
   def handle_packet_in({packet, excess}, packet_type, state)
       when packet_type in [Type.UD1ACK, Type.UD1NAK, Type.UD2ACK, Type.UD2NAK] do
     if packet.seq != state.rx_seq do
@@ -157,7 +164,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
         state.transport.send(state.socket, Packet.ackpkt(packet.seq))
       end
 
-      new_tx_seq = handle_packet_out(packet, state)
+      new_tx_seq = send_tcs_packet_to_dia(packet, state)
       {excess, new_tx_seq, new_rx_seq}
     end
   end
@@ -193,7 +200,12 @@ defmodule Prodigy.Server.Protocol.Tcs do
     {excess, state.tx_seq, state.rx_seq}
   end
 
-  def handle_packet_out(packet, state) do
+  @doc """
+  Send a TCS packet to the DIA handler. The DIA handler will determine if this packet
+  completes a DIA packet. An :ok means it needs more TCS packets for a complete DIA,
+  {:ok, response} means that this completed a DIA packet and it handled the command.
+  """
+  def send_tcs_packet_to_dia(packet, state) do
     case state.dia_module.handle_packet(state.dia_pid, packet) do
       :ok ->
         Logger.debug("nothing to return to client")
