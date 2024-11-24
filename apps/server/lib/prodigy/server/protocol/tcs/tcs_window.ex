@@ -26,7 +26,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Window do
   @spec init(integer(), integer()) :: Prodigy.Server.Protocol.Tcs.Window.t()
   def init(window_start, window_size) do
 
-    Logger.debug("Init a window, start=#{window_start}, size=#{window_size}")
+    Logger.debug("Initting a window, start=#{window_start}, size=#{window_size}")
 
     # List of sequences in the proper wrap-around order. Important since maps don't preserve key order
     sequences = window_start .. (window_start + window_size - 1) |> Enum.map(fn x -> Integer.mod(x, @sequence_wrap) end)
