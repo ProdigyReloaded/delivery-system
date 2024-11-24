@@ -32,6 +32,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
   alias Prodigy.Server.Protocol.Tcs.Packet
   alias Prodigy.Server.Protocol.Tcs.Packet.Type
+  alias Prodigy.Server.Protocol.Tcs.Window
 
   @behaviour :ranch_protocol
   @timeout 6_000_000
@@ -46,7 +47,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
   defmodule State do
     @moduledoc "A structure containing the state utilized through the lifecycle of a TCS connection"
     @enforce_keys [:socket, :transport, :dia_module, :dia_pid]
-    defstruct [:socket, :transport, :dia_module, dia_pid: nil, buffer: <<>>, tx_seq: 0, rx_seq: 0]
+    defstruct [:socket, :transport, :dia_module, :window, dia_pid: nil, buffer: <<>>, tx_seq: 0, rx_seq: 0]
   end
 
   @impl true
@@ -75,6 +76,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
       socket: socket,
       transport: transport,
       dia_module: options.dia_module,
+      window: Window.init(0, Window.receive_window_size),
       dia_pid: dia_pid
     })
   end
@@ -105,7 +107,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
   @impl GenServer
   def handle_info({:tcp, _socket, data}, %State{socket: socket, transport: transport} = state) do
-    {new_buffer, new_tx_seq, new_rx_seq} =
+    {new_buffer, new_tx_seq, new_rx_seq, new_window} =
       case Packet.decode(state.buffer <> data) do
         {:ok, packet, excess} ->
           handle_packet_in({packet, excess}, packet.type, state)
@@ -114,13 +116,13 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
         {:error, :crc, seq, excess} ->
           transport.send(socket, Packet.nakcce(seq))
-          {excess, state.tx_seq, state.rx_seq}
+          {excess, state.tx_seq, state.rx_seq, state.window}
 
         {:fragment, excess} ->
-          {excess, state.tx_seq, state.rx_seq}
+          {excess, state.tx_seq, state.rx_seq, state.window}
       end
 
-    {:noreply, %{state | buffer: new_buffer, tx_seq: new_tx_seq, rx_seq: new_rx_seq}, @timeout}
+    {:noreply, %{state | buffer: new_buffer, tx_seq: new_tx_seq, rx_seq: new_rx_seq, window: new_window}, @timeout}
   end
 
   @impl GenServer
@@ -150,10 +152,23 @@ defmodule Prodigy.Server.Protocol.Tcs do
   """
   def handle_packet_in({packet, excess}, packet_type, state)
       when packet_type in [Type.UD1ACK, Type.UD1NAK, Type.UD2ACK, Type.UD2NAK] do
+
+    new_in_window = case Window.add_packet(state.window, state.rx_seq, packet) do
+      {:ok, window} ->
+        Logger.debug("Packet inside window range, added to window")
+        window
+      {:error, :outside_window} ->
+        Logger.debug("Packet was outside window, receive sequence is #{packet.seq}")
+        state.window
+    end
+
+    packet_error_list = Window.check_packets(state.window)
+    Logger.debug("Packet sequence errors this round is #{packet_error_list}")
+
     if packet.seq != state.rx_seq do
       Logger.debug("incorrect receive sequence #{packet.seq}; expected #{state.rx_seq}")
       state.transport.send(state.socket, Packet.nakncc(packet.seq))
-      {excess, state.tx_seq, state.rx_seq}
+      {excess, state.tx_seq, state.rx_seq, state.window}
     else
       new_rx_seq = next_seq(state.rx_seq)
 
@@ -164,40 +179,40 @@ defmodule Prodigy.Server.Protocol.Tcs do
         state.transport.send(state.socket, Packet.ackpkt(packet.seq))
       end
 
-      new_tx_seq = send_tcs_packet_to_dia(packet, state)
-      {excess, new_tx_seq, new_rx_seq}
+      {new_tx_seq, new_window} = send_tcs_packet_to_dia(packet, state, new_in_window)
+      {excess, new_tx_seq, new_rx_seq, new_window}
     end
   end
 
   def handle_packet_in({_packet, excess}, Type.ACKPKT, state) do
     Logger.debug("ackpkt")
-    {excess, state.tx_seq, state.rx_seq}
+    {excess, state.tx_seq, state.rx_seq, state.window}
   end
 
   def handle_packet_in({_packet, excess}, Type.NAKCCE, state) do
     Logger.error("nakcce")
-    {excess, state.tx_seq, state.rx_seq}
+    {excess, state.tx_seq, state.rx_seq, state.window}
   end
 
   def handle_packet_in({_packet, excess}, Type.NAKNCC, state) do
     Logger.error("nakncc")
-    {excess, state.tx_seq, state.rx_seq}
+    {excess, state.tx_seq, state.rx_seq, state.window}
   end
 
   def handle_packet_in({_packet, excess}, Type.RXMITP, state) do
     Logger.error("rxmitp")
-    {excess, state.tx_seq, state.rx_seq}
+    {excess, state.tx_seq, state.rx_seq, state.window}
   end
 
   def handle_packet_in({packet, excess}, Type.WACKPK, state) do
     Logger.error("wackpk")
     state.transport.send(state.socket, Packet.rxmitp(packet.seq))
-    {excess, state.tx_seq, state.rx_seq}
+    {excess, state.tx_seq, state.rx_seq, state.window}
   end
 
   def handle_packet_in({_packet, excess}, Type.TXABOD, state) do
     Logger.error("txabod")
-    {excess, state.tx_seq, state.rx_seq}
+    {excess, state.tx_seq, state.rx_seq, state.window}
   end
 
   @doc """
@@ -205,11 +220,11 @@ defmodule Prodigy.Server.Protocol.Tcs do
   completes a DIA packet. An :ok means it needs more TCS packets for a complete DIA,
   {:ok, response} means that this completed a DIA packet and it handled the command.
   """
-  def send_tcs_packet_to_dia(packet, state) do
+  def send_tcs_packet_to_dia(packet, state, in_window) do
     case state.dia_module.handle_packet(state.dia_pid, packet) do
       :ok ->
         Logger.debug("nothing to return to client")
-        state.tx_seq
+        {state.tx_seq, in_window}
 
       {:ok, response} ->
         [first | rest] = binary_chunk_every(response, @max_payload_size)
@@ -221,7 +236,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
         new_tx_seq = next_seq(state.tx_seq)
 
-        Enum.reduce(rest, new_tx_seq, fn chunk, tx_seq ->
+        last_tx_seq = Enum.reduce(rest, new_tx_seq, fn chunk, tx_seq ->
           out_packet = %Packet{seq: tx_seq, type: Type.UD2ACK, payload: chunk}
 
           Logger.debug("sending packet: #{inspect(out_packet, base: :hex, limit: :infinity)}")
@@ -229,6 +244,8 @@ defmodule Prodigy.Server.Protocol.Tcs do
           state.transport.send(state.socket, Packet.encode(out_packet))
           next_seq(tx_seq)
         end)
+        num_received_packets = Window.tcs_packets_used(in_window)
+        {last_tx_seq, Window.init(in_window.window_start + num_received_packets, Window.receive_window_size)}
     end
   end
 
