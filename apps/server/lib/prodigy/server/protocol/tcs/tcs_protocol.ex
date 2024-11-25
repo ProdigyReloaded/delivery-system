@@ -47,7 +47,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
   defmodule State do
     @moduledoc "A structure containing the state utilized through the lifecycle of a TCS connection"
     @enforce_keys [:socket, :transport, :dia_module, :dia_pid]
-    defstruct [:socket, :transport, :dia_module, :window, dia_pid: nil, buffer: <<>>, tx_seq: 0, rx_seq: 0]
+    defstruct [:socket, :transport, :dia_module, :rx_window, dia_pid: nil, buffer: <<>>, tx_seq: 0, rx_seq: 0]
   end
 
   @impl true
@@ -76,7 +76,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
       socket: socket,
       transport: transport,
       dia_module: options.dia_module,
-      window: Window.init(0, Window.receive_window_size),
+      rx_window: Window.init(0, Window.receive_window_size),
       dia_pid: dia_pid
     })
   end
@@ -107,7 +107,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
   @impl GenServer
   def handle_info({:tcp, _socket, data}, %State{socket: socket, transport: transport} = state) do
-    {new_buffer, new_tx_seq, new_rx_seq, new_window} =
+    {new_buffer, new_tx_seq, new_rx_seq, rx_window} =
       case Packet.decode(state.buffer <> data) do
         {:ok, packet, excess} ->
           handle_packet_in({packet, excess}, packet.type, state)
@@ -116,13 +116,13 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
         {:error, :crc, seq, excess} ->
           transport.send(socket, Packet.nakcce(seq))
-          {excess, state.tx_seq, state.rx_seq, state.window}
+          {excess, state.tx_seq, state.rx_seq, state.rx_window}
 
         {:fragment, excess} ->
-          {excess, state.tx_seq, state.rx_seq, state.window}
+          {excess, state.tx_seq, state.rx_seq, state.rx_window}
       end
 
-    {:noreply, %{state | buffer: new_buffer, tx_seq: new_tx_seq, rx_seq: new_rx_seq, window: new_window}, @timeout}
+    {:noreply, %{state | buffer: new_buffer, tx_seq: new_tx_seq, rx_seq: new_rx_seq, rx_window: rx_window}, @timeout}
   end
 
   @impl GenServer
@@ -153,22 +153,22 @@ defmodule Prodigy.Server.Protocol.Tcs do
   def handle_packet_in({packet, excess}, packet_type, state)
       when packet_type in [Type.UD1ACK, Type.UD1NAK, Type.UD2ACK, Type.UD2NAK] do
 
-    new_in_window = case Window.add_packet(state.window, state.rx_seq, packet) do
+    new_rx_window = case Window.add_packet(state.rx_window, state.rx_seq, packet) do
       {:ok, window} ->
         Logger.debug("Packet inside window range, added to window")
         window
       {:error, :outside_window} ->
         Logger.debug("Packet was outside window, receive sequence is #{packet.seq}")
-        state.window
+        state.rx_window
     end
 
-    packet_error_list = Window.check_packets(state.window)
+    packet_error_list = Window.check_packets(state.rx_window)
     Logger.debug("Packet sequence errors this round is #{packet_error_list}")
 
     if packet.seq != state.rx_seq do
       Logger.debug("incorrect receive sequence #{packet.seq}; expected #{state.rx_seq}")
       state.transport.send(state.socket, Packet.nakncc(packet.seq))
-      {excess, state.tx_seq, state.rx_seq, state.window}
+      {excess, state.tx_seq, state.rx_seq, state.rx_window}
     else
       new_rx_seq = next_seq(state.rx_seq)
 
@@ -179,40 +179,40 @@ defmodule Prodigy.Server.Protocol.Tcs do
         state.transport.send(state.socket, Packet.ackpkt(packet.seq))
       end
 
-      {new_tx_seq, new_window} = send_tcs_packet_to_dia(packet, state, new_in_window)
+      {new_tx_seq, new_window} = send_tcs_packet_to_dia(packet, state, new_rx_window)
       {excess, new_tx_seq, new_rx_seq, new_window}
     end
   end
 
   def handle_packet_in({_packet, excess}, Type.ACKPKT, state) do
     Logger.debug("ackpkt")
-    {excess, state.tx_seq, state.rx_seq, state.window}
+    {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
   def handle_packet_in({_packet, excess}, Type.NAKCCE, state) do
     Logger.error("nakcce")
-    {excess, state.tx_seq, state.rx_seq, state.window}
+    {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
   def handle_packet_in({_packet, excess}, Type.NAKNCC, state) do
     Logger.error("nakncc")
-    {excess, state.tx_seq, state.rx_seq, state.window}
+    {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
   def handle_packet_in({_packet, excess}, Type.RXMITP, state) do
     Logger.error("rxmitp")
-    {excess, state.tx_seq, state.rx_seq, state.window}
+    {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
   def handle_packet_in({packet, excess}, Type.WACKPK, state) do
     Logger.error("wackpk")
     state.transport.send(state.socket, Packet.rxmitp(packet.seq))
-    {excess, state.tx_seq, state.rx_seq, state.window}
+    {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
   def handle_packet_in({_packet, excess}, Type.TXABOD, state) do
     Logger.error("txabod")
-    {excess, state.tx_seq, state.rx_seq, state.window}
+    {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
   @doc """
