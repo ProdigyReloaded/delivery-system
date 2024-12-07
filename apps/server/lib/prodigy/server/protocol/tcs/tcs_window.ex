@@ -9,6 +9,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Window do
   require Logger
 
   alias __MODULE__
+  alias Prodigy.Server.Protocol.Tcs.Packet
 
   @sequence_wrap 256
 
@@ -21,9 +22,9 @@ defmodule Prodigy.Server.Protocol.Tcs.Window do
   def transmit_window_size, do: @transmit_window_size
 
   defstruct [:window_start, :window_size, :sequences, packet_map: %{} ]
-  @type t() :: %Window{sequences: list(integer()), window_start: integer(), window_size: integer(), packet_map: Map.t()}
+  @type t() :: %Window{sequences: list(integer()), window_start: integer(), window_size: integer(), packet_map: map()}
 
-  @spec init(integer(), integer()) :: Prodigy.Server.Protocol.Tcs.Window.t()
+  @spec init(integer(), integer()) :: Window.t()
   def init(window_start, window_size) do
 
     Logger.debug("Initting a window, start=#{window_start}, size=#{window_size}")
@@ -40,21 +41,49 @@ defmodule Prodigy.Server.Protocol.Tcs.Window do
 
   end
 
-  @spec add_packet(Prodigy.Server.Protocol.Tcs.Window.t(), integer(), binary()) ::
-          {:error, :outside_window} | {:ok, Prodigy.Server.Protocol.Tcs.Window.t()}
-  def add_packet(window, sequence_number, packet) do
-    if sequence_number in window.sequences do
-      new_packet_map = %{window.packet_map | sequence_number => packet}
-      {:ok, %Window{window | packet_map: new_packet_map}}
-    else
-      Logger.warning("Received packet with number #{sequence_number}, outside of current window.")
-      {:error, :outside_window}
+  def fetch_value(enumerable, index) do
+    case Enum.fetch(enumerable, index) do
+      {:ok, value} -> value
+      _ -> 0
     end
   end
 
+  @spec first_sequence(Window.t()) :: integer()
+  def first_sequence(window), do: fetch_value(window.sequences, 0)
+
+  @spec last_sequence(Window.t()) :: integer()
+  def last_sequence(window), do: fetch_value(window.sequences, -1)
+
+  @spec add_packet(integer(), integer(), Packet.t()) ::
+          {:ok, Prodigy.Server.Protocol.Tcs.Window.t()}
+          | {:error, :outside_window, integer()}
+  def add_packet(window, _sequence_number, packet) do
+    if packet.seq in window.sequences do
+      new_packet_map = %{window.packet_map | packet.seq => packet}
+      Logger.debug("add_packet - packet number #{packet.seq} is within range.")
+      {:ok, %Window{window | packet_map: new_packet_map}}
+    else
+      window_first = first_sequence(window)
+      window_last = last_sequence(window)
+      Logger.warning("add_packet - Received packet with number #{packet.seq}, outside of current window #{window_first} to #{window_last}")
+      {:error, :outside_window, window_first}
+    end
+  end
+
+  @doc """
+  Makes a list of tuples of {key, value} of the packet map, in sequence order.
+  """
+  @spec get_packet_tuples(Window.t()) :: list()
   def get_packet_tuples(window), do: Enum.map(window.sequences, fn seq -> {seq, window.packet_map[seq]} end)
 
-  @spec check_packets(Prodigy.Server.Protocol.Tcs.Window.t()) :: list()
+
+  @doc """
+  Returns a list of "missing" packets from a sequence. In this case missing means that
+  there is a received packet that has a missing packet, or :pending, in the list of sequences
+  that we expect in this window.
+  An empty list indicates that there are no out-of-sequence packets.
+  """
+  @spec check_packets(Window.t()) :: list()
   def check_packets(window) do
     packet_tuples = get_packet_tuples(window)
     checked_packet_list = Enum.reverse(check_packet(packet_tuples, []))
@@ -62,6 +91,11 @@ defmodule Prodigy.Server.Protocol.Tcs.Window do
     checked_packet_list
   end
 
+  @doc """
+  Builds the list of out-of-sequence packets. Goes through the list of tuples,
+  if a sequence is :pending and there are any after it with received packets then
+  you need to send a :nakncc.
+  """
   def check_packet([{_, _} | []], acc), do: acc
 
   def check_packet([{seq, pt} | rest], acc) do
@@ -75,8 +109,10 @@ defmodule Prodigy.Server.Protocol.Tcs.Window do
   end
 
   @doc """
-  Currently assumes that the TCS packets are filled correctly, from the beginning of the window
+  Counts the number of packets used in the window.
+  Currently assumes that the TCS packets are filled correctly, from the beginning of the window.
   """
+  @spec tcs_packets_used(Window.t()) :: non_neg_integer()
   def tcs_packets_used(window) do
     packet_tuples = get_packet_tuples(window)
     packets_used = Enum.count(packet_tuples, fn {_s, p} -> p != :pending end)
