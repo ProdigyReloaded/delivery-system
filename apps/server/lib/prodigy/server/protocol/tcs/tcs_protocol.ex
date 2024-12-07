@@ -109,15 +109,14 @@ defmodule Prodigy.Server.Protocol.Tcs do
   def handle_info({:tcp, _socket, data}, %State{socket: socket, transport: transport} = state) do
     {new_buffer, new_tx_seq, new_rx_seq, rx_window} =
       case Packet.decode(state.buffer <> data) do
-        {:ok, packet, excess} ->
+        # complete packet, handle to see if in sequence, if it completes a DIA, etc.
+        {:ok, %Packet{} = packet, excess} ->
           handle_packet_in({packet, excess}, packet.type, state)
-
-        # data packet
-
+        # complete but bad crc, scrambled, try again
         {:error, :crc, seq, excess} ->
           transport.send(socket, Packet.nakcce(seq))
           {excess, state.tx_seq, state.rx_seq, state.rx_window}
-
+        # not a complete packet yet, get more bytes
         {:fragment, excess} ->
           {excess, state.tx_seq, state.rx_seq, state.rx_window}
       end
@@ -150,25 +149,33 @@ defmodule Prodigy.Server.Protocol.Tcs do
   Checks on the receive window are done here and acks or nacks, or 'we need more packets' are
   sent from here.
   """
-  def handle_packet_in({packet, excess}, packet_type, state)
+  def handle_packet_in({%Packet{} = packet, excess}, packet_type, state)
       when packet_type in [Type.UD1ACK, Type.UD1NAK, Type.UD2ACK, Type.UD2NAK] do
 
     new_rx_window = case Window.add_packet(state.rx_window, state.rx_seq, packet) do
       {:ok, window} ->
         Logger.debug("Packet inside window range, added to window")
         window
-      {:error, :outside_window} ->
-        Logger.debug("Packet was outside window, receive sequence is #{packet.seq}")
-        state.rx_window
+      {:error, :outside_window, window_first} ->
+        Logger.debug("Packet was outside window, receive sequence is #{window_first}")
+        state.transport.send(state.socket, Packet.rxmitp(window_first))
+        # We believe the RS is all messed up, with the rxmitp we tell it to start over
+        Window.init(state.rx_window.window_start, Window.receive_window_size)
     end
 
-    packet_error_list = Window.check_packets(state.rx_window)
+    # Check to see if there are any out of sequence packets. If so, ask for them again
+    packet_error_list = Window.check_packets(new_rx_window)
     Logger.debug("Packet sequence errors this round is #{packet_error_list}")
 
-    if packet.seq != state.rx_seq do
-      Logger.debug("incorrect receive sequence #{packet.seq}; expected #{state.rx_seq}")
-      state.transport.send(state.socket, Packet.nakncc(packet.seq))
-      {excess, state.tx_seq, state.rx_seq, state.rx_window}
+    # XXX if packet.seq != state.rx_seq do
+    if !Enum.empty?(packet_error_list) do
+      # XXX Logger.debug("incorrect receive sequence #{packet.seq}; expected #{state.rx_seq}")
+      error_seqs = Enum.map(packet_error_list, &(elem(&1, 0)))
+      Logger.warning("Out of sequence packets: #{error_seqs}")
+      Enum.each(packet_error_list, fn {seq, function} ->
+        state.transport.send(state.socket, apply(Packet, function, [seq]))
+      end)
+      {excess, state.tx_seq, state.rx_seq, new_rx_window}
     else
       new_rx_seq = next_seq(state.rx_seq)
 
