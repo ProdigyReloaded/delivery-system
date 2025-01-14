@@ -54,18 +54,17 @@ defmodule Prodigy.Server.Protocol.Tcs.Window do
   @spec last_sequence(Window.t()) :: integer()
   def last_sequence(window), do: fetch_value(window.sequences, -1)
 
-  @spec add_packet(integer(), integer(), Packet.t()) ::
+  @spec add_packet(Window.t(), integer(), Packet.t()) ::
           {:ok, Prodigy.Server.Protocol.Tcs.Window.t()}
           | {:error, :outside_window, integer()}
   def add_packet(window, _sequence_number, packet) do
     if packet.seq in window.sequences do
       new_packet_map = %{window.packet_map | packet.seq => packet}
-      Logger.debug("add_packet - packet number #{packet.seq} is within range.")
       {:ok, %Window{window | packet_map: new_packet_map}}
     else
       window_first = first_sequence(window)
       window_last = last_sequence(window)
-      Logger.warning("add_packet - Received packet with number #{packet.seq}, outside of current window #{window_first} to #{window_last}")
+      Logger.error("add_packet - Received packet with number #{packet.seq}, outside of current window #{window_first} to #{window_last}")
       {:error, :outside_window, window_first}
     end
   end
@@ -87,7 +86,9 @@ defmodule Prodigy.Server.Protocol.Tcs.Window do
   def check_packets(window) do
     packet_tuples = get_packet_tuples(window)
     checked_packet_list = Enum.reverse(check_packet(packet_tuples, []))
-    Logger.debug("Checked packets, out of sequence packets: #{checked_packet_list}")
+    if length(checked_packet_list) > 0 do
+      Logger.error("Checked packets, out of sequence packets: #{Enum.unzip(checked_packet_list) |> elem(0) |> Enum.join(", ")}")
+    end
     checked_packet_list
   end
 
@@ -116,7 +117,6 @@ defmodule Prodigy.Server.Protocol.Tcs.Window do
   def tcs_packets_used(window) do
     packet_tuples = get_packet_tuples(window)
     packets_used = Enum.count(packet_tuples, fn {_s, p} -> p != :pending end)
-    Logger.debug("Window used #{packets_used} packets out of possible #{Enum.count(window.sequences)}")
     packets_used
   end
 
