@@ -124,42 +124,42 @@ defmodule Prodigy.Server.Protocol.Tcs.Packet do
   @doc "Construct a TCS Acknowledgement Packet"
   @spec ackpkt(integer) :: <<_::16, _::_*8>>
   def ackpkt(seq) do
-    Logger.debug("In ackpkt function.")
+    Logger.debug("In ackpkt function, seq is #{seq}.")
     encode(%Packet{seq: 0, type: Type.ACKPKT, payload: <<seq>>})
   end
 
   @doc "Construct a TCS Negative Acknowledgement (CRC Error) Packet"
   @spec nakcce(integer) :: <<_::16, _::_*8>>
   def nakcce(seq) do
-    Logger.debug("In nakcce function.")
+    Logger.debug("In nakcce function, seq is #{seq}.")
     encode(%Packet{seq: 0, type: Type.NAKCCE, payload: <<seq>>})
   end
 
   @doc "Construct a TCS Negative Acknowledgement (Not CRC Error) Packet"
   @spec nakncc(integer) :: <<_::16, _::_*8>>
   def nakncc(seq) do
-    Logger.debug("In nakncc function.")
+    Logger.debug("In nakncc function, seq is #{seq}.")
     encode(%Packet{seq: 0, type: Type.NAKNCC, payload: <<seq>>})
   end
 
   @doc "Construct a TCS Retransmit Packet"
   @spec rxmitp(integer) :: <<_::16, _::_*8>>
   def rxmitp(seq) do
-    Logger.debug("In rxmitp function.")
+    Logger.debug("In rxmitp function, seq is #{seq}.")
     encode(%Packet{seq: 0, type: Type.RXMITP, payload: <<seq>>})
   end
 
   @doc "Construct a TCS Waiting for Acknowledgement Packet"
   @spec wackpk(integer) :: <<_::16, _::_*8>>
   def wackpk(seq) do
-    Logger.debug("In wackpk function.")
+    Logger.debug("In wackpk function, seq is #{seq}.")
     encode(%Packet{seq: 0, type: Type.WACKPK, payload: <<seq>>})
   end
 
   @doc "Construct a TCS Transmission Aborted Packet"
   @spec txabod(integer) :: <<_::16, _::_*8>>
   def txabod(seq) do
-    Logger.debug("In txabod function.")
+    Logger.debug("In txabod function, seq is #{seq}.")
     encode(%Packet{seq: 0, type: Type.TXABOD, payload: <<seq>>})
   end
 
