@@ -32,26 +32,22 @@ defmodule Prodigy.Server.Service.Cmc do
     case payload do
         <<
           user_id::binary-size(7),          # right padded with '?'
-          _spaces1::binary-size(2),         # "  ",
-          ## "  ",
+          "  ",
           system_origin::binary-size(1),    # "T" = Trintex
           msg_origin::binary-size(3),       # "PCM" = pcmessage
           unit_id::binary-size(2),          # ascii decimals, "10" typical
           error_code::binary-size(2),       # ascii decimals, "02" typical
           severity_level::binary-size(1),   # 'E'
-          _spaces2::binary-size(1),
-          ## " ",
+          " ",
           error_threshold::binary-size(3),  # "001"
-          _spaces3::binary-size(1),
-          ## " ",
+          " ",
           date::binary-size(8),             # '05231988' typical
           time::binary-size(6),             # '143023' typical
           api_event::binary-size(5),        # '00003' typical
           mem_to_start::binary-size(8),     # '00227472' typical
           dos_version::binary-size(5),      # '03.30' typical
           rs_version::binary-size(7),       # '6.01.XX' typical
-          _spaces4::binary-size(1),
-          ## " ",
+          " ",
           window_id::binary-size(11),       # 'NOWINDOWIDX' typical
           window_last::binary-size(4),      # in ascii hex, '0104' typical
           selected_id::binary-size(11),     # 'NOSELECTORX' typical
