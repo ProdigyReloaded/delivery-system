@@ -41,10 +41,10 @@ defmodule Prodigy.Server.RanchSup do
     Cachex.start_link(:transmit, [
       expiration: expiration(
         # how often cleanup should occur
-        interval: :timer.minutes(15),
+        interval: :timer.seconds(30),
 
         # default record expiration
-        default: :timer.minutes(10)
+        default: :timer.seconds(15)
       )
     ])
 
