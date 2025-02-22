@@ -53,6 +53,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
       :dia_module,
       :rx_window,
       dia_pid: nil,
+      tx_pid: nil,
       buffer: <<>>,
       tx_seq: 0,
       rx_seq: 0
@@ -81,12 +82,15 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
     Logger.debug("TCS server entering genserver loop")
 
+    {:ok, tx_pid} = Transmitter.start_link(%{transport: transport, socket: socket})
+
     :gen_server.enter_loop(__MODULE__, [], %State{
       socket: socket,
       transport: transport,
       dia_module: options.dia_module,
       rx_window: Window.init(0, Window.receive_window_size()),
-      dia_pid: dia_pid
+      dia_pid: dia_pid,
+      tx_pid: tx_pid
     })
   end
 
@@ -124,7 +128,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
         # complete but bad crc, scrambled, try again
         {:error, :crc, seq, excess} ->
-          Logger.error("CRC error in packet #{seq}, length: #{byte_size(excess)}")
+          Logger.error("CRC error in incoming packet #{seq}, length: #{byte_size(excess)}")
           transport.send(socket, Packet.nakcce(seq))
           {excess, state.tx_seq, state.rx_seq, state.rx_window}
 
@@ -216,27 +220,22 @@ defmodule Prodigy.Server.Protocol.Tcs do
       "incoming ackpkt of # #{payload_seq}, #{inspect(packet.payload, binaries: :as_binaries, limit: :infinity)}"
     )
 
-    Cachex.del(:transmit, {self(), payload_seq})
+    Transmitter.send_code(state.tx_pid, :ackpkt, payload_seq)
     {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
   def handle_packet_in({packet, excess}, Type.NAKCCE, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
     Logger.error("incoming nakcce on packet # #{payload_seq}, resending packet")
-    {_ok, packet_to_resend} = Cachex.get(:transmit, {self(), payload_seq})
 
-    if packet_to_resend do
-      state.transport.send(state.socket, packet_to_resend)
-    else
-      Logger.error("nakcce, but no packet to resend")
-    end
-
+    Transmitter.send_code(state.tx_pid, :nakcce, payload_seq)
     {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
   def handle_packet_in({packet, excess}, Type.NAKNCC, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
     Logger.error("incoming nakccc on packet # #{payload_seq}")
+    Transmitter.send_code(state.tx_pid, :nakccc, payload_seq)
     {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
@@ -277,12 +276,11 @@ defmodule Prodigy.Server.Protocol.Tcs do
         out_packet = %Packet{seq: state.tx_seq, type: Type.UD1ACK, payload: first}
 
         Logger.debug(
-          "sending packet # #{state.tx_seq}: #{inspect(out_packet, base: :hex, limit: :infinity)}"
+          "queuing packet # #{state.tx_seq}: #{inspect(out_packet, base: :hex, limit: :infinity)}"
         )
 
         encoded_packet = Packet.encode(out_packet)
-        state.transport.send(state.socket, encoded_packet)
-        Cachex.put(:transmit, {self(), state.tx_seq}, encoded_packet)
+        Transmitter.transmit_packet(state.tx_pid, encoded_packet, state.tx_seq)
 
         new_tx_seq = next_seq(state.tx_seq)
 
@@ -291,12 +289,11 @@ defmodule Prodigy.Server.Protocol.Tcs do
             out_packet = %Packet{seq: tx_seq, type: Type.UD2ACK, payload: chunk}
 
             Logger.debug(
-              "sending packet # #{tx_seq}: #{inspect(out_packet, base: :hex, limit: :infinity)}"
+              "queuing packet # #{tx_seq}: #{inspect(out_packet, base: :hex, limit: :infinity)}"
             )
 
             encoded_packet = Packet.encode(out_packet)
-            state.transport.send(state.socket, encoded_packet)
-            Cachex.put(:transmit, {self(), tx_seq}, encoded_packet)
+            Transmitter.transmit_packet(state.tx_pid, encoded_packet, tx_seq)
 
             next_seq(tx_seq)
           end)
