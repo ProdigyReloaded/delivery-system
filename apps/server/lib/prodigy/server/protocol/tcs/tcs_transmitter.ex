@@ -1,4 +1,4 @@
-defmodule Transmitter do
+defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
   use GenServer
   require Logger
 
