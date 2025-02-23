@@ -33,6 +33,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
   alias Prodigy.Server.Protocol.Tcs.Packet
   alias Prodigy.Server.Protocol.Tcs.Packet.Type
   alias Prodigy.Server.Protocol.Tcs.Window
+  alias Prodigy.Server.Protocol.Tcs.Transmitter
 
   @behaviour :ranch_protocol
   @timeout 6_000_000
