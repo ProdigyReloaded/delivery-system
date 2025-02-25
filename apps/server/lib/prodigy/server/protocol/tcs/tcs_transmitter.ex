@@ -44,13 +44,18 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     {:noreply, state}
   end
 
+  # Somtimes DS gets both a nakcce and nakccc so we mark when we send a packet with a nakcce
   @impl true
   def handle_cast({:nakcce, sequence}, state) do
-    {:ok, packet_to_resend} = Cachex.get(:transmit, {self(), sequence})
+    {:ok, value} = Cachex.get(:transmit, {self(), sequence})
 
-    if packet_to_resend do
+    Logger.debug("nakcce received for sequence: #{sequence}, outside if")
+    if value do
+      {_cce_sent, packet_to_resend} = value
       Logger.debug("nakcce received for sequence: #{sequence}, resending")
       state.transport.send(state.socket, packet_to_resend)
+      # update the cce_sent status so it won't be sent with a nakccc
+      Cachex.put(:transmit, {self(), sequence}, {true, packet_to_resend})
     else
       Logger.warning("nakcce for sequence: #{sequence}, but no packet to resend")
     end
@@ -59,10 +64,25 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     {:noreply, state}
   end
 
+  # Sometimes DS gets both a nakcce and nakccc so we only send if we haven't sent a nakcce
   @impl true
   def handle_cast({:nakccc, sequence}, state) do
-    # Might make it act the same as nakcce
-    Logger.warning("nakccc received for sequence: #{sequence} - do nothing for now?")
+    {:ok, value} = Cachex.get(:transmit, {self(), sequence})
+    Logger.debug("nakccc received for sequence: #{sequence}, outside if")
+
+    if value do
+      {cce_sent, packet_to_resend} = value
+      if (cce_sent) do
+        Logger.debug("nakccc received for sequence: #{sequence}, but nakcce was sent")
+      else
+        Logger.debug("nakccc received for sequence: #{sequence}, resending")
+        state.transport.send(state.socket, packet_to_resend)
+      end
+    else
+      Logger.warning("nakccc for sequence: #{sequence}, but no packet to resend")
+    end
+
+    send(self(), :check_queue)
     {:noreply, state}
   end
 
@@ -85,7 +105,9 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
         {{:value, {packet, sequence}}, new_queue} ->
           Logger.debug("Sending packet with sequence: #{sequence}")
           state.transport.send(state.socket, packet)
-          Cachex.put(:transmit, {tx_self, sequence}, packet)
+          # store the packet in the cache so we can resend it if we get a nakcce or nakccc
+          # cce_sent is false because we haven't sent a nakcce yet
+          Cachex.put(:transmit, {tx_self, sequence}, {false, packet})
           %{state | packet_queue: new_queue}
         {:empty, _packet_queue} ->
           state
