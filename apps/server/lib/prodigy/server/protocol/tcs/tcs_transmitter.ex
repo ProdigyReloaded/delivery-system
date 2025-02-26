@@ -44,7 +44,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     {:noreply, state}
   end
 
-  # Somtimes DS gets both a nakcce and nakccc so we mark when we send a packet with a nakcce
+  # Somtimes DS gets both a nakcce and nakncc so we mark when we send a packet with a nakcce
   @impl true
   def handle_cast({:nakcce, sequence}, state) do
     {:ok, value} = Cachex.get(:transmit, {self(), sequence})
@@ -54,7 +54,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
       {_cce_sent, packet_to_resend} = value
       Logger.debug("nakcce received for sequence: #{sequence}, resending")
       state.transport.send(state.socket, packet_to_resend)
-      # update the cce_sent status so it won't be sent with a nakccc
+      # update the cce_sent status so it won't be sent with a nakncc
       Cachex.put(:transmit, {self(), sequence}, {true, packet_to_resend})
     else
       Logger.warning("nakcce for sequence: #{sequence}, but no packet to resend")
@@ -64,22 +64,22 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     {:noreply, state}
   end
 
-  # Sometimes DS gets both a nakcce and nakccc so we only send if we haven't sent a nakcce
+  # Sometimes DS gets both a nakcce and nakncc so we only send if we haven't sent a nakcce
   @impl true
-  def handle_cast({:nakccc, sequence}, state) do
+  def handle_cast({:nakncc, sequence}, state) do
     {:ok, value} = Cachex.get(:transmit, {self(), sequence})
-    Logger.debug("nakccc received for sequence: #{sequence}, outside if")
+    Logger.debug("nakncc received for sequence: #{sequence}, outside if")
 
     if value do
       {cce_sent, packet_to_resend} = value
       if (cce_sent) do
-        Logger.debug("nakccc received for sequence: #{sequence}, but nakcce was sent")
+        Logger.debug("nakncc received for sequence: #{sequence}, but nakcce was sent")
       else
-        Logger.debug("nakccc received for sequence: #{sequence}, resending")
+        Logger.debug("nakncc received for sequence: #{sequence}, resending")
         state.transport.send(state.socket, packet_to_resend)
       end
     else
-      Logger.warning("nakccc for sequence: #{sequence}, but no packet to resend")
+      Logger.warning("nakncc for sequence: #{sequence}, but no packet to resend")
     end
 
     send(self(), :check_queue)
@@ -105,7 +105,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
         {{:value, {packet, sequence}}, new_queue} ->
           Logger.debug("Sending packet with sequence: #{sequence}")
           state.transport.send(state.socket, packet)
-          # store the packet in the cache so we can resend it if we get a nakcce or nakccc
+          # store the packet in the cache so we can resend it if we get a nakcce or nakncc
           # cce_sent is false because we haven't sent a nakcce yet
           Cachex.put(:transmit, {tx_self, sequence}, {false, packet})
           %{state | packet_queue: new_queue}
