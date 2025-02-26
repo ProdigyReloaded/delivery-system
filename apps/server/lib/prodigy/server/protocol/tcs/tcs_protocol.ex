@@ -204,7 +204,8 @@ defmodule Prodigy.Server.Protocol.Tcs do
       Logger.debug("received packet in sequence, next expected receive sequence #{new_rx_seq}")
 
       if packet.type in [Type.UD1ACK, Type.UD2ACK] do
-        Logger.debug("sending ack of packet sequence #{packet.seq}")
+        Logger.debug("sending and caching ack of packet sequence #{packet.seq}")
+        Cachex.put(:ack_tracker, {self(), packet.seq}, true)
         state.transport.send(state.socket, Packet.ackpkt(packet.seq))
       end
 
@@ -235,8 +236,8 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
   def handle_packet_in({packet, excess}, Type.NAKNCC, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-    Logger.error("incoming nakccc on packet # #{payload_seq}")
-    Transmitter.send_code(state.tx_pid, :nakccc, payload_seq)
+    Logger.error("incoming nakncc on packet # #{payload_seq}")
+    Transmitter.send_code(state.tx_pid, :nakncc, payload_seq)
     {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
@@ -251,8 +252,14 @@ defmodule Prodigy.Server.Protocol.Tcs do
     Logger.error(
       "incoming wackpk on packet # #{payload_seq}, rx window start is  #{state.rx_window.window_start}"
     )
-
-    state.transport.send(state.socket, Packet.nakncc(:binary.decode_unsigned(packet.payload)))
+    {:ok, value} = Cachex.get(:ack_tracker, {self(), payload_seq})
+    if (value) do
+      Logger.debug("wackpk received for sequence: #{payload_seq}, but ack was sent")
+      state.transport.send(state.socket, Packet.ackpkt(:binary.decode_unsigned(packet.payload)))
+    else
+      Logger.debug("wackpk received for sequence: #{payload_seq}, resending")
+      state.transport.send(state.socket, Packet.nakncc(:binary.decode_unsigned(packet.payload)))
+    end
     {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
