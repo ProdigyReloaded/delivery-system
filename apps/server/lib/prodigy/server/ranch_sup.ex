@@ -48,6 +48,17 @@ defmodule Prodigy.Server.RanchSup do
       )
     ])
 
+    Logger.debug("Setting up cache for tracking acks")
+    Cachex.start_link(:ack_tracker, [
+      expiration: expiration(
+        # how often cleanup should occur
+        interval: :timer.seconds(15),
+
+        # default record expiration
+        default: :timer.seconds(30)
+      )
+    ])
+
     Logger.debug("setting up the ranch supervision tree")
 
     children = [
