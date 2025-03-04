@@ -2,7 +2,11 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
   use GenServer
   require Logger
 
-  @back_pressure_size 4
+  alias Prodigy.Server.Protocol.Tcs.Packet
+
+  @back_pressure_size 6
+  @wack_threshold 4
+  @wack_interval 10 # in seconds
   @run_interval 250
 
   # Public API
@@ -26,21 +30,21 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
   def init(initial_state) do
     packet_queue = :queue.new()
     new_state = Map.merge(initial_state, %{packet_queue: packet_queue})
-    {:ok, new_state, {:continue, :schedule_check_queue}}
+    {:ok, new_state, {:continue, :schedule_run_checks}}
   end
 
   @impl true
   def handle_cast({:packet, packet, sequence}, state) do
     Logger.debug("queuing packet with sequence: #{sequence}")
     new_queue = :queue.in({packet, sequence}, state.packet_queue)
-    {:noreply, %{state | packet_queue: new_queue}, {:continue, :schedule_check_queue}}
+    {:noreply, %{state | packet_queue: new_queue}, {:continue, :schedule_run_checks}}
   end
 
   @impl true
   def handle_cast({:ackpkt, sequence}, state) do
     Cachex.del(:transmit, {self(), sequence})
     Logger.debug("ackpkt received for sequence: #{sequence}")
-    send(self(), :check_queue)
+    send(self(), :run_checks)
     {:noreply, state}
   end
 
@@ -51,16 +55,16 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
 
     Logger.debug("nakcce received for sequence: #{sequence}, outside if")
     if value do
-      {_cce_sent, packet_to_resend} = value
+      {_nakcce_received, wack_count, sent_time, packet_to_resend} = value
       Logger.debug("nakcce received for sequence: #{sequence}, resending")
       state.transport.send(state.socket, packet_to_resend)
-      # update the cce_sent status so it won't be sent with a nakncc
-      Cachex.put(:transmit, {self(), sequence}, {true, packet_to_resend})
+      # update the nakcce_received status so it won't be sent with a nakncc
+      Cachex.put(:transmit, {self(), sequence}, {true, wack_count, sent_time, packet_to_resend})
     else
       Logger.warning("nakcce for sequence: #{sequence}, but no packet to resend")
     end
 
-    send(self(), :check_queue)
+    send(self(), :run_checks)
     {:noreply, state}
   end
 
@@ -71,9 +75,9 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     Logger.debug("nakncc received for sequence: #{sequence}, outside if")
 
     if value do
-      {cce_sent, packet_to_resend} = value
-      if (cce_sent) do
-        Logger.debug("nakncc received for sequence: #{sequence}, but nakcce was sent")
+      {nakcce_received, _wack_count, _sent_time, packet_to_resend} = value
+      if (nakcce_received) do
+        Logger.debug("nakncc received for sequence: #{sequence}, but nakcce was already received")
       else
         Logger.debug("nakncc received for sequence: #{sequence}, resending")
         state.transport.send(state.socket, packet_to_resend)
@@ -82,22 +86,41 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
       Logger.warning("nakncc for sequence: #{sequence}, but no packet to resend")
     end
 
-    send(self(), :check_queue)
+    send(self(), :run_checks)
     {:noreply, state}
   end
 
   @impl true
-  def handle_continue(:schedule_check_queue, state) do
-    Process.send_after(self(), :check_queue, @run_interval)
+  def handle_continue(:schedule_run_checks, state) do
+    Process.send_after(self(), :run_checks, @run_interval)
     {:noreply, state}
   end
 
+  @doc """
+  This function has two main responsibilities:
+  1. Check to see if a packet has a wackpk that needs to be sent. If the current time is more
+      than @wack_interval seconds after the last time we sent a wackpk, then we send one, then
+      save the incremented wack_count and the current time.
+  2. Check to see if we can send a packet from the queue
+  """
   @impl true
-  def handle_info(:check_queue, state) do
+  def handle_info(:run_checks, state) do
     tx_self = self()
     {:ok, tx_keys} = Cachex.keys(:transmit)
 
     our_keys = Enum.filter(tx_keys, fn {pid, _} -> pid == tx_self end)
+    # send a wackpk if it's been more than @wack_interval seconds since the last one
+    Enum.each(our_keys, fn {_, sequence} ->
+      {:ok, value} = Cachex.get(:transmit, {tx_self, sequence})
+      {_nakcce_received, wack_count, sent_time, packet_to_resend} = value
+      {:ok, now} = DateTime.now("Etc/UTC")
+      if (DateTime.diff(now, sent_time)) > @wack_interval do
+        Logger.warning("Sending wackpk for sequence: #{sequence}")
+        state.transport.send(state.socket, Packet.wackpk(sequence))
+        Cachex.put(:transmit, {tx_self, sequence}, {false, wack_count + 1, now, packet_to_resend})
+      end
+    end)
+
     new_state = if length(our_keys) > @back_pressure_size do
       state
     else
@@ -106,15 +129,18 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
           Logger.debug("Sending packet with sequence: #{sequence}")
           state.transport.send(state.socket, packet)
           # store the packet in the cache so we can resend it if we get a nakcce or nakncc
-          # cce_sent is false because we haven't sent a nakcce yet
-          Cachex.put(:transmit, {tx_self, sequence}, {false, packet})
+          # nakcce_received is false because we haven't sent a nakcce yet
+          # wack_count to keep track of how many times we've sent a wackpk
+          # now to know when to send a wackpk
+          {:ok, now} = DateTime.now("Etc/UTC")
+          Cachex.put(:transmit, {tx_self, sequence}, {false, 0, now, packet})
           %{state | packet_queue: new_queue}
         {:empty, _packet_queue} ->
           state
       end
     end
 
-    {:noreply, new_state, {:continue, :schedule_check_queue}}
+    {:noreply, new_state, {:continue, :schedule_run_checks}}
   end
 
   @impl true
