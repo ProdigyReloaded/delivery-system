@@ -83,7 +83,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
     Logger.debug("TCS server entering genserver loop")
 
-    {:ok, tx_pid} = Transmitter.start_link(%{transport: transport, socket: socket})
+    {:ok, tx_pid} = Transmitter.start_link(%{transport: transport, socket: socket, from: self()})
 
     :gen_server.enter_loop(__MODULE__, [], %State{
       socket: socket,
@@ -141,6 +141,13 @@ defmodule Prodigy.Server.Protocol.Tcs do
     {:noreply,
      %{state | buffer: new_buffer, tx_seq: new_tx_seq, rx_seq: new_rx_seq, rx_window: rx_window},
      @timeout}
+  end
+
+  @impl GenServer
+  def handle_info({:wp_limit_exceeded, socket}, state) do
+    Logger.error("Too many wackpk packets sent, closing connection")
+    send(self(), {:tcp_closed, socket})
+    {:noreply, state}
   end
 
   @impl GenServer
