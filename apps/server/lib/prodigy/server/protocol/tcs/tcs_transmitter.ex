@@ -115,8 +115,15 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
       {_nakcce_received, wack_count, sent_time, packet_to_resend} = value
       {:ok, now} = DateTime.now("Etc/UTC")
       if (DateTime.diff(now, sent_time)) > @wack_interval do
-        Logger.warning("Sending wackpk for sequence: #{sequence}")
+        Logger.warning("Sending wackpk for sequence: #{sequence}, wackpk count is #{wack_count}")
         state.transport.send(state.socket, Packet.wackpk(sequence))
+        case wack_count do
+          @wack_threshold ->
+            Logger.warning("wackpk threshold reached for sequence: #{sequence}")
+            # Too many wackpk's sent, abort the transmission
+            send(state.from, {:wp_limit_exceeded, state.socket})
+          _ -> Cachex.put(:transmit, {tx_self, sequence}, {false, wack_count + 1, now, packet_to_resend})
+        end
         Cachex.put(:transmit, {tx_self, sequence}, {false, wack_count + 1, now, packet_to_resend})
       end
     end)
