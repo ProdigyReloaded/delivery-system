@@ -140,7 +140,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
           # wack_count to keep track of how many times we've sent a wackpk
           # now to know when to send a wackpk
           {:ok, now} = DateTime.now("Etc/UTC")
-          Cachex.put(:transmit, {tx_self, sequence}, {false, 0, now, packet})
+          Cachex.put(:transmit, {tx_self, sequence}, {false, 1, now, packet})
           %{state | packet_queue: new_queue}
         {:empty, _packet_queue} ->
           state
