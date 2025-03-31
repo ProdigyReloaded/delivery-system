@@ -14,12 +14,12 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
   defmodule PacketState do
     @moduledoc "A structure containing the state utilized through the lifecycle of a TCS connection"
     defstruct [
-      :nakcce_received,
-      :wack_count,
-      :sent_time,
-      :packet,
-      :transmitted,
-      :acked
+      nakcce_received: false,
+      wack_count: 1,
+      sent_time: nil,
+      packet: nil,
+      transmitted: false,
+      acked: false
     ]
   end
 
@@ -42,7 +42,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
   @impl true
   def init(initial_state) do
     packet_queue = :queue.new()
-    new_state = Map.merge(initial_state, %{packet_queue: packet_queue})
+    new_state = Map.merge(initial_state, %{packet_queue: packet_queue, rs_buf: []})
     {:ok, new_state, {:continue, :schedule_run_checks}}
   end
 
@@ -55,11 +55,15 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
 
   @impl true
   def handle_cast({:ackpkt, sequence}, state) do
-    ## XXX Add list check
-    Cachex.del(:transmit, {self(), sequence})
-    Logger.debug("ackpkt received for sequence: #{sequence}")
+    ## We no longer manually delete, in case we need it
+    ## Cachex.del(:transmit, {self(), sequence})
+    tx_self = self()
+    {:ok, packet_state} = Cachex.get(:transmit, {tx_self, sequence})
+    Cachex.put(:transmit, {tx_self, sequence}, %PacketState{packet_state | acked: true})
+    new_rs_buf = trim_acked(state.rs_buf)
+    Logger.debug("ackpkt received for sequence: #{sequence}, new rs_buf: #{inspect(new_rs_buf, charlists: :as_lists)}")
     send(self(), :run_checks)
-    {:noreply, state}
+    {:noreply, %{state | rs_buf: new_rs_buf}}
   end
 
   # Somtimes DS gets both a nakcce and nakncc so we mark when we send a packet with a nakcce
@@ -106,10 +110,35 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     {:noreply, state}
   end
 
+  # Received a rxmitp, resend all unacked packets, basically all entries in rs_buf
+  @impl true
+  def handle_cast({:rxmitp, _sequence}, state) do
+    Logger.warning("rxmitp received, resending all unacked packets - #{inspect(state.rs_buf, charlists: :as_lists)}")
+    tx_self = self()
+    Enum.each(state.rs_buf, fn sequence ->
+      {:ok, packet_state} = Cachex.get(:transmit, {tx_self, sequence})
+
+      if packet_state do
+        %PacketState{packet: packet} = packet_state
+        state.transport.send(state.socket, packet)
+      else
+        Logger.warning("rxmitp for sequence: #{sequence}, but no packet to resend")
+      end
+    end)
+    send(tx_self, :run_checks)
+    {:noreply, state}
+  end
+
   @impl true
   def handle_continue(:schedule_run_checks, state) do
     Process.send_after(self(), :run_checks, @run_interval)
     {:noreply, state}
+  end
+
+  defp is_not_acked({pid, sequence}) do
+    {:ok, packet_state} = Cachex.get(:transmit, {pid, sequence})
+    %PacketState{acked: acked} = packet_state
+    !acked
   end
 
   @doc """
@@ -123,10 +152,12 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
   def handle_info(:run_checks, state) do
     tx_self = self()
     {:ok, tx_keys} = Cachex.keys(:transmit)
-
+    ## Filter the keys to only include those that belong to this process
     our_keys = Enum.filter(tx_keys, fn {pid, _} -> pid == tx_self end)
+    ## Packets aren't deleted manually, check to see if acked is false
+    not_acked_keys = Enum.filter(our_keys, &is_not_acked/1)
     # send a wackpk if it's been more than @wack_interval seconds since the last one
-    Enum.each(our_keys, fn {_, sequence} ->
+    Enum.each(not_acked_keys, fn {_, sequence} ->
       {:ok, packet_state} = Cachex.get(:transmit, {tx_self, sequence})
       %PacketState{wack_count: wack_count, sent_time: sent_time} = packet_state
       {:ok, now} = DateTime.now("Etc/UTC")
@@ -156,7 +187,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     end)
 
     new_state =
-      if length(our_keys) > @back_pressure_size do
+      if length(state.rs_buf) >= @rs_buffer_size do
         state
       else
         case :queue.out(state.packet_queue) do
@@ -173,10 +204,12 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
               nakcce_received: false,
               wack_count: 1,
               sent_time: now,
-              packet: packet
+              packet: packet,
+              transmitted: true,
+              acked: false
             })
 
-            %{state | packet_queue: new_queue}
+            %{state | packet_queue: new_queue, rs_buf: state.rs_buf ++ [sequence]}
 
           {:empty, _packet_queue} ->
             state
@@ -192,7 +225,15 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     :ok
   end
 
-  def trim_true([]), do: []
-  def trim_true([{_n, true} | tail]), do: trim_true(tail)
-  def trim_true([{n, false} | tail]), do: [{n, false} | tail]
+  def trim_acked([]), do: []
+  def trim_acked([head | tail]) do
+    {:ok, packet_state} = Cachex.get(:transmit, {self(), head})
+    case packet_state.acked do
+      true ->
+        trim_acked(tail)
+      false ->
+        [head | tail]
+    end
+  end
+
 end

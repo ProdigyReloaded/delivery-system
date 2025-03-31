@@ -55,7 +55,7 @@ defmodule Prodigy.Server.RanchSup do
         interval: :timer.seconds(15),
 
         # default record expiration
-        default: :timer.seconds(60)
+        default: :timer.minutes(2)
       )
     ])
 
