@@ -248,8 +248,10 @@ defmodule Prodigy.Server.Protocol.Tcs do
     {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
-  def handle_packet_in({_packet, excess}, Type.RXMITP, state) do
-    Logger.error("rxmitp")
+  def handle_packet_in({packet, excess}, Type.RXMITP, state) do
+    <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
+    Logger.error("incoming rxmitp on packet # #{payload_seq}")
+    Transmitter.send_code(state.tx_pid, :rxmitp, payload_seq)
     {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
