@@ -184,7 +184,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
           window
 
         {:error, :outside_window, window_first} ->
-          Logger.debug("Packet was outside window, receive sequence is #{window_first}")
+          Logger.error("Packet was outside window, receive sequence is #{window_first}")
           state.transport.send(state.socket, Packet.rxmitp(window_first))
           # We believe the RS is all messed up, with the rxmitp we tell it to start over
           Window.init(state.rx_window.window_start, Window.receive_window_size())
