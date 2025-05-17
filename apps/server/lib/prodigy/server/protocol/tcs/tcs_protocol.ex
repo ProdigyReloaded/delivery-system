@@ -177,47 +177,55 @@ defmodule Prodigy.Server.Protocol.Tcs do
   """
   def handle_packet_in({%Packet{} = packet, excess}, packet_type, state)
       when packet_type in [Type.UD1ACK, Type.UD1NAK, Type.UD2ACK, Type.UD2NAK] do
-    new_rx_window =
+    {status, new_rx_window} =
       case Window.add_packet(state.rx_window, state.rx_seq, packet) do
         {:ok, window} ->
           Logger.debug("Packet inside window range, added to window")
-          window
+          {:ok, window}
 
         {:error, :outside_window, window_first} ->
           Logger.error("Packet was outside window, receive sequence is #{window_first}")
           state.transport.send(state.socket, Packet.rxmitp(window_first))
           # We believe the RS is all messed up, with the rxmitp we tell it to start over
-          Window.init(state.rx_window.window_start, Window.receive_window_size())
+          {:error, Window.init(state.rx_window.window_start, Window.receive_window_size())}
       end
 
     # Check to see if there are any out of sequence packets. If so, ask for them again
     packet_error_list = Window.check_packets(new_rx_window)
     # Logger.debug("Packet sequence errors this round is #{packet_error_list}")
 
-    if !Enum.empty?(packet_error_list) do
-      # XXX Logger.debug("incorrect receive sequence #{packet.seq}; expected #{state.rx_seq}")
-      error_seqs = Enum.map(packet_error_list, &elem(&1, 0))
-      Logger.warning("Out of sequence packets: #{error_seqs}")
+    cond do
+      status == :error ->
+        # XXX Logger.debug("packet outside window, sending rxmitp")
+        # We believe the RS is all messed up, with the rxmitp we tell it to start over
 
-      Enum.each(packet_error_list, fn {seq, function_atom} ->
-        Logger.warning("Sending a #{function_atom} packet for #{seq}")
-        state.transport.send(state.socket, apply(Packet, function_atom, [seq]))
-      end)
+        {excess, state.tx_seq, state.rx_seq, new_rx_window}
 
-      {excess, state.tx_seq, state.rx_seq, new_rx_window}
-    else
-      new_rx_seq = next_seq(state.rx_seq)
+      !Enum.empty?(packet_error_list) ->
+        # XXX Logger.debug("incorrect receive sequence #{packet.seq}; expected #{state.rx_seq}")
+        error_seqs = Enum.map(packet_error_list, &elem(&1, 0))
+        Logger.warning("Out of sequence packets: #{error_seqs}")
 
-      Logger.debug("received packet in sequence, next expected receive sequence #{new_rx_seq}")
+        Enum.each(packet_error_list, fn {seq, function_atom} ->
+          Logger.warning("Sending a #{function_atom} packet for #{seq}")
+          state.transport.send(state.socket, apply(Packet, function_atom, [seq]))
+        end)
 
-      if packet.type in [Type.UD1ACK, Type.UD2ACK] do
-        Logger.debug("sending and caching ack of packet sequence #{packet.seq}")
-        Cachex.put(:ack_tracker, {self(), packet.seq}, true)
-        state.transport.send(state.socket, Packet.ackpkt(packet.seq))
-      end
+        {excess, state.tx_seq, state.rx_seq, new_rx_window}
 
-      {new_tx_seq, new_window} = send_tcs_packet_to_dia(packet, state, new_rx_window)
-      {excess, new_tx_seq, new_rx_seq, new_window}
+      true ->
+        new_rx_seq = next_seq(state.rx_seq)
+
+        Logger.debug("received packet in sequence, next expected receive sequence #{new_rx_seq}")
+
+        if packet.type in [Type.UD1ACK, Type.UD2ACK] do
+          Logger.debug("sending and caching ack of packet sequence #{packet.seq}")
+          Cachex.put(:ack_tracker, {self(), packet.seq}, true)
+          state.transport.send(state.socket, Packet.ackpkt(packet.seq))
+        end
+
+        {new_tx_seq, new_window} = send_tcs_packet_to_dia(packet, state, new_rx_window)
+        {excess, new_tx_seq, new_rx_seq, new_window}
     end
   end
 
@@ -261,14 +269,17 @@ defmodule Prodigy.Server.Protocol.Tcs do
     Logger.error(
       "incoming wackpk on packet # #{payload_seq}, rx window start is  #{state.rx_window.window_start}"
     )
+
     {:ok, value} = Cachex.get(:ack_tracker, {self(), payload_seq})
-    if (value) do
+
+    if value do
       Logger.debug("wackpk received for sequence: #{payload_seq}, but ack was sent")
       state.transport.send(state.socket, Packet.ackpkt(:binary.decode_unsigned(packet.payload)))
     else
       Logger.debug("wackpk received for sequence: #{payload_seq}, resending")
       state.transport.send(state.socket, Packet.nakncc(:binary.decode_unsigned(packet.payload)))
     end
+
     {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
