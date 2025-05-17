@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2022, 2025, Phillip Heller and Richard Cook
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -16,6 +16,8 @@
 defmodule Prodigy.Server.Protocol.Tcs.Test do
   @moduledoc false
   use ExUnit.Case, async: true
+  import Cachex.Spec
+
   import WaitFor
   require Logger
 
@@ -28,25 +30,16 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
     def handshake(ref), do: {:ok, ref}
   end
 
-  defmodule TestTransport do
-    use Agent
-
-    # socket, for our testing, is the pid of the TestTransport process
-    def setopts(_, _), do: :ok
-    def start_link(_opts), do: Agent.start_link(fn -> [] end)
-
-    def send(socket, data),
-      do: Agent.get_and_update(socket, fn queue -> {queue, queue ++ [data]} end)
-
-    def take(socket), do: Agent.get_and_update(socket, fn [head | tail] -> {head, tail} end)
-    def count(socket), do: Agent.get(socket, fn queue -> length(queue) end)
-  end
-
   defmodule TestDiaProtocol do
     require Logger
     use GenServer
 
-    @doc """
+    @response Packet.encode(%Packet{
+      seq: 0,
+      type: Type.UD1ACK,
+      payload: << "foo" >>
+    })
+@doc """
     TcsProtocol uses this function to pass a received packet to be processed.
     """
     def handle_packet(pid, %Packet{} = packet), do: GenServer.call(pid, {:packet, packet})
@@ -72,7 +65,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
       {:ok, []}
     end
 
-    def handle_call({:packet, packet}, _from, queue), do: {:reply, :ok, queue ++ [packet]}
+    def handle_call({:packet, packet}, _from, queue), do: {:reply, {:ok, @response}, queue ++ [packet]}
     def handle_call(:take, _from, [head | tail]), do: {:reply, head, tail}
     def handle_call(:count, _from, queue), do: {:reply, length(queue), queue}
 
@@ -85,6 +78,29 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
   @options %Options{dia_module: TestDiaProtocol, ranch_module: TestRanch}
 
   setup do
+    Logger.debug("Setting up cache for tracking transmissions")
+    Cachex.start_link(:transmit, [
+      expiration: expiration(
+        # how often cleanup should occur
+        interval: :timer.seconds(15),
+
+        # default record expiration
+        default: :timer.seconds(60)
+      )
+    ])
+
+    Logger.debug("Setting up cache for tracking acks")
+    Cachex.start_link(:ack_tracker, [
+      expiration: expiration(
+        # how often cleanup should occur
+        interval: :timer.seconds(15),
+
+        # default record expiration
+        default: :timer.minutes(2)
+      )
+    ])
+
+
     {:ok, socket} = TestTransport.start_link({})
     {:ok, tcsp} = TcsProtocol.start_link(socket, TestTransport, @options)
     :ok = wait_for(fn -> GenServer.call(tcsp, :get_dia_pid) != nil end, @timeout)
@@ -135,8 +151,8 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
     assert packet.payload == <<0>>
   end
 
-  test "out of sequence packet causes NAKNCC", context do
-    send(
+  test "out of sequence packet causes RXMITP ", context do
+   send(
       context.tcsp,
       {:tcp, nil, Packet.encode(%Packet{type: Type.UD1ACK, seq: 9, payload: <<"foo">>})}
     )
@@ -145,13 +161,16 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
 
     assert TestTransport.count(context.socket) == 1
     {:ok, %Packet{} = packet, _excess} = Packet.decode(TestTransport.take(context.socket))
-    assert packet.type == Type.NAKNCC
+    assert packet.type == Type.RXMITP
     assert packet.seq == 0
-    assert packet.payload == <<9>>
+    # RXMITP is a retransmit starting at packet 0
+    assert packet.payload == <<0>>
+    # assert packet.payload == <<9>>
+
   end
 
   test "two good packets, then one out of sequence", context do
-    send(
+     send(
       context.tcsp,
       {:tcp, nil, Packet.encode(%Packet{type: Type.UD1ACK, seq: 0, payload: <<"foo">>})}
     )
@@ -196,17 +215,22 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
     assert packet.payload == <<0>>
 
     {:ok, %Packet{} = packet, _excess} = Packet.decode(TestTransport.take(context.socket))
-    assert packet.type == Type.NAKNCC
+    assert packet.type == Type.RXMITP
     assert packet.seq == 0
-    assert packet.payload == <<9>>
+    # RXMITP is a retransmit starting at packet 2
+    # since we responded to 0 and 1, the next packet is 2
+    assert packet.payload == <<2>>
+
   end
 
   test "TCS receive sequence rolls over from 255 to 0", context do
     for i <- 0..514 do
+      seq_mod = Integer.mod(i, 256)
+
       send(
         context.tcsp,
         {:tcp, nil,
-         Packet.encode(%Packet{type: Type.UD1NAK, seq: Integer.mod(i, 256), payload: <<"foo">>})}
+         Packet.encode(%Packet{type: Type.UD1NAK, seq: seq_mod, payload: <<"foo">>})}
       )
     end
 
