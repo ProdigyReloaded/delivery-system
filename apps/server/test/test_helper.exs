@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2022, 2025, Phillip Heller and Richard Cook
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -82,6 +82,38 @@ defmodule Server do
     |> first()
     |> Repo.one()
     |> Map.get(:logged_on)
+  end
+end
+
+defmodule TestTransport do
+  use Agent
+  alias Prodigy.Server.Protocol.Tcs.Packet, as: Packet
+  # alias Prodigy.Server.Protocol.Tcs.Packet.Type, as: Type
+
+
+  # socket, for our testing, is the pid of the TestTransport process
+  def setopts(_, _), do: :ok
+  def start_link(_opts), do: Agent.start_link(fn -> [] end)
+
+  def send(socket, data),
+    do: Agent.get_and_update(socket, fn queue -> {queue, queue ++ [data]} end)
+
+  def close(_socket), do: :ok
+
+
+  def take(socket), do: Agent.get_and_update(socket, fn [head | tail] -> {head, tail} end)
+  def count(socket), do: Agent.get(socket, fn queue -> length(queue) end)
+  def clear(socket), do: Agent.update(socket, fn _ -> [] end)
+
+  def get_queue(socket), do: Agent.get(socket, fn queue -> queue end)
+
+  def get_q_as_p(socket) do
+    Agent.get(socket, fn queue ->
+      Enum.map(queue, fn item ->
+        {:ok, %Packet{} = packet, _excess} = Packet.decode(item)
+        packet
+      end)
+    end)
   end
 end
 
