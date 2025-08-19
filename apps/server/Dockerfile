@@ -31,6 +31,9 @@ RUN cd apps/podbutil && mix escript.build
 
 FROM elixir:1.13.4-otp-25-slim AS run_stage
 
+# Install git for cloning the objects repository
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
 COPY --from=release_stage $HOME/_build .
 COPY --from=release_stage $HOME/apps/pomsutil/pomsutil /usr/local/bin
 COPY --from=release_stage $HOME/apps/podbutil/podbutil /usr/local/bin

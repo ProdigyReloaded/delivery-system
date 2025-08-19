@@ -24,23 +24,16 @@ the service was created by the _Producer System_.
 ## Start the service
 ```
 docker compose up
-docker compose run server /prod/rel/server/bin/server eval "Prodigy.Core.Release.migrate()"
 ```
 
-## Install the objects
-```
-git clone git@github.com:ProdigyReloaded/objects.git /tmp/objects
-docker compose run -v /tmp/objects:/objects:ro server podbutil import "/objects/*"
-- Imported 498 objects
-```
+This command will:
+* Build the delivery system Docker image
+* Start the database
+* Execute the database migrations
+* Clone the git objects repository and add them to the database
+* Create a user `AAAA11A` with an initial password `SECRET`
+* Run the server.
 
-## Create an account 
-
-```
-docker compose run server pomsutil create
-- Created Household XLNV42
-- Created User XLNV42A with password WVYLC6
-```
 
 ## Download dosbox-staging
 
@@ -48,7 +41,8 @@ Get the latest release for your operating system [here](https://dosbox-staging.g
 
 ## Download the client
 
-As of this writing, the client version software that shipped with the IBM PS/1 (RS 6.03.17)
+As of this writing, the client version software that shipped with the IBM PS/1 (RS 6.03.17); this version has produced
+the best results but it does require a small tweak which will be described below.
 
 The software is archived [here](https://archive.org/details/ibm-ps-1-users-club-and-prodigy-software-1990) and
 the disk image is [here](https://archive.org/download/ibm-ps-1-users-club-and-prodigy-software-1990/IBM%20PS1%20Users%27%20Club%20and%20PRODIGY%20Software%20%281990%29.img).
@@ -87,13 +81,41 @@ PRODIGY.BAT
 ```
 
 
-## Run dosbox and connect
+## Run dosbox and prepare the client
 ```
 % dosbox -conf /tmp/prodigy/dosbox.conf
 ```
 
-If prompted for a phone number, use the same as created in the preparation step above (`5551212`).
-Once prompted for a username and password, use the one returned by `pomsutil` above.
+When you first run the client software, step through the prompts, responding as follows:
+* Which phone service do you have? `TONE`
+* Please type your one-letter network symbol, then press [ENTER]. `Q`
+* Type the Prodigy service/Users' Club phone number, then press [ENTER]. `5551212`
+* Now, simply close dosbox.
+
+## Make a small adjustment
+Edit `CONFIG.SM` however you wish and remove the line that reads `OBJECT:XTG00000.PG1;` and save the file.
+
+## Run dosbox and connect
+```
+% dosbox -conf /tmp/prodigy/dosbox.conf
+```
+Now (and any time you re-run the client), you will be presented with the Prodigy logon screen.
+
+Login with the default credentials created above (User ID `AAAA11A` and password `SECRET`).  Upon logon you'll be
+prompted to complete enrollment and choose a new password.  Subsequent logons will be with the new password.
+
+# Stopping and starting the service
+After starting the service as described above, it should run in the foreground.  It can be stopped with CTRL-C, and
+simply restarted with `docker compose up`.  It will use the database that was already crated and populated.
+
+# Resetting the service
+If at some point it is necessary to rebuild the service, it can be done by deleting the containers and volumes, then
+restarting them. Beware that this will delete all users and content you may have created.
+
+```
+docker compose down -v
+```
+
 
 ## Caveats
 

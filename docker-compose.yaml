@@ -6,6 +6,33 @@ services:
       POSTGRES_USER: prodigy
       POSTGRES_PASSWORD: prodigy
       POSTGRES_DB: prodigy
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prodigy -d prodigy"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-init:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    environment:
+      - DB_NAME=prodigy
+      - DB_USER=prodigy
+      - DB_PASS=prodigy
+      - DB_HOST=db
+      - MIX_ENV=prod
+    volumes:
+      - objects_data:/objects
+      - init_state:/init_state
+      - ./apps/server/init-prodigy.sh:/init-prodigy.sh:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "/init-prodigy.sh"]
+
   server:
     build:
       context: .
@@ -19,4 +46,10 @@ services:
       - DB_HOST=db
       - MIX_ENV=prod
     depends_on:
-      - db
+      db-init:
+        condition: service_completed_successfully
+
+volumes:
+  db_data:
+  objects_data:
+  init_state:
