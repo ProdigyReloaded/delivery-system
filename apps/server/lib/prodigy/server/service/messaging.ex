@@ -243,7 +243,7 @@ defmodule Prodigy.Server.Service.Messaging do
 
     Logger.debug("delete message indices: #{inspect message_ids_to_delete}")
 
-    {:ok, message} =
+    {:ok, _message} =
       Repo.transaction(fn ->
         Message
         |> Ecto.Query.where([m], m.to_id == ^session.user.id)

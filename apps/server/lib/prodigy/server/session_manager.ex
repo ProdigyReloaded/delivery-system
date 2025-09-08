@@ -3,7 +3,7 @@ defmodule Prodigy.Server.SessionManager do
   Manages user sessions with concurrency control
   """
 
-  alias Prodigy.Core.Data.{Session, User, Repo}
+  alias Prodigy.Core.Data.{Session, Repo}
   import Ecto.Query
   require Logger
 

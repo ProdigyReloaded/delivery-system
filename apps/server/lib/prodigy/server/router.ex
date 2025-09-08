@@ -171,7 +171,7 @@ defmodule Prodigy.Server.Router do
 
   @impl true
   def handle_info(:auth_timeout, state) do
-    Logger.warn("authentication timeout")
+    Logger.warning("authentication timeout")
     {:stop, :normal, state}
   end
 

@@ -174,7 +174,7 @@ defmodule Prodigy.Server.Service.Logon do
     Logger.debug("#{inspect(user)}")
 
     if user == nil do
-      Logger.warn("User #{user_id} attempted to logon, but does not exist in the database")
+      Logger.warning("User #{user_id} attempted to logon, but does not exist in the database")
       :bad_password
     else
       # TODO remove this once tooling supports creating users with initial password hashed
@@ -190,7 +190,7 @@ defmodule Prodigy.Server.Service.Logon do
           {:ok, user}
 
         false ->
-          Logger.warn("User #{user_id} attempted logon, but failed authentication")
+          Logger.warning("User #{user_id} attempted logon, but failed authentication")
           :bad_password
       end
     end
@@ -237,7 +237,7 @@ defmodule Prodigy.Server.Service.Logon do
 
   defp in_use(user) do
     if SessionManager.user_logged_on?(user.id) do
-      Logger.warn("User #{user.id} attempted logon, but appears to already be logged on")
+      Logger.warning("User #{user.id} attempted logon, but appears to already be logged on")
       :id_in_use
     else
       false
@@ -249,7 +249,7 @@ defmodule Prodigy.Server.Service.Logon do
       Logger.debug("User is connecting with RS #{version}")
       true
     else
-      Logger.warn("User is connecting with an unacceptable software version")
+      Logger.warning("User is connecting with an unacceptable software version")
       :bad_version
     end
   end

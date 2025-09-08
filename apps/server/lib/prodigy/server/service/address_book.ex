@@ -41,7 +41,7 @@ defmodule Prodigy.Server.Service.AddressBook do
           {:ok, <<0x01, 0x03, "TODO">>}
 
         _ ->
-          Logger.warn(
+          Logger.warning(
             "unhandled addressbook request #{inspect(request, base: :hex, limit: :infinity)}"
           )
 

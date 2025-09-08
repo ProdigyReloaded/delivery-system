@@ -41,7 +41,7 @@ end
 defmodule Server do
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Router
-  alias Prodigy.Core.Data.{Repo, User, Session}
+  alias Prodigy.Core.Data.{Repo, Session}
 
   import Ecto.Query
 
