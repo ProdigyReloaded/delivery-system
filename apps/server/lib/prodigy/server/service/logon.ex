@@ -30,6 +30,7 @@ defmodule Prodigy.Server.Service.Logon do
   alias Prodigy.Server.Protocol.Dia.Packet
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Service.Messaging
+  alias Prodigy.Server.SessionManager
   alias Prodigy.Server.Session
 
   defenum Status do
@@ -206,12 +207,10 @@ defmodule Prodigy.Server.Service.Logon do
 
       String.ends_with?(normalized_user_id, "A") ->
         Logger.debug("Subscriber is unenrolled")
-        mark_id_in_use(user)
         {:enroll_subscriber, user}
 
       true ->
         Logger.debug("Household member is unenrolled")
-        mark_id_in_use(user)
         {:enroll_other, user}
     end
   end
@@ -237,26 +236,12 @@ defmodule Prodigy.Server.Service.Logon do
   end
 
   defp in_use(user) do
-    case user.logged_on do
-      false ->
-        false
-
-      nil ->
-        false
-
-      true ->
-        Logger.warn("User #{user.id} attempted logon, but appears to already be logged on")
-        :id_in_use
+    if SessionManager.user_logged_on?(user.id) do
+      Logger.warn("User #{user.id} attempted logon, but appears to already be logged on")
+      :id_in_use
+    else
+      false
     end
-  end
-
-  defp mark_id_in_use(user) do
-    user
-    |> Ecto.Changeset.change(%{logged_on: true})
-    |> Repo.update!()
-
-    Logger.debug("User online state updated")
-    :ok
   end
 
   defp version_ok(version) do
@@ -283,9 +268,25 @@ defmodule Prodigy.Server.Service.Logon do
            false <- in_use(user),
            false <- deleted(user),
            true <- household_active(user),
-           true <- enrolled(user),
-           :ok <- mark_id_in_use(user) do
-        {Status.SUCCESS, user}
+           enrollment_status <- enrolled(user) do
+
+        # create session based on enrollment status
+        session_status = case enrollment_status do
+          true -> :success
+          {:enroll_subscriber, _} -> :enroll_subscriber
+          {:enroll_other, _} -> :enroll_other
+        end
+
+        case SessionManager.create_session(user, session_status, version) do
+          {:ok, _db_session} ->
+            case enrollment_status do
+              true -> {Status.SUCCESS, user}
+              {:enroll_subscriber, user} -> {Status.ENROLL_SUBSCRIBER, user}
+              {:enroll_other, user} -> {Status.ENROLL_OTHER, user}
+            end
+          {:error, :concurrency_exceeded} ->
+            {Status.ID_IN_USE, nil}
+        end
       else
         :bad_version -> {Status.BAD_VERSION, nil}
         :bad_password -> {Status.BAD_PASSWORD, nil}

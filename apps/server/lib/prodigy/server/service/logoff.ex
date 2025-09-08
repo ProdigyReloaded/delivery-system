@@ -27,6 +27,7 @@ defmodule Prodigy.Server.Service.Logoff do
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Session
+  alias Prodigy.Server.SessionManager
 
   defp clear_id_in_use(user_id, reason \\ "normal") do
     user =
@@ -40,12 +41,19 @@ defmodule Prodigy.Server.Service.Logoff do
 
     user
     |> change(%{
-      logged_on: false,
       prf_last_logon_date: Timex.format!(now, "{0M}/{0D}/{YYYY}"),
       prf_last_logon_time: Timex.format!(now, "{h24}.{m}")
     })
     |> Repo.update()
 
+    # Close the session
+    status = case reason do
+      "normal" -> :normal
+      "abnormal" -> :abnormal
+      _ -> :abnormal
+    end
+
+    SessionManager.close_session(user_id, status)
     Logger.info("User #{user_id} logged off (#{reason})")
     :ok
   end

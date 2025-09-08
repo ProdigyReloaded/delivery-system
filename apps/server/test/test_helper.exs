@@ -41,7 +41,7 @@ end
 defmodule Server do
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Router
-  alias Prodigy.Core.Data.{Repo, User}
+  alias Prodigy.Core.Data.{Repo, User, Session}
 
   import Ecto.Query
 
@@ -77,11 +77,11 @@ defmodule Server do
   end
 
   def logged_on?(user_id) do
-    User
-    |> where([u], u.id == ^user_id)
-    |> first()
-    |> Repo.one()
-    |> Map.get(:logged_on)
+    from(s in Session,
+      where: s.user_id == ^user_id,
+      where: is_nil(s.logoff_timestamp)
+    )
+    |> Repo.exists?()
   end
 end
 

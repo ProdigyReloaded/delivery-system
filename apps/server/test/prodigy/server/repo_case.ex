@@ -30,11 +30,8 @@ defmodule Prodigy.Server.RepoCase do
   end
 
   setup tags do
-    :ok = Sandbox.checkout(Prodigy.Core.Data.Repo)
-
-    unless tags[:async] do
-      Sandbox.mode(Prodigy.Core.Data.Repo, {:shared, self()})
-    end
+    pid = Sandbox.start_owner!(Prodigy.Core.Data.Repo, shared: not tags[:async])
+    on_exit(fn -> Sandbox.stop_owner(pid) end)
 
     :ok
   end
