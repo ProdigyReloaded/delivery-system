@@ -28,13 +28,17 @@ defmodule Prodigy.Server.Application do
   def start(_type, _args) do
     Logger.info("Starting Prodigy Server")
 
+    # these processes are started in this order, then shutdown in reverse order when the process receives SIGKILL
+    # SessionCleanup will close any active sessions on this node.  Good for routine shutdowns, but would also be good
+    # if nodes had deterministic names and could clean stale sessions on restart.
     children = [
-      {Prodigy.Server.RanchSup, {}},
       {Prodigy.Core.Data.Repo, []},
-      Prodigy.Server.Scheduler,
-      Prodigy.Server.SessionSupervisor
+      Prodigy.Server.SessionCleanup,
+      {Prodigy.Server.RanchSup, {}},
+      Prodigy.Server.Scheduler
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)
   end
+
 end

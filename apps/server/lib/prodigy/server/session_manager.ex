@@ -38,6 +38,7 @@ defmodule Prodigy.Server.SessionManager do
   end
 
   def close_session(user_id, status_atom) do
+    # Find the active session for this user AND this pid
     session =
       from(s in Session,
         where: s.user_id == ^user_id,
@@ -74,20 +75,6 @@ defmodule Prodigy.Server.SessionManager do
       update: [set: [
         logoff_timestamp: ^DateTime.utc_now(),
         logoff_status: ^@logoff_status[:node_shutdown]
-      ]]
-    )
-    |> Repo.update_all([])
-  end
-
-  def cleanup_stale_sessions(timeout_minutes \\ 30) do
-    cutoff = DateTime.utc_now() |> DateTime.add(-timeout_minutes * 60)
-
-    from(s in Session,
-      where: is_nil(s.logoff_timestamp),
-      where: s.last_activity_at < ^cutoff,
-      update: [set: [
-        logoff_timestamp: ^DateTime.utc_now(),
-        logoff_status: ^@logoff_status[:timeout]
       ]]
     )
     |> Repo.update_all([])

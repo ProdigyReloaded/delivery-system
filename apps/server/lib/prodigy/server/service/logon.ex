@@ -235,15 +235,6 @@ defmodule Prodigy.Server.Service.Logon do
     end
   end
 
-  defp in_use(user) do
-    if SessionManager.user_logged_on?(user.id) do
-      Logger.warning("User #{user.id} attempted logon, but appears to already be logged on")
-      :id_in_use
-    else
-      false
-    end
-  end
-
   defp version_ok(version) do
     if version in ["06.03.10", "06.03.17"] do
       Logger.debug("User is connecting with RS #{version}")
@@ -265,7 +256,6 @@ defmodule Prodigy.Server.Service.Logon do
     result =
       with true <- version_ok(version),
            {:ok, user} <- get_user(user_id, password),
-           false <- in_use(user),
            false <- deleted(user),
            true <- household_active(user),
            enrollment_status <- enrolled(user) do
@@ -285,6 +275,7 @@ defmodule Prodigy.Server.Service.Logon do
               {:enroll_other, user} -> {Status.ENROLL_OTHER, user}
             end
           {:error, :concurrency_exceeded} ->
+            Logger.warning("User #{user.id} attempted logon, but exceeded concurrency limit")
             {Status.ID_IN_USE, nil}
         end
       else
