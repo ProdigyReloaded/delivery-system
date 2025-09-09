@@ -67,12 +67,15 @@ defmodule Prodigy.OmsUtil.CLI do
         list-users [--like <pattern>]
           Displays a listing of user accounts found at <datasource>
 
-        create [XXXX[YY]] [password]
+        create [XXXX[YY]] [password] [--concurrency-limit <n>]
           When no arguments, XXXX, or XXXXYY are given, creates a household
           with household ID next in sequence, or with XXXXYY as specified.
 
           Creates the "A" user record, with the given password, or if none is
           given, generates one randomly which is printed to the console.
+
+          --concurrency-limit <n>  Set the maximum concurrent sessions for this user
+                                  (default: 1, use 0 for unlimited)
 
           If XXXXYY already exists, an error is given.
 
@@ -99,7 +102,8 @@ defmodule Prodigy.OmsUtil.CLI do
           d: :database,
           p: :port,
           h: :host,
-          u: :username
+          u: :username,
+          c: :concurrency_limit
         ],
         strict: [
           help: :boolean,
@@ -107,7 +111,8 @@ defmodule Prodigy.OmsUtil.CLI do
           host: :string,
           port: :integer,
           database: :string,
-          like: :string
+          like: :string,
+          concurrency_limit: :integer
         ]
       )
 
@@ -141,7 +146,8 @@ defmodule Prodigy.OmsUtil.CLI do
           end
 
         args = %{
-          id: id
+          id: id,
+          concurrency_limit: Map.get(args, :concurrency_limit, 1)
         }
 
         Create.exec(rest, args)
