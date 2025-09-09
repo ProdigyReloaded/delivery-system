@@ -33,11 +33,11 @@ defmodule Prodigy.Server.Service.Cmc do
         <<
           user_id::binary-size(7),          # right padded with '?'
           "  ",
-          system_origin,                    # "T" = Trintex
+          system_origin::binary-size(1),    # "T" = Trintex
           msg_origin::binary-size(3),       # "PCM" = pcmessage
           unit_id::binary-size(2),          # ascii decimals, "10" typical
           error_code::binary-size(2),       # ascii decimals, "02" typical
-          severity_level,                   # 'E'
+          severity_level::binary-size(1),   # 'E'
           " ",
           error_threshold::binary-size(3),  # "001"
           " ",
@@ -46,13 +46,14 @@ defmodule Prodigy.Server.Service.Cmc do
           api_event::binary-size(5),        # '00003' typical
           mem_to_start::binary-size(8),     # '00227472' typical
           dos_version::binary-size(5),      # '03.30' typical
-          rs_version::binary-size(8),       # '6.01.XX' typical
+          rs_version::binary-size(7),       # '6.01.XX' typical
+          " ",
           window_id::binary-size(11),       # 'NOWINDOWIDX' typical
-          window_last::binary-size(2),      # in ascii hex, '0104' typical
+          window_last::binary-size(4),      # in ascii hex, '0104' typical
           selected_id::binary-size(11),     # 'NOSELECTORX' typical
-          selected_last::binary-size(2),    # '0104 typical
+          selected_last::binary-size(4),    # '0104 typical
           base_id::binary-size(11),         # 'PIOT0010MAP' typical
-          base_last::binary-size(2),        # '0104' typical
+          base_last::binary-size(4),        # '0104' typical
           keyword::binary-size(13)          # 'QUOTE TRACK  ' typical
         >> ->
           msg = """
@@ -79,9 +80,9 @@ defmodule Prodigy.Server.Service.Cmc do
                 Base Last: #{inspect base_last, base: :hex}
                   Keyword: #{keyword}
           """
-          Logger.warn(msg)
+          Logger.warning(msg)
         _ ->
-          Logger.warn("CMC received message in unknown format: #{inspect payload, base: :hex, limit: :infinity}")
+          Logger.warning("CMC received message in unknown format: #{inspect payload, base: :hex, limit: :infinity}")
       end
 
     {:ok, session, <<>>}
