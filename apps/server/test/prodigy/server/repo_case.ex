@@ -31,7 +31,18 @@ defmodule Prodigy.Server.RepoCase do
 
   setup tags do
     pid = Sandbox.start_owner!(Prodigy.Core.Data.Repo, shared: not tags[:async])
-    on_exit(fn -> Sandbox.stop_owner(pid) end)
+    on_exit(fn ->
+      # we need to delay shutdown long enough for the router to clean up so we can avoid log messages that
+      # look like errors.  These errors arise because we finish our assertions and the test concludes, but when
+      # the Router process terminates, it calls it's hooks which handle what appear to be abnormal user
+      # disconnections.  They try and write to the database that has already shutdown.
+
+      # A possibly better alternative would be an on_exit hook in the test setup where the Router's termination
+      # is awaited.  Doesn't seem there is an on_exit callback for setup_with_mocks, though.
+
+      Process.sleep(10)
+      Sandbox.stop_owner(pid)
+    end)
 
     :ok
   end
