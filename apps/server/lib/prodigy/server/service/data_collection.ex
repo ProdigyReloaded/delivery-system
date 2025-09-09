@@ -22,7 +22,7 @@ defmodule Prodigy.Server.Service.DataCollection do
   require Logger
 
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
   defmodule ObjectRecord do
     @moduledoc false
@@ -65,13 +65,13 @@ defmodule Prodigy.Server.Service.DataCollection do
     entries
   end
 
-  def handle(%Fm0{dest: _dest, payload: <<0x4, rest::binary>>} = request, %Session{} = session) do
+  def handle(%Fm0{dest: _dest, payload: <<0x4, rest::binary>>} = request, %Context{} = context) do
     Logger.debug("data collection request #{inspect(request, base: :hex, limit: :infinity)}")
 
     entries = parse(rest)
 
     Logger.debug("data collection records: #{inspect(entries, pretty: true)}")
 
-    {:ok, session}
+    {:ok, context}
   end
 end

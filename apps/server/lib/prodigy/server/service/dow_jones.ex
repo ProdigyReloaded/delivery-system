@@ -23,7 +23,7 @@ defmodule Prodigy.Server.Service.DowJones do
 
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
   defmodule YahooFinanceData do
     @moduledoc false
@@ -81,7 +81,7 @@ defmodule Prodigy.Server.Service.DowJones do
   @doc """
   This method handles Stock Symbol to Company Name resolution requests from the newly created logic in BNB00037.PGM.
   """
-  def handle(%Fm0{dest: 0x009900, payload: symbol} = request, %Session{} = session) do
+  def handle(%Fm0{dest: 0x009900, payload: symbol} = request, %Context{} = context) do
     Logger.debug("dow jones resolve symbol '#{symbol}' to short name")
 
     shortName =
@@ -110,12 +110,12 @@ defmodule Prodigy.Server.Service.DowJones do
         payload: shortName
     }
 
-    {:ok, session, DiaPacket.encode(response)}
+    {:ok, context, DiaPacket.encode(response)}
   end
 
   def handle(
         %Fm0{dest: _dest, payload: <<0x2C, symbol::binary-size(5), 0xD>>} = request,
-        %Session{user: _user} = session
+        %Context{user: _user} = context
       ) do
     Logger.debug("dow jones request #{inspect(request, base: :hex, limit: :infinity)}")
 
@@ -172,6 +172,6 @@ defmodule Prodigy.Server.Service.DowJones do
           }
       end
 
-    {:ok, session, DiaPacket.encode(response)}
+    {:ok, context, DiaPacket.encode(response)}
   end
 end

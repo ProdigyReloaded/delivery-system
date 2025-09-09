@@ -31,7 +31,7 @@ defmodule Prodigy.Server.Service.Logon do
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Service.Messaging
   alias Prodigy.Server.SessionManager
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
   defenum Status do
     @moduledoc "An enumeration of Logon service responses"
@@ -251,7 +251,7 @@ defmodule Prodigy.Server.Service.Logon do
             <<_, user_id::binary-size(7)-unit(8), pwlen, password::binary-size(pwlen)-unit(8),
               version::binary-size(8)-unit(8), _rest::binary>>
         } = request,
-        %Session{auth_timeout: auth_timeout} = session
+        %Context{auth_timeout: auth_timeout} = context
       ) do
     result =
       with true <- version_ok(version),
@@ -260,14 +260,14 @@ defmodule Prodigy.Server.Service.Logon do
            true <- household_active(user),
            enrollment_status <- enrolled(user) do
 
-        # create session based on enrollment status
-        session_status = case enrollment_status do
+        # create context based on enrollment status
+        status = case enrollment_status do
           true -> :success
           {:enroll_subscriber, _} -> :enroll_subscriber
           {:enroll_other, _} -> :enroll_other
         end
 
-        case SessionManager.create_session(user, session_status, version) do
+        case SessionManager.create_session(user, status, version) do
           {:ok, _db_session} ->
             case enrollment_status do
               true -> {Status.SUCCESS, user}
@@ -294,22 +294,22 @@ defmodule Prodigy.Server.Service.Logon do
 
     case result do
       {Status.SUCCESS, user} ->
-        Session.cancel_auth_timer(auth_timeout)
+        Context.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Normal)")
-        {:ok, %Session{user: user, rs_version: version}, response}
+        {:ok, %Context{user: user, rs_version: version}, response}
 
       {Status.ENROLL_SUBSCRIBER, user} ->
-        Session.cancel_auth_timer(auth_timeout)
+        Context.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Enroll Subscriber)")
-        {:ok, %Session{user: user, rs_version: version}, response}
+        {:ok, %Context{user: user, rs_version: version}, response}
 
       {Status.ENROLL_OTHER, user} ->
-        Session.cancel_auth_timer(auth_timeout)
+        Context.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Enroll Other)")
-        {:ok, %Session{user: user, rs_version: version}, response}
+        {:ok, %Context{user: user, rs_version: version}, response}
 
       _ ->
-        {:error, session, response}
+        {:error, context, response}
     end
   end
 end

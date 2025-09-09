@@ -21,10 +21,10 @@ defmodule Prodigy.Server.Service.Cmc do
 
   require Logger
 
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm9}
 
-  def handle(%Fm0{fm9: %Fm9{payload: payload}} = request, %Session{} = session) do
+  def handle(%Fm0{fm9: %Fm9{payload: payload}} = request, %Context{} = context) do
     Logger.debug("cmc got #{inspect(request, base: :hex, limit: :infinity)}")
 
     # TODO insert the error details into the database
@@ -85,6 +85,6 @@ defmodule Prodigy.Server.Service.Cmc do
           Logger.warning("CMC received message in unknown format: #{inspect payload, base: :hex, limit: :infinity}")
       end
 
-    {:ok, session, <<>>}
+    {:ok, context, <<>>}
   end
 end

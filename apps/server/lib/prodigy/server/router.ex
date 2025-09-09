@@ -15,23 +15,23 @@
 
 defmodule Prodigy.Server.Router do
   @moduledoc """
-  The Router implements the service invocation function and stores session data.
+  The Router implements the service invocation function and stores context data.
 
   An instance of the Router is created for each active connection.
 
   The Router is responsible for:
-  * Storing an instance of `Prodigy.Server.Session`
+  * Storing an instance of `Prodigy.Server.Context`
   * receiving packets from `Prodigy.Server.Protocol.Dia`
   * invoking the appropriate Service (that implements `Prodigy.Server.Service`) and passing to it the packet itself and
-    the session
-  * Storing the updated Session as received from the Service
+    the context
+  * Storing the updated Context as received from the Service
   * Returning any response received from the service to the reception system (note, DIA vs TOCS)
   """
 
   require Logger
   use GenServer
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
   alias Prodigy.Server.Service.{
     AddressBook,
@@ -48,7 +48,7 @@ defmodule Prodigy.Server.Router do
   }
 
   defmodule State do
-    defstruct session: %Session{}
+    defstruct context: %Context{}
   end
 
   def handle_packet(pid, %Fm0{} = packet), do: GenServer.call(pid, {:handle_packet, packet})
@@ -57,7 +57,7 @@ defmodule Prodigy.Server.Router do
   def init(_) do
     Logger.debug("router started")
     Process.flag(:trap_exit, true)
-    {:ok, %State{session: %Session{auth_timeout: Session.set_auth_timer()}}}
+    {:ok, %State{context: %Context{auth_timeout: Context.set_auth_timer()}}}
   end
 
   defmodule Default do
@@ -78,13 +78,13 @@ defmodule Prodigy.Server.Router do
   * DIA destination ID
   * When necessary, the first byte of the DIA packet payload
 
-  The entire deserialized DIA Fm0 packet (`Prodigy.Server.Protocol.Dia.Packet.Fm0`) and the `Prodigy.Server.Session` is
+  The entire deserialized DIA Fm0 packet (`Prodigy.Server.Protocol.Dia.Packet.Fm0`) and the `Prodigy.Server.Context` is
   passed to the service.  The service returns:
   * A status atom (:ok, :error, or :disconnect)
-  * The `Prodigy.Server.Session` struct, updated as appropriate
+  * The `Prodigy.Server.Context` struct, updated as appropriate
   * Optionally, A binary response payload
 
-  The router will update the stored `Prodigy.Server.Session` with the value returned, and the binary response payload
+  The router will update the stored `Prodigy.Server.Context` with the value returned, and the binary response payload
   will be returned to `Prodigy.Server.Protocol.Dia`, then to `Prodigy.Server.Protocol.Tcs` where it will ultimately be
   chunked, encapsulated, and sent to the Reception System.
   """
@@ -138,25 +138,25 @@ defmodule Prodigy.Server.Router do
           Default
       end
 
-    case service.handle(packet, state.session) do
-      {:ok, %Session{} = session} ->
-        {:reply, {:ok}, %{state | session: session}}
+    case service.handle(packet, state.context) do
+      {:ok, %Context{} = context} ->
+        {:reply, {:ok}, %{state | context: context}}
 
-      {:ok, %Session{} = session, response} ->
-        {:reply, {:ok, response}, %{state | session: session}}
+      {:ok, %Context{} = context, response} ->
+        {:reply, {:ok, response}, %{state | context: context}}
 
-      {:error, %Session{} = session, response} ->
-        {:reply, {:ok, response}, %{state | session: session}}
+      {:error, %Context{} = context, response} ->
+        {:reply, {:ok, response}, %{state | context: context}}
 
       # but want to exit at the end of this
-      {:disconnect, %Session{}, response} ->
-        {:reply, {:ok, response}, %Session{}}
+      {:disconnect, %Context{}, response} ->
+        {:reply, {:ok, response}, %Context{}}
     end
   end
 
   @impl GenServer
-  def terminate(reason, %{session: %Session{user: user}} = _state) do
-    # If the router is terminated with a session still active, log the user off
+  def terminate(reason, %{context: %Context{user: user}} = _state) do
+    # If the router is terminated with a connection still active, log the user off
     Logoff.handle_abnormal(user)
     Logger.debug("Router shutting down: #{inspect(reason)}")
     :normal

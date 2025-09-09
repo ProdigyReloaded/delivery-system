@@ -28,14 +28,14 @@ defmodule Prodigy.Server.Service.Tocs do
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
   alias Prodigy.Server.Protocol.Tocs.Packet, as: TocsPacket
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
   def handle(
         %Fm0{
           message_id: message_id,
           payload: <<name::binary-size(11), sequence, type, rest::binary>>
         } = request,
-        session \\ %Session{}
+        context \\ %Context{}
       ) do
     Logger.debug("received tocs packet: #{inspect(request, base: :hex)}")
 
@@ -138,6 +138,6 @@ defmodule Prodigy.Server.Service.Tocs do
           <<>>
       end
 
-    {:ok, session, response}
+    {:ok, context, response}
   end
 end

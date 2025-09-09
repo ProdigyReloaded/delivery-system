@@ -26,7 +26,7 @@ defmodule Prodigy.Server.Service.Logoff do
   alias Prodigy.Core.Data.{Repo, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
   alias Prodigy.Server.SessionManager
 
   defp clear_id_in_use(user_id, reason \\ "normal") do
@@ -46,7 +46,7 @@ defmodule Prodigy.Server.Service.Logoff do
     })
     |> Repo.update()
 
-    # Close the session
+    # Close the connection
     status = case reason do
       "normal" -> :normal
       "abnormal" -> :abnormal
@@ -58,11 +58,11 @@ defmodule Prodigy.Server.Service.Logoff do
     :ok
   end
 
-  def handle(%Fm0{} = request, %Session{user: nil}) do
-    {:ok, %Session{}, DiaPacket.encode(Fm0.make_response(<<>>, request))}
+  def handle(%Fm0{} = request, %Context{user: nil}) do
+    {:ok, %Context{}, DiaPacket.encode(Fm0.make_response(<<>>, request))}
   end
 
-  def handle(%Fm0{dest: dest} = request, %Session{user: user}) do
+  def handle(%Fm0{dest: dest} = request, %Context{user: user}) do
     {:ok, result} =
       Repo.transaction(fn ->
         clear_id_in_use(user.id)
@@ -73,7 +73,7 @@ defmodule Prodigy.Server.Service.Logoff do
         end
       end)
 
-    {result, %Session{auth_timeout: Session.set_auth_timer()},
+    {result, %Context{auth_timeout: Context.set_auth_timer()},
      DiaPacket.encode(Fm0.make_response(<<0, "xxxxxxxx01011988124510">>, request))}
   end
 

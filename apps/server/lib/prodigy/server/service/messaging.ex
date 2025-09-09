@@ -296,7 +296,7 @@ defmodule Prodigy.Server.Service.Messaging do
     session
   end
 
-  def handle(%Fm0{payload: <<0x1, payload::binary>>} = request, %Session{} = session) do
+  def handle(%Fm0{payload: <<0x1, payload::binary>>} = request, %Context{} = context) do
     Logger.debug("messaging got payload: #{inspect(payload, base: :hex, limit: :infinity)}")
 
     {session, response} =
@@ -337,7 +337,7 @@ defmodule Prodigy.Server.Service.Messaging do
           {do_disposition(payload, session), :ok} # retains
 
         _ ->
-          Logger.warn(
+          Logger.warning(
             "unhandled messaging request: #{inspect(request, base: :hex, limit: :infinity)}"
           )
 
@@ -345,8 +345,8 @@ defmodule Prodigy.Server.Service.Messaging do
       end
 
     case response do
-      {:ok, payload} -> {:ok, session, DiaPacket.encode(Fm0.make_response(payload, request))}
-      _ -> {:ok, session}
+      {:ok, payload} -> {:ok, context, DiaPacket.encode(Fm0.make_response(payload, request))}
+      _ -> {:ok, context}
     end
   end
 end
