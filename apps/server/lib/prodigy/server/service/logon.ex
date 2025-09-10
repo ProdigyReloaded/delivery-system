@@ -152,7 +152,7 @@ defmodule Prodigy.Server.Service.Logon do
     time = now |> Calendar.strftime("%H%M%S")
 
     <<
-      status.value,
+      status.value(),
       0x0::unsigned-integer-size(80),
       date::binary-size(6)-unit(8),   # SYS_DATE
       time::binary-size(6)-unit(8),   # SYS_TIME

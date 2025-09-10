@@ -37,8 +37,7 @@ defmodule Prodigy.Server.RepoCase do
       # the Router process terminates, it calls it's hooks which handle what appear to be abnormal user
       # disconnections.  They try and write to the database that has already shutdown.
 
-      # A possibly better alternative would be an on_exit hook in the test setup where the Router's termination
-      # is awaited.  Doesn't seem there is an on_exit callback for setup_with_mocks, though.
+      # An alternative might be an on_exit hook in the test setup where the Router's termination.
 
       Process.sleep(10)
       Sandbox.stop_owner(pid)

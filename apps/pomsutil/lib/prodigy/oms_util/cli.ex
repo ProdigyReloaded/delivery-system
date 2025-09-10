@@ -18,6 +18,7 @@ defmodule Prodigy.OmsUtil.CLI do
 
   alias Prodigy.Core.Data.Util
 
+  @spec usage(any()) :: none()
   def usage(mode, message \\ "")
 
   def usage(:terse, message) do
