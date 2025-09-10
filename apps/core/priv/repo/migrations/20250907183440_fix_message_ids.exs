@@ -17,7 +17,6 @@ defmodule Prodigy.Core.Data.Repo.Migrations.FixMessageIds do
     alter table(:message) do
       remove :id
       add :index, :integer
-      add :to_id_primary, :boolean  # We'll need to handle the composite key separately
     end
 
     # Recreate the composite primary key

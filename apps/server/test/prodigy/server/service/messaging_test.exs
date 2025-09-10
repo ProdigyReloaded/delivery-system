@@ -350,13 +350,13 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     message_payload = <<
       0x04,       # delete
       2::16-big,  # delete 2 messages
-      0::16-big,  # client index 1 (Test 6)
-      2::16-big,  # client index 3 (Test 4)
+      0::16-big,  # client index 0 (Test 6)
+      2::16-big,  # client index 2 (Test 4)
       0x05,       # retain
       3::16-big,  # retain 3 messages
-      1::16-big,  # client index 2 (Test 5)
-      3::16-big,  # client index 4 (Test 3)
-      5::16-big,  # client index 6 (Test 1)
+      1::16-big,  # client index 1 (Test 5)
+      3::16-big,  # client index 3 (Test 3)
+      5::16-big,  # client index 5 (Test 1)
       0xFF        # done
     >>
 
