@@ -224,7 +224,7 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
     assert 6 ==  Message |> Repo.aggregate(:count)
 
-    # Client enters mailbox - this loads the message IDs into session
+    # Client enters mailbox - this loads the message IDs into context
     {6, 4, _rest} = get_mailbox_page(context, 1)
 
     # Get the actual message IDs that will be deleted (client indices 0 and 2)
@@ -286,7 +286,7 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
     assert 6 == Message |> Ecto.Query.where([m], m.retain == false) |> Repo.aggregate(:count)
 
-    # Client enters mailbox - this loads the message IDs into session
+    # Client enters mailbox - this loads the message IDs into context
     {6, 4, _rest} = get_mailbox_page(context, 1)
 
     message_payload = <<
@@ -336,7 +336,7 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
     assert 6 == Message |> Ecto.Query.where([m], m.retain == false) |> Repo.aggregate(:count)
 
-    # Client enters mailbox - this loads the message IDs into session
+    # Client enters mailbox - this loads the message IDs into context
     {6, 4, _rest} = get_mailbox_page(context, 1)
 
     # Get the actual message IDs that will be deleted (client indices 0 and 2)
