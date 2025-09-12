@@ -20,6 +20,7 @@ defmodule Prodigy.Server.RanchSup do
 
   use Supervisor
   require Logger
+  import Cachex.Spec
   alias Prodigy.Server.Protocol.Tcs.Options
 
   def start_link(args) do
@@ -35,6 +36,28 @@ defmodule Prodigy.Server.RanchSup do
 
     Logger.debug("Setting up Down Jones company name lookup")
     :ets.new(:dow_jones, [:set, :public, :named_table])
+
+    Logger.debug("Setting up cache for transmitting packets")
+    Cachex.start_link(:transmit, [
+      expiration: expiration(
+        # how often cleanup should occur
+        interval: :timer.seconds(15),
+
+        # default record expiration
+        default: :timer.seconds(60)
+      )
+    ])
+
+    Logger.debug("Setting up cache for tracking acks")
+    Cachex.start_link(:ack_tracker, [
+      expiration: expiration(
+        # how often cleanup should occur
+        interval: :timer.seconds(15),
+
+        # default record expiration
+        default: :timer.minutes(2)
+      )
+    ])
 
     Logger.debug("setting up the ranch supervision tree")
 
