@@ -28,9 +28,9 @@ defmodule Prodigy.Server.Service.Enrollment do
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Service.{Logon, Messaging, Profile}
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
-  def handle(%Fm0{payload: payload} = request, %Session{user: user} = session) do
+  def handle(%Fm0{payload: payload} = request, %Context{user: user} = context) do
     Logger.debug("received enrollment packet: #{inspect(request, base: :hex, limit: :infinity)}")
     user_id = user.id
 
@@ -91,6 +91,6 @@ defmodule Prodigy.Server.Service.Enrollment do
 
     Logger.info("Enrolled user #{user.id}")
 
-    {:ok, %{session | user: user}, response}
+    {:ok, %{context | user: user}, response}
   end
 end

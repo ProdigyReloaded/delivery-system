@@ -91,7 +91,7 @@ defmodule Prodigy.Server.Service.Cmc.Test do
       }
     }
 
-    assert capture_log([level: :warn], fn ->
+    assert capture_log([level: :warning], fn ->
            Router.handle_packet(context.router_pid, fm0)
     end) =~ "CMC FM9"
 

@@ -20,8 +20,15 @@ defmodule Create do
 
   import Ecto.Changeset
 
-  def exec(argv, _args \\ %{}) do
+  def exec(argv, args \\ %{}) do
     {household_id, password} = parse_arguments(argv)
+    concurrency_limit = Map.get(args, :concurrency_limit, 1)
+
+    # Validate concurrency limit
+    if concurrency_limit < 0 do
+      IO.puts("Error: Concurrency limit must be 0 (unlimited) or a positive integer")
+      exit({:shutdown, 1})
+    end
 
     today = DateTime.to_date(DateTime.utc_now())
 
@@ -30,13 +37,25 @@ defmodule Create do
         %Household{id: household_id, enabled_date: today}
         |> change
         |> put_assoc(:users, [
-          %User{id: household_id <> "A"}
+          %User{
+            id: household_id <> "A",
+            concurrency_limit: concurrency_limit  # Set the limit
+          }
           |> User.changeset(%{password: password})
         ])
         |> Repo.insert()
 
         IO.puts("- Created Household #{household_id}")
         IO.puts("- Created User #{household_id <> "A"} with password #{password}")
+
+        # Show concurrency limit info
+        limit_msg = if concurrency_limit == 0 do
+          "unlimited concurrent sessions"
+        else
+          "#{concurrency_limit} concurrent session(s)"
+        end
+        IO.puts("   * Concurrency limit: #{limit_msg}")
+
 
       _existing ->
         IO.puts("Error: Household #{household_id} already exists")

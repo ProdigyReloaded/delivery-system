@@ -30,11 +30,18 @@ defmodule Prodigy.Server.RepoCase do
   end
 
   setup tags do
-    :ok = Sandbox.checkout(Prodigy.Core.Data.Repo)
+    pid = Sandbox.start_owner!(Prodigy.Core.Data.Repo, shared: not tags[:async])
+    on_exit(fn ->
+      # we need to delay shutdown long enough for the router to clean up so we can avoid log messages that
+      # look like errors.  These errors arise because we finish our assertions and the test concludes, but when
+      # the Router process terminates, it calls it's hooks which handle what appear to be abnormal user
+      # disconnections.  They try and write to the database that has already shutdown.
 
-    unless tags[:async] do
-      Sandbox.mode(Prodigy.Core.Data.Repo, {:shared, self()})
-    end
+      # An alternative might be an on_exit hook in the test setup where the Router's termination.
+
+      Process.sleep(10)
+      Sandbox.stop_owner(pid)
+    end)
 
     :ok
   end

@@ -28,7 +28,7 @@ defmodule Prodigy.Server.Service.Messaging do
   alias Prodigy.Core.Data.{Message, Repo, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
   def expunge do
     Logger.debug("Expunging messages ...")
@@ -111,9 +111,9 @@ defmodule Prodigy.Server.Service.Messaging do
     |> Repo.all()
   end
 
-  defp get_message(client_index, session) do
+  defp get_message(client_index, context) do
     # Client index is 1-based, Elixir lists are 0-based
-    message_id = Enum.at(session.messaging.message_ids, client_index)
+    message_id = Enum.at(context.messaging.message_ids, client_index)
 
     if message_id do
       {:ok, message} =
@@ -122,7 +122,7 @@ defmodule Prodigy.Server.Service.Messaging do
           message =
             Message
             |> Ecto.Query.where([m], m.id == ^message_id)
-            |> Ecto.Query.where([m], m.to_id == ^session.user.id)
+            |> Ecto.Query.where([m], m.to_id == ^context.user.id)
             |> Repo.one()
 
           if message do
@@ -145,7 +145,7 @@ defmodule Prodigy.Server.Service.Messaging do
 
         {:ok, res}
       else
-        Logger.error("Message #{message_id} not found or unauthorized for user #{session.user.id}")
+        Logger.error("Message #{message_id} not found or unauthorized for user #{context.user.id}")
         {:error, "Message not found"}
       end
     else
@@ -154,8 +154,8 @@ defmodule Prodigy.Server.Service.Messaging do
     end
   end
 
-  defp get_mailbox_page(page, session) do
-    message_ids = session.messaging.message_ids
+  defp get_mailbox_page(page, context) do
+    message_ids = context.messaging.message_ids
     total_messages = length(message_ids)
 
     # Calculate which message IDs are on this page (4 messages per page)
@@ -230,7 +230,7 @@ defmodule Prodigy.Server.Service.Messaging do
     unread_message_count > 0
   end
 
-  defp do_disposition(<< 0x4, count::16-big, rest::binary >>, session) do
+  defp do_disposition(<< 0x4, count::16-big, rest::binary >>, context) do
     byte_count = count * 2
     << data::binary-size(byte_count), rest::binary >> = rest
 
@@ -238,27 +238,27 @@ defmodule Prodigy.Server.Service.Messaging do
 
     # Map client indices to message IDs
     message_ids_to_delete = client_indices
-    |> Enum.map(fn idx -> Enum.at(session.messaging.message_ids, idx) end)
+    |> Enum.map(fn idx -> Enum.at(context.messaging.message_ids, idx) end)
     |> Enum.filter(&(&1 != nil))
 
     Logger.debug("delete message indices: #{inspect message_ids_to_delete}")
 
-    {:ok, message} =
+    {:ok, _message} =
       Repo.transaction(fn ->
         Message
-        |> Ecto.Query.where([m], m.to_id == ^session.user.id)
+        |> Ecto.Query.where([m], m.to_id == ^context.user.id)
         |> Ecto.Query.where([m], m.id in ^message_ids_to_delete)
         |> Repo.delete_all()
       end)
 
-    # explicitly don't mutate the session message_ids because we might have more references that
+    # explicitly don't mutate the context message_ids because we might have more references that
     # are to it as is.  Also, we only call dispose when we are leaving messaging.  Guarantee to
-    # have a get_message_page(1) call if client comes back, which will refresh session
+    # have a get_message_page(1) call if client comes back, which will refresh context
 
-    do_disposition(rest, session)
+    do_disposition(rest, context)
   end
 
-  defp do_disposition(<< 0x5, count::16-big, rest::binary >>, session) do
+  defp do_disposition(<< 0x5, count::16-big, rest::binary >>, context) do
     byte_count = count * 2
     << data::binary-size(byte_count), rest::binary >> = rest
 
@@ -266,14 +266,14 @@ defmodule Prodigy.Server.Service.Messaging do
 
     # Map client indices to message IDs
     message_ids_to_retain = client_indices
-    |> Enum.map(fn idx -> Enum.at(session.messaging.message_ids, idx) end)
+    |> Enum.map(fn idx -> Enum.at(context.messaging.message_ids, idx) end)
     |> Enum.filter(&(&1 != nil))
 
     Logger.debug("retain message indices: #{inspect message_ids_to_retain}")
 
     Repo.transaction(fn ->
       messages = Message
-      |> Ecto.Query.where([m], m.to_id == ^session.user.id)
+      |> Ecto.Query.where([m], m.to_id == ^context.user.id)
       |> Ecto.Query.where([m], m.id in ^message_ids_to_retain)
       |> Ecto.Query.where([m], m.retain == false)
       |> Repo.all()
@@ -287,19 +287,19 @@ defmodule Prodigy.Server.Service.Messaging do
       end)
     end)
 
-    do_disposition(rest, session)
+    do_disposition(rest, context)
   end
 
-  defp do_disposition(<< 0xff >>, session) do
+  defp do_disposition(<< 0xff >>, context) do
     # done
     Logger.debug("done processing dispositions")
-    session
+    context
   end
 
-  def handle(%Fm0{payload: <<0x1, payload::binary>>} = request, %Session{} = session) do
+  def handle(%Fm0{payload: <<0x1, payload::binary>>} = request, %Context{} = context) do
     Logger.debug("messaging got payload: #{inspect(payload, base: :hex, limit: :infinity)}")
 
-    {session, response} =
+    {context, response} =
       case payload do
         # this is sent when jumping to "communication"; this response causes
         # option 2 to read "offline communications", which loads MP000000.PGM (missing)
@@ -307,37 +307,37 @@ defmodule Prodigy.Server.Service.Messaging do
 
         # this response loads the page as normal, option 2 is "mailbox"
         <<0x1E, _rest::binary>> ->
-          {session, {:ok, <<0>>}}
+          {context, {:ok, <<0>>}}
 
         # Mailbox page request - check if we need to load message IDs
         <<0xA, page, _rest::binary>> ->
-          session = if page == 1 or not Map.has_key?(session, :messaging) or is_nil(session.messaging) do
-            message_ids = load_message_ids(session.user.id)
-            Map.put(session, :messaging, %{message_ids: message_ids})
+          context = if page == 1 or not Map.has_key?(context, :messaging) or is_nil(context.messaging) do
+            message_ids = load_message_ids(context.user.id)
+            Map.put(context, :messaging, %{message_ids: message_ids})
           else
-            session
+            context
           end
 
-          {session, get_mailbox_page(page, session)}
+          {context, get_mailbox_page(page, context)}
 
         <<0x3, 0x3, index::16-big, 0x1, 0xF4>> ->
-          {session, get_message(index, session)}
+          {context, get_message(index, context)}
 
         <<0x1, 0x2, payload::binary>> ->
-          {session, internal_send_message(session.user, payload)}
+          {context, internal_send_message(context.user, payload)}
 
           # Request for next message within full message view
         <<0x3, index::16-big>> ->
-          {session, get_message(index, session)}
+          {context, get_message(index, context)}
 
-        <<0x4, rest::binary>> ->
-          {do_disposition(payload, session), :ok} # deletes
+        <<0x4, _rest::binary>> ->
+          {do_disposition(payload, context), :ok} # deletes
 
-        <<0x5, rest::binary>> ->
-          {do_disposition(payload, session), :ok} # retains
+        <<0x5, _rest::binary>> ->
+          {do_disposition(payload, context), :ok} # retains
 
         _ ->
-          Logger.warn(
+          Logger.warning(
             "unhandled messaging request: #{inspect(request, base: :hex, limit: :infinity)}"
           )
 
@@ -345,8 +345,8 @@ defmodule Prodigy.Server.Service.Messaging do
       end
 
     case response do
-      {:ok, payload} -> {:ok, session, DiaPacket.encode(Fm0.make_response(payload, request))}
-      _ -> {:ok, session}
+      {:ok, payload} -> {:ok, context, DiaPacket.encode(Fm0.make_response(payload, request))}
+      _ -> {:ok, context}
     end
   end
 end

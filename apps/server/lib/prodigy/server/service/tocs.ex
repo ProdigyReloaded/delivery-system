@@ -28,14 +28,14 @@ defmodule Prodigy.Server.Service.Tocs do
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
   alias Prodigy.Server.Protocol.Tocs.Packet, as: TocsPacket
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
   def handle(
         %Fm0{
           message_id: message_id,
           payload: <<name::binary-size(11), sequence, type, rest::binary>>
         } = request,
-        session \\ %Session{}
+        context \\ %Context{}
       ) do
     Logger.debug("received tocs packet: #{inspect(request, base: :hex)}")
 
@@ -66,7 +66,7 @@ defmodule Prodigy.Server.Service.Tocs do
     response =
       cond do
         !String.printable?(name) ->
-          Logger.warn("Client requested nonsensical object name #{inspect(name)}")
+          Logger.warning("Client requested nonsensical object name #{inspect(name)}")
 
           fm64 = %Fm64{
             status_type: Fm64.StatusType.ERROR,
@@ -80,7 +80,7 @@ defmodule Prodigy.Server.Service.Tocs do
           <<legend::binary-size(4), _identification::binary-size(4), extension::binary>> = name
 
           if String.trim(extension) == "D" and legend in ["XXMH", "XXME"] do
-            Logger.warn("synthesizing response for '#{name}' which is missing from the database")
+            Logger.warning("synthesizing response for '#{name}' which is missing from the database")
             <<candidacy_version_high::3, candidacy_version_low::13>> = <<0::3, 0::13>>
 
             TocsPacket.encode(%TocsPacket{
@@ -100,7 +100,7 @@ defmodule Prodigy.Server.Service.Tocs do
               >>
             })
           else
-            Logger.warn("User requested #{user_request}, but it is missing from the database")
+            Logger.warning("User requested #{user_request}, but it is missing from the database")
 
             fm64 = %Fm64{
               status_type: Fm64.StatusType.ERROR,
@@ -112,7 +112,7 @@ defmodule Prodigy.Server.Service.Tocs do
           end
 
         object == nil ->
-          Logger.warn("User requested #{user_request}, but it is missing from the database")
+          Logger.warning("User requested #{user_request}, but it is missing from the database")
           TocsPacket.encode(%TocsPacket{seq: message_id})
 
         client_version < object.version or client_version == 0 ->
@@ -138,6 +138,6 @@ defmodule Prodigy.Server.Service.Tocs do
           <<>>
       end
 
-    {:ok, session, response}
+    {:ok, context, response}
   end
 end

@@ -114,7 +114,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Packet do
   @spec encode(Packet.t()) :: <<_::16, _::_*8>>
   def encode(%Packet{} = packet) do
     count = byte_size(packet.payload) - 1
-    data = <<count, ~~~count &&& 255, packet.seq, packet.type.value, packet.payload::binary>>
+    data = <<count, ~~~count &&& 255, packet.seq, packet.type.value(), packet.payload::binary>>
     crc = CRC.calculate(:binary.bin_to_list(data), :x_25)
     <<0x02>> <> data <> <<crc::16-little>>
   end
