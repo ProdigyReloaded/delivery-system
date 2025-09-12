@@ -78,19 +78,20 @@ defmodule Prodigy.Server.Service.Cmc.Test do
           "00003",
           "00227472",
           "03.30",
-          " 6.01.XX",
+          "6.01.XX",
+          " ",
           "NOWINDOWIDX",
-          0x01, 0x04,
+          "0104",
           "NOSELECTORX",
-          0x01, 0x04,
+          "0104",
           "PIOT0010MAP",
-          0x01, 0x04,
+          "0104",
           "QUOTE TRACK  "
         >>
       }
     }
 
-    assert capture_log([level: :warn], fn ->
+    assert capture_log([level: :warning], fn ->
            Router.handle_packet(context.router_pid, fm0)
     end) =~ "CMC FM9"
 

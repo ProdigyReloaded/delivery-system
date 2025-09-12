@@ -30,7 +30,8 @@ defmodule Prodigy.Server.Service.Logon do
   alias Prodigy.Server.Protocol.Dia.Packet
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Service.Messaging
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.SessionManager
+  alias Prodigy.Server.Context
 
   defenum Status do
     @moduledoc "An enumeration of Logon service responses"
@@ -151,7 +152,7 @@ defmodule Prodigy.Server.Service.Logon do
     time = now |> Calendar.strftime("%H%M%S")
 
     <<
-      status.value,
+      status.value(),
       0x0::unsigned-integer-size(80),
       date::binary-size(6)-unit(8),   # SYS_DATE
       time::binary-size(6)-unit(8),   # SYS_TIME
@@ -173,7 +174,7 @@ defmodule Prodigy.Server.Service.Logon do
     Logger.debug("#{inspect(user)}")
 
     if user == nil do
-      Logger.warn("User #{user_id} attempted to logon, but does not exist in the database")
+      Logger.warning("User #{user_id} attempted to logon, but does not exist in the database")
       :bad_password
     else
       # TODO remove this once tooling supports creating users with initial password hashed
@@ -189,7 +190,7 @@ defmodule Prodigy.Server.Service.Logon do
           {:ok, user}
 
         false ->
-          Logger.warn("User #{user_id} attempted logon, but failed authentication")
+          Logger.warning("User #{user_id} attempted logon, but failed authentication")
           :bad_password
       end
     end
@@ -206,12 +207,10 @@ defmodule Prodigy.Server.Service.Logon do
 
       String.ends_with?(normalized_user_id, "A") ->
         Logger.debug("Subscriber is unenrolled")
-        mark_id_in_use(user)
         {:enroll_subscriber, user}
 
       true ->
         Logger.debug("Household member is unenrolled")
-        mark_id_in_use(user)
         {:enroll_other, user}
     end
   end
@@ -236,35 +235,12 @@ defmodule Prodigy.Server.Service.Logon do
     end
   end
 
-  defp in_use(user) do
-    case user.logged_on do
-      false ->
-        false
-
-      nil ->
-        false
-
-      true ->
-        Logger.warn("User #{user.id} attempted logon, but appears to already be logged on")
-        :id_in_use
-    end
-  end
-
-  defp mark_id_in_use(user) do
-    user
-    |> Ecto.Changeset.change(%{logged_on: true})
-    |> Repo.update!()
-
-    Logger.debug("User online state updated")
-    :ok
-  end
-
   defp version_ok(version) do
     if version in ["06.03.10", "06.03.17"] do
       Logger.debug("User is connecting with RS #{version}")
       true
     else
-      Logger.warn("User is connecting with an unacceptable software version")
+      Logger.warning("User is connecting with an unacceptable software version")
       :bad_version
     end
   end
@@ -275,17 +251,33 @@ defmodule Prodigy.Server.Service.Logon do
             <<_, user_id::binary-size(7)-unit(8), pwlen, password::binary-size(pwlen)-unit(8),
               version::binary-size(8)-unit(8), _rest::binary>>
         } = request,
-        %Session{auth_timeout: auth_timeout} = session
+        %Context{auth_timeout: auth_timeout} = context
       ) do
     result =
       with true <- version_ok(version),
            {:ok, user} <- get_user(user_id, password),
-           false <- in_use(user),
            false <- deleted(user),
            true <- household_active(user),
-           true <- enrolled(user),
-           :ok <- mark_id_in_use(user) do
-        {Status.SUCCESS, user}
+           enrollment_status <- enrolled(user) do
+
+        # create context based on enrollment status
+        status = case enrollment_status do
+          true -> :success
+          {:enroll_subscriber, _} -> :enroll_subscriber
+          {:enroll_other, _} -> :enroll_other
+        end
+
+        case SessionManager.create_session(user, status, version) do
+          {:ok, _db_session} ->
+            case enrollment_status do
+              true -> {Status.SUCCESS, user}
+              {:enroll_subscriber, user} -> {Status.ENROLL_SUBSCRIBER, user}
+              {:enroll_other, user} -> {Status.ENROLL_OTHER, user}
+            end
+          {:error, :concurrency_exceeded} ->
+            Logger.warning("User #{user.id} attempted logon, but exceeded concurrency limit")
+            {Status.ID_IN_USE, nil}
+        end
       else
         :bad_version -> {Status.BAD_VERSION, nil}
         :bad_password -> {Status.BAD_PASSWORD, nil}
@@ -302,22 +294,22 @@ defmodule Prodigy.Server.Service.Logon do
 
     case result do
       {Status.SUCCESS, user} ->
-        Session.cancel_auth_timer(auth_timeout)
+        Context.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Normal)")
-        {:ok, %Session{user: user, rs_version: version}, response}
+        {:ok, %Context{user: user, rs_version: version}, response}
 
       {Status.ENROLL_SUBSCRIBER, user} ->
-        Session.cancel_auth_timer(auth_timeout)
+        Context.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Enroll Subscriber)")
-        {:ok, %Session{user: user, rs_version: version}, response}
+        {:ok, %Context{user: user, rs_version: version}, response}
 
       {Status.ENROLL_OTHER, user} ->
-        Session.cancel_auth_timer(auth_timeout)
+        Context.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Enroll Other)")
-        {:ok, %Session{user: user, rs_version: version}, response}
+        {:ok, %Context{user: user, rs_version: version}, response}
 
       _ ->
-        {:error, session, response}
+        {:error, context, response}
     end
   end
 end

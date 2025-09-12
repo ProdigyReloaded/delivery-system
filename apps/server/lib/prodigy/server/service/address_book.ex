@@ -23,9 +23,9 @@ defmodule Prodigy.Server.Service.AddressBook do
 
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
-  def handle(%Fm0{payload: <<0xD, payload::binary>>} = request, %Session{} = session) do
+  def handle(%Fm0{payload: <<0xD, payload::binary>>} = request, %Context{} = context) do
     response =
       case payload do
         # this is sent when jumping to "address book"; unsure what it is
@@ -41,7 +41,7 @@ defmodule Prodigy.Server.Service.AddressBook do
           {:ok, <<0x01, 0x03, "TODO">>}
 
         _ ->
-          Logger.warn(
+          Logger.warning(
             "unhandled addressbook request #{inspect(request, base: :hex, limit: :infinity)}"
           )
 
@@ -49,8 +49,8 @@ defmodule Prodigy.Server.Service.AddressBook do
       end
 
     case response do
-      {:ok, payload} -> {:ok, session, DiaPacket.encode(Fm0.make_response(payload, request))}
-      _ -> {:ok, session}
+      {:ok, payload} -> {:ok, context, DiaPacket.encode(Fm0.make_response(payload, request))}
+      _ -> {:ok, context}
     end
   end
 end

@@ -47,7 +47,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Packet.Test do
 
       # manually calculate the CRC, encode the packet, and ensure the unit under test calculated the same CRC
       crc =
-        [thislen - 1, ~~~(thislen - 1) &&& 255, inseq, intype.value, first, rest]
+        [thislen - 1, ~~~(thislen - 1) &&& 255, inseq, intype.value(), first, rest]
         |> CRC.calculate(:x_25)
 
       data = Packet.encode(%Packet{seq: inseq, type: intype, payload: thispayload})

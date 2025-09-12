@@ -19,10 +19,10 @@ defmodule Prodigy.Server.Service do
   """
 
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
-  @callback handle(%Fm0{}, %Session{}) ::
-              {:ok, %Session{}, response :: binary}
-              | {:ok, %Session{}}
-              | {:error, %Session{}, response :: binary}
+  @callback handle(%Fm0{}, %Context{}) ::
+              {:ok, %Context{}, response :: binary}
+              | {:ok, %Context{}}
+              | {:error, %Context{}, response :: binary}
 end

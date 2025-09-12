@@ -25,12 +25,10 @@ defmodule Prodigy.Core.Data.Message do
 
   # TODO denormalize this
 
-  @primary_key false
   schema "message" do
     field(:from_id, :string)
     field(:from_name, :string)
-    field(:to_id, :string, primary_key: true)
-    field(:index, :integer, primary_key: true)
+    field(:to_id, :string)
     field(:subject, :string)
     field(:sent_date, :utc_datetime)
     field(:retain_date, :utc_datetime)

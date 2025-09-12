@@ -144,27 +144,36 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     {0, 0, _rest} = get_mailbox_page(context, 1)
 
     Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 1", "Test 1")
+
+    # Client must reload page 1 to see new messages (simulating leaving and re-entering mailbox)
     {1, 1, _rest} = get_mailbox_page(context, 1)
 
     Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 2", "Test 2")
     Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 3", "Test 3")
     Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 4", "Test 4")
+
+    # Client reloads mailbox
     {4, 4, _rest} = get_mailbox_page(context, 1)
 
     Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 5", "Test 5")
+
+    # Client reloads mailbox again
     {5, 4, _rest} = get_mailbox_page(context, 1)
 
     Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 6", "Test 6")
+
+    # Client reloads mailbox and then navigates to page 2
+    {6, 4, _rest} = get_mailbox_page(context, 1)
     {6, 2, rest} = get_mailbox_page(context, 2)
 
     # make sure the messages on page 2 are as expected
+    # Messages should be Test 2 and Test 1 (oldest) since we show newest first
+    # and page 1 has Test 6, 5, 4, 3
 
-    # Timex mock above not working as expected; will ignore values for now
-    # sent_date = Timex.format!(epoch(), "{0M}/{0D}")
-    # u retain_date = Timex.format!(Timex.shift(epoch(), days: 14), "{0M}/{0D}")
-    <<5::16-big, "ZZZZ00A", 0, 0, sent_date::binary-size(5), retain_date::binary-size(5), 9,
-      "Test User", 6, "Test 5", 6::16-big, "ZZZZ00A", 0, 0, sent_date::binary-size(5),
-      retain_date::binary-size(5), 9, "Test User", 6, "Test 6">> = rest
+    # The client indices for page 2 should be 4 and 5
+    <<4::16-big, "ZZZZ00A", 0, 0, sent_date::binary-size(5), retain_date::binary-size(5), 9,
+      "Test User", 6, "Test 2", 5::16-big, "ZZZZ00A", 0, 0, sent_date::binary-size(5),
+      retain_date::binary-size(5), 9, "Test User", 6, "Test 1">> = rest
 
     logoff(context.router_pid)
   end
@@ -177,20 +186,20 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 1", "Test 1")
 
     {1, 1,
-     <<index::16-big, "ZZZZ00A", 0::16, _dates::binary-size(10), 9, "Test User", 6, "Test 1">>} =
+      <<index::16-big, "ZZZZ00A", 0::16, _dates::binary-size(10), 9, "Test User", 6, "Test 1">>} =
       get_mailbox_page(context, 1)
 
     # check a second time to be sure the read flag isn't set
     {1, 1,
-     <<^index::16-big, "ZZZZ00A", 0::16, _dates::binary-size(10), 9, "Test User", 6, "Test 1">>} =
+      <<^index::16-big, "ZZZZ00A", 0::16, _dates::binary-size(10), 9, "Test User", 6, "Test 1">>} =
       get_mailbox_page(context, 1)
 
     "Test 1" = get_message(context, index)
 
     # check a third time and the read flag should be set
     {1, 1,
-     <<^index::16-big, "ZZZZ00A", 0::3, 1::1, 0::12, _dates::binary-size(10), 9, "Test User", 6,
-       "Test 1">>} = get_mailbox_page(context, 1)
+      <<^index::16-big, "ZZZZ00A", 0::3, 1::1, 0::12, _dates::binary-size(10), 9, "Test User", 6,
+        "Test 1">>} = get_mailbox_page(context, 1)
 
     logoff(context.router_pid)
   end
@@ -215,11 +224,25 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
     assert 6 ==  Message |> Repo.aggregate(:count)
 
+    # Client enters mailbox - this loads the message IDs into context
+    {6, 4, _rest} = get_mailbox_page(context, 1)
+
+    # Get the actual message IDs that will be deleted (client indices 0 and 2)
+    # Since messages are ordered newest first: Test 6, 5, 4, 3, 2, 1
+    # Client index 0 = Test 6, Client index 2 = Test 4
+    messages_before = Message
+                      |> Ecto.Query.where([m], m.to_id == "AAAA12A")
+                      |> Ecto.Query.order_by([m], [desc: m.sent_date, desc: m.id ])
+                      |> Repo.all()
+
+    # Get IDs of messages that should be deleted (1st and 3rd in the list)
+    deleted_ids = [Enum.at(messages_before, 0).id, Enum.at(messages_before, 2).id]
+
     message_payload = <<
       0x04,       # delete
       2::16-big,  # delete 2 messages
-      1::16-big,
-      3::16-big,
+      0::16-big,  # client index 0 (newest message - Test 6)
+      2::16-big,  # client index 2 (Test 4)
       0xFF        # done
     >>
 
@@ -233,7 +256,18 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     })
 
     assert 4 == Message |> Repo.aggregate(:count)
-    assert 0 == Message |> Ecto.Query.where([m], m.index in [1, 3]) |> Repo.aggregate(:count)
+
+    # Verify the correct messages were deleted
+    assert 0 == Message |> Ecto.Query.where([m], m.id in ^deleted_ids) |> Repo.aggregate(:count)
+
+    # Verify Test 5, 3, 2, 1 remain
+    remaining = Message
+                |> Ecto.Query.where([m], m.to_id == "AAAA12A")
+                |> Ecto.Query.order_by([m], [desc: m.sent_date, desc: m.id ])
+                |> Repo.all()
+
+    assert 4 == length(remaining)
+    assert ["Test 5", "Test 3", "Test 2", "Test 1"] == Enum.map(remaining, & &1.subject)
 
     logoff(context.router_pid)
   end
@@ -252,12 +286,15 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
     assert 6 == Message |> Ecto.Query.where([m], m.retain == false) |> Repo.aggregate(:count)
 
+    # Client enters mailbox - this loads the message IDs into context
+    {6, 4, _rest} = get_mailbox_page(context, 1)
+
     message_payload = <<
       0x05,       # retain
       3::16-big,  # retain 3 messages
-      2::16-big,
-      4::16-big,
-      6::16-big,
+      1::16-big,  # client index 1 (Test 5)
+      3::16-big,  # client index 3 (Test 3)
+      5::16-big,  # client index 5 (Test 1)
       0xFF        # done
     >>
 
@@ -272,6 +309,15 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
     assert 6 == Message |> Repo.aggregate(:count)
     assert 3 == Message |> Ecto.Query.where([m], m.retain == true) |> Repo.aggregate(:count)
+
+    # Verify the correct messages were retained
+    retained = Message
+               |> Ecto.Query.where([m], m.to_id == "AAAA12A")
+               |> Ecto.Query.where([m], m.retain == true)
+               |> Ecto.Query.order_by([m], [desc: m.sent_date, desc: m.id ])
+               |> Repo.all()
+
+    assert ["Test 5", "Test 3", "Test 1"] == Enum.map(retained, & &1.subject)
 
     logoff(context.router_pid)
   end
@@ -290,16 +336,27 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
     assert 6 == Message |> Ecto.Query.where([m], m.retain == false) |> Repo.aggregate(:count)
 
+    # Client enters mailbox - this loads the message IDs into context
+    {6, 4, _rest} = get_mailbox_page(context, 1)
+
+    # Get the actual message IDs that will be deleted (client indices 0 and 2)
+    messages_before = Message
+                      |> Ecto.Query.where([m], m.to_id == "AAAA12A")
+                      |> Ecto.Query.order_by([m], [desc: m.sent_date, desc: m.id ])
+                      |> Repo.all()
+
+    deleted_ids = [Enum.at(messages_before, 0).id, Enum.at(messages_before, 2).id]
+
     message_payload = <<
       0x04,       # delete
       2::16-big,  # delete 2 messages
-      1::16-big,
-      3::16-big,
+      0::16-big,  # client index 0 (Test 6)
+      2::16-big,  # client index 2 (Test 4)
       0x05,       # retain
       3::16-big,  # retain 3 messages
-      2::16-big,
-      4::16-big,
-      6::16-big,
+      1::16-big,  # client index 1 (Test 5)
+      3::16-big,  # client index 3 (Test 3)
+      5::16-big,  # client index 5 (Test 1)
       0xFF        # done
     >>
 
@@ -313,8 +370,17 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     })
 
     assert 4 == Message |> Repo.aggregate(:count)
-    assert 0 == Message |> Ecto.Query.where([m], m.index in [1, 3]) |> Repo.aggregate(:count)
+    assert 0 == Message |> Ecto.Query.where([m], m.id in ^deleted_ids) |> Repo.aggregate(:count)
     assert 3 == Message |> Ecto.Query.where([m], m.retain == true) |> Repo.aggregate(:count)
+
+    # Verify correct messages remain and are retained
+    retained = Message
+               |> Ecto.Query.where([m], m.to_id == "AAAA12A")
+               |> Ecto.Query.where([m], m.retain == true)
+               |> Ecto.Query.order_by([m], [desc: m.sent_date, desc: m.id ])
+               |> Repo.all()
+
+    assert ["Test 5", "Test 3", "Test 1"] == Enum.map(retained, & &1.subject)
 
     logoff(context.router_pid)
   end

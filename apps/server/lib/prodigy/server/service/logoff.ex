@@ -26,7 +26,8 @@ defmodule Prodigy.Server.Service.Logoff do
   alias Prodigy.Core.Data.{Repo, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
+  alias Prodigy.Server.SessionManager
 
   defp clear_id_in_use(user_id, reason \\ "normal") do
     user =
@@ -40,21 +41,28 @@ defmodule Prodigy.Server.Service.Logoff do
 
     user
     |> change(%{
-      logged_on: false,
       prf_last_logon_date: Timex.format!(now, "{0M}/{0D}/{YYYY}"),
       prf_last_logon_time: Timex.format!(now, "{h24}.{m}")
     })
     |> Repo.update()
 
+    # Close the connection
+    status = case reason do
+      "normal" -> :normal
+      "abnormal" -> :abnormal
+      _ -> :abnormal
+    end
+
+    SessionManager.close_session(user_id, status)
     Logger.info("User #{user_id} logged off (#{reason})")
     :ok
   end
 
-  def handle(%Fm0{} = request, %Session{user: nil}) do
-    {:ok, %Session{}, DiaPacket.encode(Fm0.make_response(<<>>, request))}
+  def handle(%Fm0{} = request, %Context{user: nil}) do
+    {:ok, %Context{}, DiaPacket.encode(Fm0.make_response(<<>>, request))}
   end
 
-  def handle(%Fm0{dest: dest} = request, %Session{user: user}) do
+  def handle(%Fm0{dest: dest} = request, %Context{user: user}) do
     {:ok, result} =
       Repo.transaction(fn ->
         clear_id_in_use(user.id)
@@ -65,7 +73,7 @@ defmodule Prodigy.Server.Service.Logoff do
         end
       end)
 
-    {result, %Session{auth_timeout: Session.set_auth_timer()},
+    {result, %Context{auth_timeout: Context.set_auth_timer()},
      DiaPacket.encode(Fm0.make_response(<<0, "xxxxxxxx01011988124510">>, request))}
   end
 

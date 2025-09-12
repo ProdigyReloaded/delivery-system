@@ -15,24 +15,33 @@
 
 defmodule Prodigy.Core.Data.Session do
   use Ecto.Schema
+  import Ecto.Changeset
 
   @moduledoc """
   Schema specific to individual user sessions and related change functions
   """
 
   schema "session" do
-    belongs_to(:user, Prodigy.Core.Data.User)
+    belongs_to(:user, Prodigy.Core.Data.User, type: :string)
     field(:logon_timestamp, :utc_datetime)
-    field(:logon_status, :integer)                # enroll, success, etc; this can be a small integer or enum
+    field(:logon_status, :integer)  # 0=success, 1=enroll_other, 2=enroll_subscriber
     field(:logoff_timestamp, :utc_datetime)
-    field(:logoff_status, :integer)               # normal, abnormal, bounced, etc; this can be a small integer or enum
+    field(:logoff_status, :integer)  # 0=normal, 1=abnormal, 2=timeout, 3=forced
     field(:rs_version, :string)
-    field(:node, :string)                         # for forced disconnect and clearing stale sessions
+    field(:node, :string)
     field(:pid, :string)
-
-    # TODO need a special mechanism to get origin IP if session originates from a softmodem that answers a SIP call
-    # use the native inet field if possible
     field(:source_address, :string)
     field(:source_port, :integer)
+    field(:last_activity_at, :utc_datetime)
+
+    timestamps()
+  end
+
+  def changeset(session, attrs) do
+    session
+    |> cast(attrs, [:user_id, :logon_timestamp, :logon_status, :logoff_timestamp,
+      :logoff_status, :rs_version, :node, :pid, :source_address,
+      :source_port, :last_activity_at])
+    |> validate_required([:user_id, :logon_timestamp, :logon_status, :node, :pid])
   end
 end

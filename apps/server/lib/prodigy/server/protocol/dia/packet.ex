@@ -132,7 +132,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
 
     payload = fm4 <> fm9 <> fm64 <> packet.payload
 
-    <<16, bool2int(packet.concatenated)::1, 0::7, packet.function.value,
+    <<16, bool2int(packet.concatenated)::1, 0::7, packet.function.value(),
       Fm0.Mode.encode(packet.mode)::binary, packet.src::32, packet.logon_seq, packet.message_id,
       packet.dest::32, byte_size(payload)::16, payload::binary>>
   end
@@ -152,7 +152,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
 
   @spec encode(Fm64.t()) :: binary()
   def encode(%Fm64{} = packet) do
-    <<6, 0::1, 64::7, packet.status_type.value, packet.data_mode.value,
+    <<6, 0::1, 64::7, packet.status_type.value(), packet.data_mode.value(),
       byte_size(packet.payload)::16, packet.payload::binary>>
   end
 

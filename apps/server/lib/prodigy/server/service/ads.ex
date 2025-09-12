@@ -23,9 +23,9 @@ defmodule Prodigy.Server.Service.Ads do
 
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
-  def handle(%Fm0{} = request, %Session{} = session) do
+  def handle(%Fm0{} = request, %Context{} = context) do
     # payload on login to DIA DID 0xD200 is \x02\x56
     Logger.debug("ads requested")
 
@@ -45,6 +45,6 @@ defmodule Prodigy.Server.Service.Ads do
       "AD000010LDR"::binary, 0x00, 0x08
     >>
 
-    {:ok, session, DiaPacket.encode(Fm0.make_response(payload, request))}
+    {:ok, context, DiaPacket.encode(Fm0.make_response(payload, request))}
   end
 end

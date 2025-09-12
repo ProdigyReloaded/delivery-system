@@ -13,15 +13,15 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Server.Session do
+defmodule Prodigy.Server.Context do
   @moduledoc """
-  Structure containing information for an individual Prodigy Session.
+  Structure containing context for an individual Prodigy Connection.
 
-  The Session structure is established when the `Prodigy.Server.Router` instance is created upon client connection, and
+  The Context structure is established when the `Prodigy.Server.Router` instance is created upon client connection, and
   persists until the connection is terminated.
   """
 
-  defstruct [:user, :rs_version, :auth_timeout]
+  defstruct [:user, :rs_version, :auth_timeout, :messaging]
 
   def set_auth_timer do
     Process.send_after(self(), :auth_timeout, Application.fetch_env!(:server, :auth_timeout))

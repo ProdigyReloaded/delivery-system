@@ -26,7 +26,7 @@ defmodule Prodigy.Server.Service.Profile do
   alias Prodigy.Core.Data.{Household, Repo, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
-  alias Prodigy.Server.Session
+  alias Prodigy.Server.Context
 
 
   defp identity(input) do
@@ -293,7 +293,7 @@ defmodule Prodigy.Server.Service.Profile do
     parse_request_values(rest, entries ++ [{tac, value}])
   end
 
-  def handle(%Fm0{payload: payload} = request, %Session{user: user} = session) do
+  def handle(%Fm0{payload: payload} = request, %Context{user: user} = context) do
     Logger.debug("[profile] request packet: #{inspect(request, base: :hex, limit: :infinity)}")
 
     <<
@@ -351,6 +351,6 @@ defmodule Prodigy.Server.Service.Profile do
       values::binary
     >>
 
-    {:ok, session, DiaPacket.encode(Fm0.make_response(payload, request))}
+    {:ok, context, DiaPacket.encode(Fm0.make_response(payload, request))}
   end
 end

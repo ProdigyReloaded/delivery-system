@@ -131,7 +131,7 @@ defmodule Prodigy.Server.Protocol.Dia do
   end
 
   @impl GenServer
-  def terminate(reason, state) do
+  def terminate(reason, _state) do
     Logger.debug("DIA server shutting down: #{inspect(reason)}")
     #    Process.exit(state.router_pid, :shutdown)
     :normal
