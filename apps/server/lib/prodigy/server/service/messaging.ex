@@ -341,7 +341,7 @@ defmodule Prodigy.Server.Service.Messaging do
             "unhandled messaging request: #{inspect(request, base: :hex, limit: :infinity)}"
           )
 
-          {:ok, <<0>>}
+          {context, :ok, <<0>>}
       end
 
     case response do

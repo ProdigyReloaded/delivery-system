@@ -13,21 +13,29 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Server.Context do
-  @moduledoc """
-  Structure containing context for an individual Prodigy Connection.
+defmodule Prodigy.Core.Data.Topic do
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  The Context structure is established when the `Prodigy.Server.Router` instance is created upon client connection, and
-  persists until the connection is terminated.
+  @moduledoc """
+  Schema for Bulletin Board topics within clubs
   """
 
-  defstruct [:user, :session_id, :rs_version, :auth_timeout, :messaging, :bb]
+  # Using id type which will map to smallserial in the migration
+  schema "topic" do
+    belongs_to(:club, Prodigy.Core.Data.Club)
+    field(:title, :string)
+    field(:closed, :boolean, default: false)  # Flag to close topic to new posts
 
-  def set_auth_timer do
-    Process.send_after(self(), :auth_timeout, Application.fetch_env!(:server, :auth_timeout))
+    has_many(:posts, Prodigy.Core.Data.Post)
+
+    timestamps()
   end
 
-  def cancel_auth_timer(ref) do
-    Process.cancel_timer(ref)
+  def changeset(topic, attrs) do
+    topic
+    |> cast(attrs, [:club_id, :title, :closed])
+    |> validate_required([:club_id, :title])
+    |> foreign_key_constraint(:club_id)
   end
 end
