@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2022-2025, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -36,6 +36,7 @@ defmodule Prodigy.Server.Router do
   alias Prodigy.Server.Service.{
     AddressBook,
     Ads,
+    BulletinBoards,
     Cmc,
     DataCollection,
     DowJones,
@@ -106,6 +107,7 @@ defmodule Prodigy.Server.Router do
           case payload do
             <<0x01, _rest::binary>> -> Messaging
             <<0x02, _rest::binary>> -> Ads
+            <<0x03, _rest::binary>> -> BulletinBoards
             <<0x04, _rest::binary>> -> DataCollection
             # sends 0xF on entry and exit; Mailing List sends 06
             <<0x0D, _rest::binary>> -> AddressBook
