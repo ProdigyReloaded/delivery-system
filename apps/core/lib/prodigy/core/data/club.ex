@@ -13,21 +13,28 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Server.Context do
-  @moduledoc """
-  Structure containing context for an individual Prodigy Connection.
+defmodule Prodigy.Core.Data.Club do
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  The Context structure is established when the `Prodigy.Server.Router` instance is created upon client connection, and
-  persists until the connection is terminated.
+  @moduledoc """
+  Schema for Prodigy Bulletin Board clubs
   """
 
-  defstruct [:user, :session_id, :rs_version, :auth_timeout, :messaging, :bb]
+  schema "club" do
+    field(:handle, :string)  # 3 character handle
+    field(:name, :string)    # Full display name
 
-  def set_auth_timer do
-    Process.send_after(self(), :auth_timeout, Application.fetch_env!(:server, :auth_timeout))
+    has_many(:topics, Prodigy.Core.Data.Topic)
+
+    timestamps()
   end
 
-  def cancel_auth_timer(ref) do
-    Process.cancel_timer(ref)
+  def changeset(club, attrs) do
+    club
+    |> cast(attrs, [:handle, :name])
+    |> validate_required([:handle, :name])
+    |> validate_length(:handle, is: 3)
+    |> unique_constraint(:handle)
   end
 end

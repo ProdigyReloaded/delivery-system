@@ -33,6 +33,8 @@ defmodule Prodigy.Server.Service.Logon do
   alias Prodigy.Server.SessionManager
   alias Prodigy.Server.Context
 
+  @supported_versions ["06.03.10", "06.03.17", "08.19.18"]
+
   defenum Status do
     @moduledoc "An enumeration of Logon service responses"
 
