@@ -21,14 +21,11 @@ defmodule Prodigy.Server.Service.Cmc do
 
   require Logger
 
+  alias Prodigy.Core.Data.{CmcError, Repo}
   alias Prodigy.Server.Context
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm9}
 
-  def handle(%Fm0{fm9: %Fm9{payload: payload}} = request, %Context{} = context) do
-    Logger.debug("cmc got #{inspect(request, base: :hex, limit: :infinity)}")
-
-    # TODO insert the error details into the database
-
+  def handle(%Fm0{fm9: %Fm9{payload: payload}}, %Context{} = context) do
     case payload do
         <<
           user_id::binary-size(7),          # right padded with '?'
@@ -56,34 +53,46 @@ defmodule Prodigy.Server.Service.Cmc do
           base_last::binary-size(4),        # '0104' typical
           keyword::binary-size(13)          # 'QUOTE TRACK  ' typical
         >> ->
-          msg = """
-          CMC FM9 Error reported by Reception System
+          # Insert the CMC error into the database
+          cmc_result = %CmcError{}
+          |> CmcError.changeset(%{
+            session_id: context.session_id,  # Assuming session_id is in context
+            user_id: user_id,
+            system_origin: system_origin,
+            msg_origin: msg_origin,
+            unit_id: unit_id,
+            error_code: error_code,
+            severity_level: severity_level,
+            error_threshold: error_threshold,
+            error_date: date,
+            error_time: time,
+            api_event: api_event,
+            mem_to_start: mem_to_start,
+            dos_version: dos_version,
+            rs_version: rs_version,
+            window_id: window_id,
+            window_last: window_last,
+            selected_id: selected_id,
+            selected_last: selected_last,
+            base_id: base_id,
+            base_last: base_last,
+            keyword: keyword,
+            raw_payload: payload
+          })
+          |> Repo.insert()
 
-                  User ID: #{user_id}
-            System Origin: #{system_origin}
-           Message Origin: #{msg_origin}
-                  Unit ID: #{unit_id}
-               Error Code: #{error_code}
-           Severity Level: #{severity_level}
-          Error Threshold: #{error_threshold}
-                     Date: #{date}
-                     Time: #{time}
-                API Event: #{api_event}
-             Starting RAM: #{mem_to_start}
-              DOS Version: #{dos_version}
-               RS Version: #{rs_version}
-                Window ID: #{window_id}
-              Window Last: #{inspect window_last, base: :hex}
-              Selected ID: #{selected_id}
-            Selected Last: #{inspect selected_last, base: :hex}
-                  Base ID: #{base_id}
-                Base Last: #{inspect base_last, base: :hex}
-                  Keyword: #{keyword}
-          """
-          Logger.warning(msg)
-        _ ->
-          Logger.warning("CMC received message in unknown format: #{inspect payload, base: :hex, limit: :infinity}")
-      end
+          case cmc_result do
+            {:ok, _} ->
+              Logger.error("CMC error logged from #{user_id}: code=#{error_code}, severity=#{severity_level}")
+
+            {:error, changeset} ->
+              Logger.error("Failed to log CMC error: #{inspect(changeset.errors)}")
+          end
+
+      _ ->
+        Logger.warning("CMC received malformed error payload: #{inspect(payload, base: :hex)}")
+
+    end
 
     {:ok, context, <<>>}
   end

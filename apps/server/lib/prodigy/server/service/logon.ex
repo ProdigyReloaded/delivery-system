@@ -65,7 +65,7 @@ defmodule Prodigy.Server.Service.Logon do
     end
   end
 
-  def make_response_payload({Status.SUCCESS, user}) do
+  def make_response_payload({Status.SUCCESS, user, _session_id}) do
     now = Calendar.DateTime.now_utc()
     # TODO refactor to use Timex
     date = now |> Calendar.strftime("%m%d%y")
@@ -146,7 +146,7 @@ defmodule Prodigy.Server.Service.Logon do
     res
   end
 
-  def make_response_payload({status, _}) do
+  def make_response_payload({status, _, _}) do
     now = Calendar.DateTime.now_utc()
     date = now |> Calendar.strftime("%m%d%y")
     time = now |> Calendar.strftime("%H%M%S")
@@ -268,23 +268,23 @@ defmodule Prodigy.Server.Service.Logon do
         end
 
         case SessionManager.create_session(user, status, version) do
-          {:ok, _db_session} ->
+          {:ok, db_session} ->
             case enrollment_status do
-              true -> {Status.SUCCESS, user}
-              {:enroll_subscriber, user} -> {Status.ENROLL_SUBSCRIBER, user}
-              {:enroll_other, user} -> {Status.ENROLL_OTHER, user}
+              true -> {Status.SUCCESS, user, db_session.id}
+              {:enroll_subscriber, user} -> {Status.ENROLL_SUBSCRIBER, user, db_session.id}
+              {:enroll_other, user} -> {Status.ENROLL_OTHER, user, db_session.id}
             end
           {:error, :concurrency_exceeded} ->
             Logger.warning("User #{user.id} attempted logon, but exceeded concurrency limit")
-            {Status.ID_IN_USE, nil}
+            {Status.ID_IN_USE, nil, nil}
         end
       else
-        :bad_version -> {Status.BAD_VERSION, nil}
-        :bad_password -> {Status.BAD_PASSWORD, nil}
-        {:enroll_subscriber, user} -> {Status.ENROLL_SUBSCRIBER, user}
-        {:enroll_other, user} -> {Status.ENROLL_OTHER, user}
-        :id_in_use -> {Status.ID_IN_USE, nil}
-        _ -> {Status.ACCOUNT_PROBLEM, nil}
+        :bad_version -> {Status.BAD_VERSION, nil, nil}
+        :bad_password -> {Status.BAD_PASSWORD, nil, nil}
+#        {:enroll_subscriber, user} -> {Status.ENROLL_SUBSCRIBER, user}
+#        {:enroll_other, user} -> {Status.ENROLL_OTHER, user}
+        :id_in_use -> {Status.ID_IN_USE, nil, nil}
+        _ -> {Status.ACCOUNT_PROBLEM, nil, nil}
       end
 
     response =
@@ -293,20 +293,20 @@ defmodule Prodigy.Server.Service.Logon do
       |> Packet.encode()
 
     case result do
-      {Status.SUCCESS, user} ->
+      {Status.SUCCESS, user, session_id} ->
         Context.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Normal)")
-        {:ok, %Context{user: user, rs_version: version}, response}
+        {:ok, %Context{user: user, session_id: session_id, rs_version: version}, response}
 
-      {Status.ENROLL_SUBSCRIBER, user} ->
+      {Status.ENROLL_SUBSCRIBER, user, session_id} ->
         Context.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Enroll Subscriber)")
-        {:ok, %Context{user: user, rs_version: version}, response}
+        {:ok, %Context{user: user, session_id: session_id, rs_version: version}, response}
 
-      {Status.ENROLL_OTHER, user} ->
+      {Status.ENROLL_OTHER, user, session_id} ->
         Context.cancel_auth_timer(auth_timeout)
         Logger.info("User #{user_id} logged on (Enroll Other)")
-        {:ok, %Context{user: user, rs_version: version}, response}
+        {:ok, %Context{user: user, session_id: session_id, rs_version: version}, response}
 
       _ ->
         {:error, context, response}

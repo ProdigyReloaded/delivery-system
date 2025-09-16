@@ -4,7 +4,6 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter.Test do
   import Cachex.Spec
 
   alias Prodigy.Server.Protocol.Tcs.Transmitter
-  alias Prodigy.Server.Protocol.Tcs.Packet
 
   setup do
     Cachex.start_link(:transmit, [
@@ -64,7 +63,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter.Test do
 
   test "sends wackpk after interval", %{transmitter: pid} do
     Transmitter.transmit_packet(pid, "test_packet", 1)
-    :timer.sleep(11_000) # Wait longer than @wack_interval
+#    :timer.sleep(11_000) # Wait longer than @wack_interval
     # assert_receive {:send, _wackpk}
   end
 end

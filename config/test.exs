@@ -25,4 +25,4 @@ config :core, Prodigy.Core.Data.Repo,
 config :server,
   auth_timeout: 3000
 
-config :logger, level: :info
+config :logger, level: :none

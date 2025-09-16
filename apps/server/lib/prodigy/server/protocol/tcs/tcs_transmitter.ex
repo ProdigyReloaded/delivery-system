@@ -4,7 +4,6 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
 
   alias Prodigy.Server.Protocol.Tcs.Packet
 
-  @back_pressure_size 6
   @rs_buffer_size 8
   @wack_threshold 4
   # in seconds
