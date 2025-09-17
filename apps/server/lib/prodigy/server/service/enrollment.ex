@@ -85,7 +85,7 @@ defmodule Prodigy.Server.Service.Enrollment do
     )
 
     response =
-      Logon.make_response_payload({Logon.Status.SUCCESS, user})
+      Logon.make_response_payload({Logon.Status.SUCCESS, user, context.session_id})
       |> Fm0.make_response(request)
       |> DiaPacket.encode()
 

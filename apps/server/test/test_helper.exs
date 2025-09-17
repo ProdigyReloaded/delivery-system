@@ -83,6 +83,16 @@ defmodule Server do
     )
     |> Repo.exists?()
   end
+
+  def ensure_logoff(pid) do
+    try do
+      logoff(pid)
+    rescue
+      _ -> :ok
+    catch
+      :exit, _ -> :ok
+    end
+  end
 end
 
 defmodule TestTransport do

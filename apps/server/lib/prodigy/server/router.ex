@@ -170,9 +170,14 @@ defmodule Prodigy.Server.Router do
   end
 
   @impl true
-  def handle_info(:auth_timeout, state) do
+  def handle_info(:auth_timeout, %{context: %Context{user: nil}} = state) do
     Logger.warning("authentication timeout")
     {:stop, :normal, state}
+  end
+
+  def handle_info(:auth_timeout, %{context: %Context{user: _user}} = state) do
+    # User is logged in, ignore timeout
+    {:noreply, state}
   end
 
   @impl GenServer

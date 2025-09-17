@@ -16,16 +16,21 @@
 defmodule Prodigy.Server.Service.Cmc.Test do
   @moduledoc false
   use Prodigy.Server.RepoCase
-
-  import ExUnit.CaptureLog
+  import Server
+  import Ecto.Changeset
 
   require Logger
 
+  alias Prodigy.Core.Data.{CmcError, Household, Repo, Session, User}
+  alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm9}
   alias Prodigy.Server.Protocol.Dia.Packet.Fm9.{Flags, Function, Reason}
   alias Prodigy.Server.Router
+  alias Prodigy.Server.Service.Logon.Status
 
 #  @moduletag :capture_log
+
+  @today DateTime.to_date(DateTime.utc_now())
 
   setup do
     {:ok, router_pid} = GenServer.start_link(Router, nil)
@@ -34,7 +39,31 @@ defmodule Prodigy.Server.Service.Cmc.Test do
   end
 
   test "error report", context do
-    fm0 = %Fm0{
+    cmc_error_count =
+      CmcError
+      |> Repo.aggregate(:count)
+
+    assert cmc_error_count == 0
+
+    sessions =
+      Session
+      |> Repo.all()
+
+    assert(length(sessions) == 0)
+
+    %Household{id: "AAAA99", enabled_date: @today}
+    |> change
+    |> put_assoc(:users, [
+      %User{id: "AAAA99A", gender: "M", date_enrolled: @today}
+      |> User.changeset(%{password: "test"})
+    ])
+    |> Repo.insert()
+
+    {:ok, response} = logon(context.router_pid, "AAAA99A", "test", "06.03.10")
+    {:ok, %Fm0{payload: <<status, _rest::binary>>}} = DiaPacket.decode(response)
+    assert status == Status.SUCCESS.value()
+
+    Router.handle_packet(context.router_pid, %Fm0{
       concatenated: true,
       src: 0x0,
       dest: 0x020200,
@@ -89,12 +118,12 @@ defmodule Prodigy.Server.Service.Cmc.Test do
           "QUOTE TRACK  "
         >>
       }
-    }
+    })
 
-    assert capture_log([level: :warning], fn ->
-           Router.handle_packet(context.router_pid, fm0)
-    end) =~ "CMC FM9"
+    cmc_error_count =
+      CmcError
+      |> Repo.aggregate(:count)
 
-    # TODO assert the message was inserted into the database
+    assert cmc_error_count == 1
   end
 end

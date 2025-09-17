@@ -50,13 +50,20 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
   @today DateTime.to_date(DateTime.utc_now())
 
   test "Router terminates when no logon before authentication timeout", context do
-    assert Process.alive?(context.router_pid) == true
-    Process.sleep(4000)
-    assert Process.alive?(context.router_pid) == false
+    router_pid = context.router_pid
+    ref = Process.monitor(router_pid)
+
+    assert Process.alive?(router_pid) == true
+
+    send(router_pid, :auth_timeout)
+    assert_receive {:DOWN, ^ref, :process, ^router_pid, :normal}, 100
   end
 
   test "Authentication timeout remains after failed logon", context do
-    assert Process.alive?(context.router_pid) == true
+    router_pid = context.router_pid
+    ref = Process.monitor(router_pid)
+
+    assert Process.alive?(router_pid) == true
 
     %Household{id: "AAAA12", enabled_date: @today}
     |> change
@@ -67,12 +74,18 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     |> Repo.insert()
 
     {:ok, _response} = logon(context.router_pid, "AAAA12A", "other", "06.03.11")
-    Process.sleep(4000)
-    assert Process.alive?(context.router_pid) == false
+
+    send(router_pid, :auth_timeout)
+    assert_receive {:DOWN, ^ref, :process, ^router_pid, :normal}, 100
+
+    ensure_logoff(context.router_pid)
   end
 
   test "Authentication timeout canceled after un-enrolled subscriber logon", context do
-    assert Process.alive?(context.router_pid) == true
+    router_pid = context.router_pid
+    ref = Process.monitor(router_pid)
+
+    assert Process.alive?(router_pid) == true
 
     %Household{id: "AAAA12", enabled_date: @today}
     |> change
@@ -82,14 +95,18 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     ])
     |> Repo.insert!()
 
-    {:ok, _response} = logon(context.router_pid, "AAAA12A", "foobaz", "06.03.10")
+    {:ok, _response} = logon(router_pid, "AAAA12A", "foobaz", "06.03.10")
+    send(router_pid, :auth_timeout)
+    refute_receive {:DOWN, ^ref, :process, ^router_pid, _}, 100
 
-    Process.sleep(4000)
-    assert Process.alive?(context.router_pid) == true
+    ensure_logoff(context.router_pid)
   end
 
   test "Authentication timeout reset after logoff (for re-logon)", context do
-    assert Process.alive?(context.router_pid) == true
+    router_pid = context.router_pid
+    ref = Process.monitor(router_pid)
+
+    assert Process.alive?(router_pid) == true
 
     %Household{id: "AAAA12", enabled_date: @today}
     |> change
@@ -101,7 +118,7 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
 
     assert !logged_on?("AAAA12D")
 
-    {:ok, response} = logon(context.router_pid, "AAAA12D", "test", "06.03.10")
+    {:ok, response} = logon(router_pid, "AAAA12D", "test", "06.03.10")
 
     {:ok,
      %Fm0{payload: <<status, _gender, 0x0::72, "010170000000", 0x0, 0x0::128, "             ">>}} =
@@ -109,15 +126,19 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
 
     assert status == Status.SUCCESS.value()
 
-    Process.sleep(4000)
-    assert Process.alive?(context.router_pid) == true
+    send(router_pid, :auth_timeout)
+
+    refute_receive {:DOWN, ^ref, :process, ^router_pid, _}, 100
 
     assert logged_on?("AAAA12D")
+
     logoff_relogon(context.router_pid)
     assert !logged_on?("AAAA12D")
 
-    Process.sleep(4000)
-    assert Process.alive?(context.router_pid) == false
+    send(router_pid, :auth_timeout)
+    assert_receive {:DOWN, ^ref, :process, ^router_pid, :normal}, 100
+
+    ensure_logoff(context.router_pid)
   end
 
   test "logon fails on unsupported client version", context do
@@ -135,6 +156,8 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
       DiaPacket.decode(response)
 
     assert status == Status.BAD_VERSION.value()
+
+    ensure_logoff(context.router_pid)
   end
 
   test "logon fails on incorrect password", context do
@@ -152,6 +175,8 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
       DiaPacket.decode(response)
 
     assert status == Status.BAD_PASSWORD.value()
+
+    ensure_logoff(context.router_pid)
   end
 
   test "logon fails when no such user", context do
@@ -161,6 +186,8 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
       DiaPacket.decode(response)
 
     assert status == Status.BAD_PASSWORD.value()
+
+    ensure_logoff(context.router_pid)
   end
 
   test "logon succeeds for un-enrolled subscriber", context do
@@ -178,6 +205,8 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
       DiaPacket.decode(response)
 
     assert status == Status.ENROLL_SUBSCRIBER.value()
+
+    ensure_logoff(context.router_pid)
   end
 
   test "logon succeeds for un-enrolled member", context do
@@ -195,6 +224,8 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
       DiaPacket.decode(response)
 
     assert status == Status.ENROLL_OTHER.value()
+
+    ensure_logoff(context.router_pid)
   end
 
   test "logon fails for deleted user", context do
@@ -212,6 +243,8 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
       DiaPacket.decode(response)
 
     assert status == Status.ACCOUNT_PROBLEM.value()
+
+    ensure_logoff(context.router_pid)
   end
 
   test "logon fails if account already logged on", context do
@@ -237,6 +270,8 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
       DiaPacket.decode(response)
 
     assert status == Status.ID_IN_USE.value()
+
+    ensure_logoff(context.router_pid)
   end
 
   test "disabled household prohibits logon", context do
@@ -254,9 +289,11 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
       DiaPacket.decode(response)
 
     assert status == Status.ACCOUNT_PROBLEM.value()
+
+    ensure_logoff(context.router_pid)
   end
 
-  test "logged_on set on logon and cleared on normal logoff", context do
+  test "session created on logon and closed on logoff", context do
     %Household{id: "AAAA12", enabled_date: @today}
     |> change
     |> put_assoc(:users, [
@@ -308,6 +345,8 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     :ok = GenServer.stop(context.router_pid)
 
     assert !logged_on?("AAAA12D")
+
+    ensure_logoff(context.router_pid)
   end
 
   test "authenication timer survives bad password then cancelled with good password", context do
@@ -333,8 +372,11 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
 
     assert logged_on?("AAAA12D")
 
-    Process.sleep(4000)
+#    Process.sleep(4000)
+    send(context.router_pid, :auth_timeout)
     assert Process.alive?(context.router_pid) == true
+
+    ensure_logoff(context.router_pid)
   end
 
   test "user with unlimited concurrency can have multiple sessions", _context do
@@ -375,6 +417,10 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     assert active_count == 3
 
     # Clean up
+    ensure_logoff(router1)
+    ensure_logoff(router2)
+    ensure_logoff(router3)
+
     GenServer.stop(router1)
     GenServer.stop(router2)
     GenServer.stop(router3)
@@ -408,6 +454,10 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     assert status3 == Status.ID_IN_USE.value()
 
     # Clean up
+    ensure_logoff(router1)
+    ensure_logoff(router2)
+    ensure_logoff(router3)
+
     GenServer.stop(router1)
     GenServer.stop(router2)
     GenServer.stop(router3)
@@ -482,6 +532,9 @@ defmodule Prodigy.Server.Service.LogonLogoff.Test do
     assert status2 == Status.ID_IN_USE.value()
 
     # Clean up
+    ensure_logoff(router1)
+    ensure_logoff(router2)
+
     GenServer.stop(router1)
     GenServer.stop(router2)
   end
