@@ -78,7 +78,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     Logger.info("TCS TX: Processing NAKCCE for seq=#{sequence}")
 
     case TransmitBuffer.get_by_sequence(state.tx_buffer, sequence) do
-      %PacketState{packet: packet} = packet_state ->
+      %PacketState{packet: packet} = _packet_state ->
         Logger.info("TCS TX: Resending packet seq=#{sequence} due to CRC error")
         state.transport.send(state.socket, packet)
 
@@ -193,7 +193,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     %{state | tx_buffer: new_buffer}
   end
 
-  defp handle_wack_timeout(state, buffer, sequence, packet_state, wack_count, now) do
+  defp handle_wack_timeout(state, buffer, sequence, _packet_state, wack_count, now) do
     if wack_count >= @wack_threshold do
       Logger.error("TCS TX: WACK threshold reached for seq=#{sequence}, aborting transmission")
       send(state.from, {:wp_limit_exceeded, state.socket})

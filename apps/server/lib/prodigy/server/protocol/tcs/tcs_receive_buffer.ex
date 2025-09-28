@@ -44,9 +44,9 @@ defmodule Prodigy.Server.Protocol.Tcs.ReceiveBuffer do
     distance < rb.size
   end
 
-  @doc """
-  Calculate forward distance between sequences with wrap-around
-  """
+  #
+  # Calculate forward distance between sequences with wrap-around
+  #
   defp calculate_forward_distance(seq, base, wrap_point) do
     if seq >= base do
       seq - base
@@ -56,9 +56,9 @@ defmodule Prodigy.Server.Protocol.Tcs.ReceiveBuffer do
     end
   end
 
-  @doc """
-  Get the position in the buffer for a given sequence number
-  """
+  #
+  # Get the position in the buffer for a given sequence number
+  #
   defp get_buffer_position(rb, seq) do
     distance = calculate_forward_distance(seq, rb.base_seq, rb.wrap_point)
     if distance < rb.size do
@@ -140,9 +140,9 @@ defmodule Prodigy.Server.Protocol.Tcs.ReceiveBuffer do
     end
   end
 
-  @doc """
-  Slide the buffer left by one position
-  """
+  #
+  # Slide the buffer left by one position
+  #
   defp slide_buffer(buffer) do
     size = :array.size(buffer)
     new_buffer = :array.new(size, default: :pending)

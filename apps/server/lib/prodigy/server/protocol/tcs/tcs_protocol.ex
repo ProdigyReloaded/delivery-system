@@ -177,7 +177,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
   @impl GenServer
   def handle_info({:tcp, _socket, data}, %State{socket: socket, transport: transport} = state) do
     # Apply error injection to received data if configured
-    corrupted_data = ErrorInjector.maybe_corrupt(
+    _corrupted_data = ErrorInjector.maybe_corrupt(
       data,
       Map.get(state, :error_injection, %ErrorInjector{enabled: false}),
       :receive
@@ -188,9 +188,12 @@ defmodule Prodigy.Server.Protocol.Tcs do
         {:ok, %Packet{} = packet, excess} ->
           handle_packet_in({packet, excess}, packet.type, state)
 
-        {:error, :crc, seq, excess} ->
-          Logger.error("TCS: CRC error in received packet seq=#{seq}, sending NAKCCE")
-          transport.send(socket, Packet.nakcce(seq))
+        {:error, :crc, _seq, excess} ->
+          # Don't trust seq from corrupted packet
+          # Send NAKCCE for next expected sequence
+          next_expected = state.rx_buffer.next_expected
+          Logger.warning("TCS: CRC error in packet, sending NAKCCE for expected seq=#{next_expected}")
+          transport.send(socket, Packet.nakcce(next_expected))
           {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
 
         {:fragment, excess} ->
@@ -226,6 +229,21 @@ defmodule Prodigy.Server.Protocol.Tcs do
     Logger.debug("TCS server got ranch error: #{inspect(code)}")
     transport.close(state.socket)
     {:stop, :shutdown, state}
+  end
+
+  @impl GenServer
+  def handle_info({:rxmitp_reset_needed, sequence}, state) do
+    Logger.error("TCS: Transmission reset needed from sequence #{sequence}")
+
+    # Reset our transmission sequence
+    new_state = %{state | tx_seq: sequence}
+
+    # Optionally notify DIA layer to resend data if needed
+    # This depends on your protocol - you might need to:
+    # 1. Clear any pending DIA packets
+    # 2. Request retransmission from DIA layer
+
+    {:noreply, new_state}
   end
 
   @doc """
@@ -340,39 +358,6 @@ defmodule Prodigy.Server.Protocol.Tcs do
     {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
-  # Helper function to check if a sequence has been received
-  defp check_if_received(rx_buffer, seq) do
-    cond do
-      # Check if it's before our window (already processed)
-      seq < rx_buffer.base_seq and
-      rx_buffer.base_seq - seq < 128 ->
-        # Sequence is before our window, we've already processed it
-        :received
-
-      # Check if sequence wraps around (e.g., seq=255, base=1)
-      seq > rx_buffer.base_seq and
-      seq - rx_buffer.base_seq > 128 ->
-        # This is actually a wrapped sequence that's before our window
-        :received
-
-      # Check if it's in our current window
-      ReceiveBuffer.in_window?(rx_buffer, seq) ->
-        # Check the buffer position
-        case ReceiveBuffer.get_packet_status(rx_buffer, seq) do
-          :received -> :received
-          :pending -> :not_received
-        end
-
-      # It's beyond our window
-      true ->
-        :unknown
-    end
-  end
-
-
-  @doc """
-  Process a TCS packet through the DIA handler
-  """
   defp process_packet_to_dia(packet, state, rx_buffer, tx_seq) do
     case state.dia_module.handle_packet(state.dia_pid, packet) do
       :ok ->
@@ -404,21 +389,6 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
         {last_tx_seq, rx_buffer}
     end
-  end
-
-  @impl GenServer
-  def handle_info({:rxmitp_reset_needed, sequence}, state) do
-    Logger.error("TCS: Transmission reset needed from sequence #{sequence}")
-
-    # Reset our transmission sequence
-    new_state = %{state | tx_seq: sequence}
-
-    # Optionally notify DIA layer to resend data if needed
-    # This depends on your protocol - you might need to:
-    # 1. Clear any pending DIA packets
-    # 2. Request retransmission from DIA layer
-
-    {:noreply, new_state}
   end
 
 
