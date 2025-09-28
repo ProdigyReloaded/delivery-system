@@ -194,4 +194,20 @@ defmodule Prodigy.Server.Protocol.Tcs.ReceiveBuffer do
       missing: get_missing_sequences(rb)
     }
   end
+
+  @doc """
+  Get the status of a specific sequence number in the buffer.
+  Returns :received if packet is in buffer, :pending if slot is empty, or :outside_window
+  """
+  def get_packet_status(rb, seq) do
+    case get_buffer_position(rb, seq) do
+      {:ok, position} ->
+        case :array.get(position, rb.buffer) do
+          :pending -> :pending
+          _packet -> :received
+        end
+      {:error, :outside_window} ->
+        :outside_window
+    end
+  end
 end

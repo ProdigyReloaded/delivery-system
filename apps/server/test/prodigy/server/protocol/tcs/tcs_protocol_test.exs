@@ -16,7 +16,6 @@
 defmodule Prodigy.Server.Protocol.Tcs.Test do
   @moduledoc false
   use ExUnit.Case, async: true
-  import Cachex.Spec
 
   import WaitFor
   require Logger
@@ -78,29 +77,6 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
   @options %Options{dia_module: TestDiaProtocol, ranch_module: TestRanch}
 
   setup do
-    Logger.debug("Setting up cache for tracking transmissions")
-    Cachex.start_link(:transmit, [
-      expiration: expiration(
-        # how often cleanup should occur
-        interval: :timer.seconds(15),
-
-        # default record expiration
-        default: :timer.seconds(60)
-      )
-    ])
-
-    Logger.debug("Setting up cache for tracking acks")
-    Cachex.start_link(:ack_tracker, [
-      expiration: expiration(
-        # how often cleanup should occur
-        interval: :timer.seconds(15),
-
-        # default record expiration
-        default: :timer.minutes(2)
-      )
-    ])
-
-
     {:ok, socket} = TestTransport.start_link({})
     {:ok, tcsp} = TcsProtocol.start_link(socket, TestTransport, @options)
     :ok = wait_for(fn -> GenServer.call(tcsp, :get_dia_pid) != nil end, @timeout)

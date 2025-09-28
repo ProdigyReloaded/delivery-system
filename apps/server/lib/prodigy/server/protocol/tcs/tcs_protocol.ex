@@ -311,15 +311,64 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
   def handle_packet_in({packet, excess}, Type.WACKPK, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-    Logger.warning("TCS: Received WACKPK for seq=#{payload_seq}, sending ACKPKT")
-    state.transport.send(state.socket, Packet.ackpkt(payload_seq))
-    {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
+    Logger.warning("TCS: Received WACKPK for seq=#{payload_seq}")
+
+    case ReceiveBuffer.get_packet_status(state.rx_buffer, payload_seq) do
+      :received ->
+        # In window and received, send ACK
+        Logger.info("TCS: Packet seq=#{payload_seq} was received, sending ACKPKT")
+        state.transport.send(state.socket, Packet.ackpkt(payload_seq))
+        {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
+
+      :pending ->
+        # In window but not received, send NAKNCC
+        Logger.warning("TCS: Packet seq=#{payload_seq} NOT received, sending NAKNCC")
+        state.transport.send(state.socket, Packet.nakncc(payload_seq))
+        {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
+
+      :outside_window ->
+        # Outside window, send RXMITP for next expected sequence
+        next_expected = state.rx_buffer.next_expected
+        Logger.error("TCS: WACKPK for seq=#{payload_seq} outside window, sending RXMITP for seq=#{next_expected}")
+        state.transport.send(state.socket, Packet.rxmitp(next_expected))
+        {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
+    end
   end
 
   def handle_packet_in({_packet, excess}, Type.TXABOD, state) do
     Logger.error("TCS: Received TXABOD - transmission aborted by remote")
     {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
+
+  # Helper function to check if a sequence has been received
+  defp check_if_received(rx_buffer, seq) do
+    cond do
+      # Check if it's before our window (already processed)
+      seq < rx_buffer.base_seq and
+      rx_buffer.base_seq - seq < 128 ->
+        # Sequence is before our window, we've already processed it
+        :received
+
+      # Check if sequence wraps around (e.g., seq=255, base=1)
+      seq > rx_buffer.base_seq and
+      seq - rx_buffer.base_seq > 128 ->
+        # This is actually a wrapped sequence that's before our window
+        :received
+
+      # Check if it's in our current window
+      ReceiveBuffer.in_window?(rx_buffer, seq) ->
+        # Check the buffer position
+        case ReceiveBuffer.get_packet_status(rx_buffer, seq) do
+          :received -> :received
+          :pending -> :not_received
+        end
+
+      # It's beyond our window
+      true ->
+        :unknown
+    end
+  end
+
 
   @doc """
   Process a TCS packet through the DIA handler
