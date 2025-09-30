@@ -40,7 +40,6 @@ services:
     ports:
       - "25234:25234"
     environment:
-      - TCS_ERROR_INJECTION=moderate
       - DB_NAME=prodigy
       - DB_USER=prodigy
       - DB_PASS=prodigy

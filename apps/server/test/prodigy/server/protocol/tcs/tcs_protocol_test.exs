@@ -1,4 +1,4 @@
-# Copyright 2022, 2025, Phillip Heller and Richard Cook
+# Copyright 2022-2025, Phillip Heller & Ralph Richard Cook
 #
 # This file is part of Prodigy Reloaded.
 #

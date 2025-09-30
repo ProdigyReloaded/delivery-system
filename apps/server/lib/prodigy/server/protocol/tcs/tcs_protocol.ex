@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2022-2025, Phillip Heller & Ralph Richard Cook
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -229,21 +229,6 @@ defmodule Prodigy.Server.Protocol.Tcs do
     Logger.debug("TCS server got ranch error: #{inspect(code)}")
     transport.close(state.socket)
     {:stop, :shutdown, state}
-  end
-
-  @impl GenServer
-  def handle_info({:rxmitp_reset_needed, sequence}, state) do
-    Logger.debug("TCS: Transmission reset needed from sequence #{sequence}")
-
-    # Reset our transmission sequence
-    new_state = %{state | tx_seq: sequence}
-
-    # Optionally notify DIA layer to resend data if needed
-    # This depends on your protocol - you might need to:
-    # 1. Clear any pending DIA packets
-    # 2. Request retransmission from DIA layer
-
-    {:noreply, new_state}
   end
 
   @doc """
