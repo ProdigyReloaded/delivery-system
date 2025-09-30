@@ -48,7 +48,6 @@ defmodule Server.MixProject do
       {:timex, "~> 3.0"},
       {:pbkdf2_elixir, "~> 1.0"},
       {:yahoo_finance_elixir, "~> 0.1.3"},
-      {:cachex, "~>4.0.3"},
       {:number, "~> 1.0.3"},
       {:quantum, "~> 3.0"},
       {:core, in_umbrella: true},

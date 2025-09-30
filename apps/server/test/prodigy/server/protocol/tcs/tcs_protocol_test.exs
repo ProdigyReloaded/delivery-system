@@ -1,4 +1,4 @@
-# Copyright 2022, 2025, Phillip Heller and Richard Cook
+# Copyright 2022-2025, Phillip Heller & Ralph Richard Cook
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -16,15 +16,19 @@
 defmodule Prodigy.Server.Protocol.Tcs.Test do
   @moduledoc false
   use ExUnit.Case, async: true
-  import Cachex.Spec
 
   import WaitFor
+  import Bitwise
   require Logger
 
   alias Prodigy.Server.Protocol.Tcs, as: TcsProtocol
   alias Prodigy.Server.Protocol.Tcs.Options, as: Options
   alias Prodigy.Server.Protocol.Tcs.Packet, as: Packet
   alias Prodigy.Server.Protocol.Tcs.Packet.Type, as: Type
+  alias Prodigy.Server.Protocol.Tcs.ReceiveBuffer
+  alias Prodigy.Server.Protocol.Tcs.State
+  alias Prodigy.Server.Protocol.Tcs.ErrorInjector
+
 
   defmodule TestRanch do
     def handshake(ref), do: {:ok, ref}
@@ -39,7 +43,8 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
       type: Type.UD1ACK,
       payload: << "foo" >>
     })
-@doc """
+
+    @doc """
     TcsProtocol uses this function to pass a received packet to be processed.
     """
     def handle_packet(pid, %Packet{} = packet), do: GenServer.call(pid, {:packet, packet})
@@ -78,29 +83,6 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
   @options %Options{dia_module: TestDiaProtocol, ranch_module: TestRanch}
 
   setup do
-    Logger.debug("Setting up cache for tracking transmissions")
-    Cachex.start_link(:transmit, [
-      expiration: expiration(
-        # how often cleanup should occur
-        interval: :timer.seconds(15),
-
-        # default record expiration
-        default: :timer.seconds(60)
-      )
-    ])
-
-    Logger.debug("Setting up cache for tracking acks")
-    Cachex.start_link(:ack_tracker, [
-      expiration: expiration(
-        # how often cleanup should occur
-        interval: :timer.seconds(15),
-
-        # default record expiration
-        default: :timer.minutes(2)
-      )
-    ])
-
-
     {:ok, socket} = TestTransport.start_link({})
     {:ok, tcsp} = TcsProtocol.start_link(socket, TestTransport, @options)
     :ok = wait_for(fn -> GenServer.call(tcsp, :get_dia_pid) != nil end, @timeout)
@@ -110,6 +92,31 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
 
     [tcsp: tcsp, socket: socket, dia_pid: dia_pid]
   end
+
+  def create_test_state(opts \\ []) do
+    %State{
+      socket: Keyword.get(opts, :socket, :mock_socket),
+      transport: Keyword.get(opts, :transport, TestTransport),
+      dia_module: Keyword.get(opts, :dia_module, TestDiaProtocol),
+      dia_pid: Keyword.get(opts, :dia_pid, :mock_dia_pid),
+      tx_pid: Keyword.get(opts, :tx_pid, nil),
+      tx_seq: Keyword.get(opts, :tx_seq, 0),
+      rx_seq: Keyword.get(opts, :rx_seq, 0),
+      rx_buffer: Keyword.get(opts, :rx_buffer, ReceiveBuffer.new(8, 0)),
+      buffer: Keyword.get(opts, :buffer, <<>>),
+      error_injection: Keyword.get(opts, :error_injection, %ErrorInjector{enabled: false})
+    }
+  end
+
+  def create_packet_with_bad_crc(seq, type, payload) do
+    import Bitwise
+    count = byte_size(payload) - 1
+    complement = ~~~count &&& 255
+    packet_without_crc = <<0x02, count, complement, seq, type, payload::binary>>
+    bad_crc = <<0xFF, 0xFF>>  # Intentionally wrong CRC
+    packet_without_crc <> bad_crc
+  end
+
 
   @tcs1 Packet.encode(%Packet{
           seq: 0,
@@ -364,18 +371,25 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
     assert packet.payload == <<0>>
   end
 
-  @crce <<0x02, 0x26, 0xD9, 0x42, 0x01, 0x10, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00,
-          0x01, 0x00, 0x00, 0x22, 0x00, 0x00, 0x17, 0x01, 0x50, 0x48, 0x49, 0x4C, 0x39, 0x39,
-          0x41, 0x06, 0x46, 0x4F, 0x4F, 0x42, 0x41, 0x52, 0x30, 0x36, 0x2E, 0x30, 0x33, 0x2E,
-          0x31, 0x30, 0x18, 0xEF>>
+  test "sends back a NACKCCE on bad CRC", context do
+    # Create a state that uses the existing TestTransport from setup
+    state = create_test_state(
+      socket: context.socket,
+      transport: TestTransport,
+      rx_buffer: ReceiveBuffer.new(8, 42)  # Expecting seq 42
+    )
 
-  @tag badcrc: true
-  test "TcsProtocol sends back a NACKCCE on bad CRC", context do
-    send(context.tcsp, {:tcp, nil, @crce})
-    :ok = wait_for(fn -> TestTransport.count(context.socket) == 1 end, @timeout)
+    # Create corrupted packet
+    corrupted = create_packet_with_bad_crc(66, 0, "data")
 
-    {:ok, %Packet{} = packet, _excess} = Packet.decode(TestTransport.take(context.socket))
+    # Process directly
+    {:noreply, _new_state, _timeout} =
+      TcsProtocol.handle_info({:tcp, context.socket, corrupted}, state)
+
+    # Verify NAKCCE was sent for seq 42
+    :ok = wait_for(fn -> TestTransport.count(context.socket) > 0 end, @timeout)
+    {:ok, packet, _} = Packet.decode(TestTransport.take(context.socket))
     assert packet.type == Type.NAKCCE
-    assert packet.payload == <<0x42>>
+    assert packet.payload == <<42>>
   end
 end

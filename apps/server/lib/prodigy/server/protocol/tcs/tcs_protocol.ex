@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2022-2025, Phillip Heller & Ralph Richard Cook
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -30,9 +30,9 @@ defmodule Prodigy.Server.Protocol.Tcs do
   use GenServer
   use EnumType
 
-  alias Prodigy.Server.Protocol.Tcs.Packet
+  alias Prodigy.Server.Protocol.Tcs.{ErrorInjector, Packet}
   alias Prodigy.Server.Protocol.Tcs.Packet.Type
-  alias Prodigy.Server.Protocol.Tcs.Window
+  alias Prodigy.Server.Protocol.Tcs.ReceiveBuffer
   alias Prodigy.Server.Protocol.Tcs.Transmitter
 
   @behaviour :ranch_protocol
@@ -52,12 +52,13 @@ defmodule Prodigy.Server.Protocol.Tcs do
       :socket,
       :transport,
       :dia_module,
-      :rx_window,
+      :rx_buffer,
       dia_pid: nil,
       tx_pid: nil,
       buffer: <<>>,
       tx_seq: 0,
-      rx_seq: 0
+      rx_seq: 0,
+      error_injection: nil
     ]
   end
 
@@ -77,23 +78,77 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
     Logger.debug("TCS server completing the client handshake")
     {:ok, socket} = options.ranch_module.handshake(ref)
-    # results in what appears to be an RS hangup, but it isn't - it's that the socket doesn't
-    # continue to poll - need active true to poll continuously
     :ok = transport.setopts(socket, active: true)
 
     Logger.debug("TCS server entering genserver loop")
 
-    {:ok, tx_pid} = Transmitter.start_link(%{transport: transport, socket: socket, from: self()})
+    # Configure error injection from environment
+    error_config = configure_error_injection()
+
+    {:ok, tx_pid} = Transmitter.start_link(%{
+      transport: transport,
+      socket: socket,
+      from: self(),
+      error_injection: error_config
+    })
 
     :gen_server.enter_loop(__MODULE__, [], %State{
       socket: socket,
       transport: transport,
       dia_module: options.dia_module,
-      rx_window: Window.init(0, Window.receive_window_size()),
+      rx_buffer: ReceiveBuffer.new(2, 0),
       dia_pid: dia_pid,
-      tx_pid: tx_pid
+      tx_pid: tx_pid,
+      error_injection: error_config  # Store for receive-side errors
     })
   end
+
+  defp configure_error_injection do
+    case System.get_env("TCS_ERROR_INJECTION") do
+      nil ->
+        ErrorInjector.init(enabled: false)
+
+      "light" ->
+        Logger.warning("TCS: Error injection enabled - LIGHT (1% error rate)")
+        ErrorInjector.init(
+          enabled: true,
+          error_rate: 0.01,
+          error_types: [:bit_flip],
+          target: :both
+        )
+
+      "moderate" ->
+        Logger.warning("TCS: Error injection enabled - MODERATE (5% error rate)")
+        ErrorInjector.init(
+          enabled: true,
+          error_rate: 0.05,
+          error_types: [:bit_flip, :byte_corruption],
+          target: :both
+        )
+
+      "heavy" ->
+        Logger.warning("TCS: Error injection enabled - HEAVY (10% error rate)")
+        ErrorInjector.init(
+          enabled: true,
+          error_rate: 0.10,
+          error_types: [:bit_flip, :byte_corruption, :truncation],
+          target: :both
+        )
+
+      "chaos" ->
+        Logger.warning("TCS: Error injection enabled - CHAOS MODE (25% error rate)")
+        ErrorInjector.init(
+          enabled: true,
+          error_rate: 0.25,
+          error_types: [:bit_flip, :byte_corruption, :truncation, :noise],
+          target: :both
+        )
+
+      _ ->
+        ErrorInjector.init(enabled: false)
+    end
+  end
+
 
   @impl GenServer
   def handle_call(:get_dia_pid, _from, state) do
@@ -121,31 +176,38 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
   @impl GenServer
   def handle_info({:tcp, _socket, data}, %State{socket: socket, transport: transport} = state) do
-    {new_buffer, new_tx_seq, new_rx_seq, rx_window} =
+    # Apply error injection to received data if configured
+    _corrupted_data = ErrorInjector.maybe_corrupt(
+      data,
+      Map.get(state, :error_injection, %ErrorInjector{enabled: false}),
+      :receive
+    )
+
+    {new_buffer, new_tx_seq, new_rx_seq, rx_buffer} =
       case Packet.decode(state.buffer <> data) do
-        # complete packet, handle to see if in sequence, if it completes a DIA, etc.
         {:ok, %Packet{} = packet, excess} ->
           handle_packet_in({packet, excess}, packet.type, state)
 
-        # complete but bad crc, scrambled, try again
-        {:error, :crc, seq, excess} ->
-          Logger.error("CRC error in incoming packet #{seq}, length: #{byte_size(excess)}")
-          transport.send(socket, Packet.nakcce(seq))
-          {excess, state.tx_seq, state.rx_seq, state.rx_window}
+        {:error, :crc, _seq, excess} ->
+          # Don't trust seq from corrupted packet
+          # Send NAKCCE for next expected sequence
+          next_expected = state.rx_buffer.next_expected
+          Logger.debug("TCS: CRC error in packet, sending NAKCCE for expected seq=#{next_expected}")
+          transport.send(socket, Packet.nakcce(next_expected))
+          {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
 
-        # not a complete packet yet, get more bytes
         {:fragment, excess} ->
-          {excess, state.tx_seq, state.rx_seq, state.rx_window}
+          {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
       end
 
     {:noreply,
-     %{state | buffer: new_buffer, tx_seq: new_tx_seq, rx_seq: new_rx_seq, rx_window: rx_window},
-     @timeout}
+      %{state | buffer: new_buffer, tx_seq: new_tx_seq, rx_seq: new_rx_seq, rx_buffer: rx_buffer},
+      @timeout}
   end
 
   @impl GenServer
   def handle_info({:wp_limit_exceeded, socket}, state) do
-    Logger.error("Too many wackpk packets sent, closing connection")
+    Logger.debug("Too many wackpk packets sent, closing connection")
     send(self(), {:tcp_closed, socket})
     {:noreply, state}
   end
@@ -158,185 +220,166 @@ defmodule Prodigy.Server.Protocol.Tcs do
   end
 
   @impl GenServer
+  def handle_info({:EXIT, _pid, _reason}, state) do
+    {:stop, :normal, state}
+  end
+
+  @impl GenServer
   def handle_info(code, %State{transport: transport} = state) do
     Logger.debug("TCS server got ranch error: #{inspect(code)}")
     transport.close(state.socket)
     {:stop, :shutdown, state}
   end
 
-  @impl GenServer
-  def handle_info({:EXIT, _pid, _reason}, state) do
-    {:stop, :normal, state}
-  end
-
   @doc """
-  Called when handle_info has a complete TCS packet. The TCS packet is passed to send_tcs_packet_to_dia
-  which will determine if this completes a DIA packet or if we need more TCS packets.
-  Checks on the receive window are done here and acks or nacks, or 'we need more packets' are
-  sent from here.
+  Handle incoming data packets
   """
   def handle_packet_in({%Packet{} = packet, excess}, packet_type, state)
       when packet_type in [Type.UD1ACK, Type.UD1NAK, Type.UD2ACK, Type.UD2NAK] do
-    {status, new_rx_window} =
-      case Window.add_packet(state.rx_window, state.rx_seq, packet) do
-        {:ok, window} ->
-          Logger.debug("Packet inside window range, added to window")
-          {:ok, window}
 
-        {:error, :outside_window, window_first} ->
-          Logger.error("Packet was outside window, receive sequence is #{window_first}")
-          state.transport.send(state.socket, Packet.rxmitp(window_first))
-          # We believe the RS is all messed up, with the rxmitp we tell it to start over
-          {:error, Window.init(state.rx_window.window_start, Window.receive_window_size())}
-      end
+    Logger.debug("TCS: Received data packet type=#{packet_type}, seq=#{packet.seq}")
 
-    # Check to see if there are any out of sequence packets. If so, ask for them again
-    packet_error_list = Window.check_packets(new_rx_window)
-    # Logger.debug("Packet sequence errors this round is #{packet_error_list}")
+    case ReceiveBuffer.add_packet(state.rx_buffer, packet) do
+      {:ok, updated_buffer} ->
+        missing_seqs = ReceiveBuffer.get_missing_sequences(updated_buffer)
 
-    cond do
-      status == :error ->
-        # XXX Logger.debug("packet outside window, sending rxmitp")
-        # We believe the RS is all messed up, with the rxmitp we tell it to start over
+        if Enum.empty?(missing_seqs) do
+          {packets, new_buffer} = ReceiveBuffer.take_sequential_packets(updated_buffer)
 
-        {excess, state.tx_seq, state.rx_seq, new_rx_window}
+          if not Enum.empty?(packets) do
+            Enum.each(packets, fn pkt ->
+              if pkt.type in [Type.UD1ACK, Type.UD2ACK] do
+                Logger.debug("TCS: Sending ACKPKT for seq=#{pkt.seq}")
+                state.transport.send(state.socket, Packet.ackpkt(pkt.seq))
+              end
+            end)
 
-      !Enum.empty?(packet_error_list) ->
-        # XXX Logger.debug("incorrect receive sequence #{packet.seq}; expected #{state.rx_seq}")
-        error_seqs = Enum.map(packet_error_list, &elem(&1, 0))
-        Logger.warning("Out of sequence packets: #{error_seqs}")
+            {new_tx_seq, final_buffer} =
+              Enum.reduce(packets, {state.tx_seq, new_buffer}, fn pkt, {tx_seq, buf} ->
+                process_packet_to_dia(pkt, state, buf, tx_seq)
+              end)
 
-        Enum.each(packet_error_list, fn {seq, function_atom} ->
-          Logger.warning("Sending a #{function_atom} packet for #{seq}")
-          state.transport.send(state.socket, apply(Packet, function_atom, [seq]))
-        end)
+            new_rx_seq = final_buffer.next_expected
+            {excess, new_tx_seq, new_rx_seq, final_buffer}
+          else
+            {excess, state.tx_seq, state.rx_seq, updated_buffer}
+          end
+        else
+          Logger.debug("TCS: Missing packets in window: #{inspect(missing_seqs)}, sending NACKNCCs")
 
-        {excess, state.tx_seq, state.rx_seq, new_rx_window}
+          Enum.each(missing_seqs, fn seq ->
+            Logger.debug("TCS: Sending NAKNCC for missing seq=#{seq}")
+            state.transport.send(state.socket, Packet.nakncc(seq))
+          end)
 
-      true ->
-        new_rx_seq = next_seq(state.rx_seq)
-
-        Logger.debug("received packet in sequence, next expected receive sequence #{new_rx_seq}")
-
-        if packet.type in [Type.UD1ACK, Type.UD2ACK] do
-          Logger.debug("sending and caching ack of packet sequence #{packet.seq}")
-          Cachex.put(:ack_tracker, {self(), packet.seq}, true)
-          state.transport.send(state.socket, Packet.ackpkt(packet.seq))
+          {excess, state.tx_seq, state.rx_seq, updated_buffer}
         end
 
-        {new_tx_seq, new_window} = send_tcs_packet_to_dia(packet, state, new_rx_window)
-        {excess, new_tx_seq, new_rx_seq, new_window}
+      {:error, :outside_window, window_start} ->
+        Logger.debug("TCS: Packet seq=#{packet.seq} outside window, sending RXMITP for seq=#{window_start}")
+        state.transport.send(state.socket, Packet.rxmitp(window_start))
+
+        new_buffer = ReceiveBuffer.reset(state.rx_buffer, window_start)
+        {excess, state.tx_seq, window_start, new_buffer}
     end
   end
 
-  # XXX put cache delete here
   def handle_packet_in({packet, excess}, Type.ACKPKT, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-
-    Logger.debug(
-      "incoming ackpkt of # #{payload_seq}, #{inspect(packet.payload, binaries: :as_binaries, limit: :infinity)}"
-    )
-
+    Logger.debug("TCS: Received ACKPKT for seq=#{payload_seq}")
     Transmitter.send_code(state.tx_pid, :ackpkt, payload_seq)
-    {excess, state.tx_seq, state.rx_seq, state.rx_window}
+    {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
   def handle_packet_in({packet, excess}, Type.NAKCCE, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-    Logger.error("incoming nakcce on packet # #{payload_seq}, resending packet")
-
+    Logger.debug("TCS: Received NAKCCE for seq=#{payload_seq}, resending packet")
     Transmitter.send_code(state.tx_pid, :nakcce, payload_seq)
-    {excess, state.tx_seq, state.rx_seq, state.rx_window}
+    {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
   def handle_packet_in({packet, excess}, Type.NAKNCC, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-    Logger.error("incoming nakncc on packet # #{payload_seq}")
+    Logger.debug("TCS: Received NAKNCC for seq=#{payload_seq}")
     Transmitter.send_code(state.tx_pid, :nakncc, payload_seq)
-    {excess, state.tx_seq, state.rx_seq, state.rx_window}
+    {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
   def handle_packet_in({packet, excess}, Type.RXMITP, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-    Logger.error("incoming rxmitp on packet # #{payload_seq}")
+    Logger.debug("TCS: Received RXMITP for seq=#{payload_seq}, retransmitting from that sequence")
     Transmitter.send_code(state.tx_pid, :rxmitp, payload_seq)
-    {excess, state.tx_seq, state.rx_seq, state.rx_window}
+    {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
   def handle_packet_in({packet, excess}, Type.WACKPK, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
+    Logger.debug("TCS: Received WACKPK for seq=#{payload_seq}")
 
-    Logger.error(
-      "incoming wackpk on packet # #{payload_seq}, rx window start is  #{state.rx_window.window_start}"
-    )
+    case ReceiveBuffer.get_packet_status(state.rx_buffer, payload_seq) do
+      :received ->
+        # In window and received, send ACK
+        Logger.debug("TCS: Packet seq=#{payload_seq} was received, sending ACKPKT")
+        state.transport.send(state.socket, Packet.ackpkt(payload_seq))
+        {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
 
-    {:ok, value} = Cachex.get(:ack_tracker, {self(), payload_seq})
+      :pending ->
+        # In window but not received, send NAKNCC
+        Logger.debug("TCS: Packet seq=#{payload_seq} NOT received, sending NAKNCC")
+        state.transport.send(state.socket, Packet.nakncc(payload_seq))
+        {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
 
-    if value do
-      Logger.debug("wackpk received for sequence: #{payload_seq}, but ack was sent")
-      state.transport.send(state.socket, Packet.ackpkt(:binary.decode_unsigned(packet.payload)))
-    else
-      Logger.debug("wackpk received for sequence: #{payload_seq}, resending")
-      state.transport.send(state.socket, Packet.nakncc(:binary.decode_unsigned(packet.payload)))
+      :outside_window ->
+        # Outside window, send RXMITP for next expected sequence
+        next_expected = state.rx_buffer.next_expected
+        Logger.debug("TCS: WACKPK for seq=#{payload_seq} outside window, sending RXMITP for seq=#{next_expected}")
+        state.transport.send(state.socket, Packet.rxmitp(next_expected))
+        {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
     end
-
-    {excess, state.tx_seq, state.rx_seq, state.rx_window}
   end
 
   def handle_packet_in({_packet, excess}, Type.TXABOD, state) do
-    Logger.error("txabod")
-    {excess, state.tx_seq, state.rx_seq, state.rx_window}
+    Logger.debug("TCS: Received TXABOD - transmission aborted by remote")
+    {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
-  @doc """
-  Send a TCS packet to the DIA handler. The DIA handler will determine if this packet
-  completes a DIA packet. An :ok means it needs more TCS packets for a complete DIA,
-  {:ok, response} means that this completed a DIA packet and it handled the command.
-  """
-  def send_tcs_packet_to_dia(packet, state, in_window) do
+  defp process_packet_to_dia(packet, state, rx_buffer, tx_seq) do
     case state.dia_module.handle_packet(state.dia_pid, packet) do
       :ok ->
-        Logger.debug("nothing to return to client")
-        {state.tx_seq, in_window}
+        Logger.debug("Nothing to return to client")
+        {tx_seq, rx_buffer}
 
       {:ok, response} ->
         [first | rest] = binary_chunk_every(response, @max_payload_size)
-        out_packet = %Packet{seq: state.tx_seq, type: Type.UD1ACK, payload: first}
+        out_packet = %Packet{seq: tx_seq, type: Type.UD1ACK, payload: first}
 
-        Logger.debug(
-          "queuing packet # #{state.tx_seq}: #{inspect(out_packet, base: :hex, limit: :infinity)}"
-        )
+        Logger.debug("TCS: Sending data packet type=UD1ACK, seq=#{tx_seq}, queuing for transmission")
 
         encoded_packet = Packet.encode(out_packet)
-        Transmitter.transmit_packet(state.tx_pid, encoded_packet, state.tx_seq)
+        Transmitter.transmit_packet(state.tx_pid, encoded_packet, tx_seq)
 
-        new_tx_seq = next_seq(state.tx_seq)
+        new_tx_seq = next_seq(tx_seq)
 
         last_tx_seq =
-          Enum.reduce(rest, new_tx_seq, fn chunk, tx_seq ->
-            out_packet = %Packet{seq: tx_seq, type: Type.UD2ACK, payload: chunk}
+          Enum.reduce(rest, new_tx_seq, fn chunk, current_tx_seq ->
+            out_packet = %Packet{seq: current_tx_seq, type: Type.UD2ACK, payload: chunk}
 
-            Logger.debug(
-              "queuing packet # #{tx_seq}: #{inspect(out_packet, base: :hex, limit: :infinity)}"
-            )
+            Logger.debug("TCS: Sending data packet type=UD2ACK, seq=#{current_tx_seq}, queuing for transmission")
 
             encoded_packet = Packet.encode(out_packet)
-            Transmitter.transmit_packet(state.tx_pid, encoded_packet, tx_seq)
+            Transmitter.transmit_packet(state.tx_pid, encoded_packet, current_tx_seq)
 
-            next_seq(tx_seq)
+            next_seq(current_tx_seq)
           end)
 
-        num_received_packets = Window.tcs_packets_used(in_window)
-
-        {last_tx_seq,
-         Window.init(in_window.window_start + num_received_packets, Window.receive_window_size())}
+        {last_tx_seq, rx_buffer}
     end
   end
+
 
   @impl GenServer
   def terminate(reason, _state) do
     Logger.debug("TCS server shutting down: #{inspect(reason)}")
     :normal
   end
-
 end
