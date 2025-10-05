@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2022-2025, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -40,6 +40,8 @@ defmodule Prodigy.Server.Service.Profile do
   defp todate(input) do
     Timex.parse!(input, "{0M}{0D}{YY}") |> Timex.to_date()
   end
+
+  defp to2digitdate("999999"), do: nil  # enrollment sends this when client omits birthdate
 
   defp to2digitdate(input) do
     parsed_date = todate(input)
@@ -173,7 +175,7 @@ defmodule Prodigy.Server.Service.Profile do
   def get_tac(tac, user, household) do
     res = get_value(tac, user, household)
 
-    <<tac::16-big>> <>
+    res = <<tac::16-big>> <>
       case res do
         nil -> <<0x0>>
         _ -> <<byte_size(res), res::binary>>
@@ -275,6 +277,8 @@ defmodule Prodigy.Server.Service.Profile do
       0x2C2 -> user.prf_last_logon_date
       0x2C4 -> user.prf_last_logon_time
       0x2FB -> user.prf_madmaze_save
+      0x183 -> "0H12AX6"
+      0x18A -> "     "
 
       _ ->
         Logger.error("User requested profile value for unhandled TAC #{inspect(tac, base: :hex)}")
