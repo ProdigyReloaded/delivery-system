@@ -34,7 +34,7 @@ defmodule Prodigy.Server.Service.Messaging do
     Logger.debug("Expunging messages ...")
 
     Repo.transaction(fn ->
-      now = DateTime.utc_now()
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       {count_read, _} =
         Message
@@ -42,13 +42,13 @@ defmodule Prodigy.Server.Service.Messaging do
         |> Ecto.Query.where([message], message.retain_date < ^now)
         |> Repo.delete_all()
 
-      # 3 days old
-      oldest_unread_date = DateTime.add(now, 3 * 24 * 60 * 60, :second)
+      # Delete unread messages older than 14 days
+      oldest_unread_date = DateTime.add(now, -14 * 24 * 60 * 60, :second)
 
       {count_unread, _} =
         Message
         |> Ecto.Query.where([message], message.read == false)
-        |> Ecto.Query.where([message], message.sent_date <= ^oldest_unread_date)
+        |> Ecto.Query.where([message], message.sent_date < ^oldest_unread_date)
         |> Repo.delete_all()
 
       total = count_read + count_unread
