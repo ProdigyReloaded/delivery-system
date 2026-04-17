@@ -192,7 +192,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
           # Don't trust seq from corrupted packet
           # Send NAKCCE for next expected sequence
           next_expected = state.rx_buffer.next_expected
-          Logger.warning("TCS: CRC error in packet, sending NAKCCE for expected seq=#{next_expected}")
+          Logger.debug("TCS: CRC error in packet, sending NAKCCE for expected seq=#{next_expected}")
           transport.send(socket, Packet.nakcce(next_expected))
           {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
 
@@ -207,7 +207,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
   @impl GenServer
   def handle_info({:wp_limit_exceeded, socket}, state) do
-    Logger.error("Too many wackpk packets sent, closing connection")
+    Logger.debug("Too many wackpk packets sent, closing connection")
     send(self(), {:tcp_closed, socket})
     {:noreply, state}
   end
@@ -233,7 +233,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
   @impl GenServer
   def handle_info({:rxmitp_reset_needed, sequence}, state) do
-    Logger.error("TCS: Transmission reset needed from sequence #{sequence}")
+    Logger.debug("TCS: Transmission reset needed from sequence #{sequence}")
 
     # Reset our transmission sequence
     new_state = %{state | tx_seq: sequence}
@@ -252,7 +252,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
   def handle_packet_in({%Packet{} = packet, excess}, packet_type, state)
       when packet_type in [Type.UD1ACK, Type.UD1NAK, Type.UD2ACK, Type.UD2NAK] do
 
-    Logger.info("TCS: Received data packet type=#{packet_type}, seq=#{packet.seq}")
+    Logger.debug("TCS: Received data packet type=#{packet_type}, seq=#{packet.seq}")
 
     case ReceiveBuffer.add_packet(state.rx_buffer, packet) do
       {:ok, updated_buffer} ->
@@ -264,7 +264,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
           if not Enum.empty?(packets) do
             Enum.each(packets, fn pkt ->
               if pkt.type in [Type.UD1ACK, Type.UD2ACK] do
-                Logger.info("TCS: Sending ACKPKT for seq=#{pkt.seq}")
+                Logger.debug("TCS: Sending ACKPKT for seq=#{pkt.seq}")
                 state.transport.send(state.socket, Packet.ackpkt(pkt.seq))
               end
             end)
@@ -280,10 +280,10 @@ defmodule Prodigy.Server.Protocol.Tcs do
             {excess, state.tx_seq, state.rx_seq, updated_buffer}
           end
         else
-          Logger.warning("TCS: Missing packets in window: #{inspect(missing_seqs)}, sending NACKNCCs")
+          Logger.debug("TCS: Missing packets in window: #{inspect(missing_seqs)}, sending NACKNCCs")
 
           Enum.each(missing_seqs, fn seq ->
-            Logger.warning("TCS: Sending NAKNCC for missing seq=#{seq}")
+            Logger.debug("TCS: Sending NAKNCC for missing seq=#{seq}")
             state.transport.send(state.socket, Packet.nakncc(seq))
           end)
 
@@ -291,7 +291,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
         end
 
       {:error, :outside_window, window_start} ->
-        Logger.error("TCS: Packet seq=#{packet.seq} outside window, sending RXMITP for seq=#{window_start}")
+        Logger.debug("TCS: Packet seq=#{packet.seq} outside window, sending RXMITP for seq=#{window_start}")
         state.transport.send(state.socket, Packet.rxmitp(window_start))
 
         new_buffer = ReceiveBuffer.reset(state.rx_buffer, window_start)
@@ -301,60 +301,60 @@ defmodule Prodigy.Server.Protocol.Tcs do
 
   def handle_packet_in({packet, excess}, Type.ACKPKT, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-    Logger.info("TCS: Received ACKPKT for seq=#{payload_seq}")
+    Logger.debug("TCS: Received ACKPKT for seq=#{payload_seq}")
     Transmitter.send_code(state.tx_pid, :ackpkt, payload_seq)
     {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
   def handle_packet_in({packet, excess}, Type.NAKCCE, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-    Logger.error("TCS: Received NAKCCE for seq=#{payload_seq}, resending packet")
+    Logger.debug("TCS: Received NAKCCE for seq=#{payload_seq}, resending packet")
     Transmitter.send_code(state.tx_pid, :nakcce, payload_seq)
     {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
   def handle_packet_in({packet, excess}, Type.NAKNCC, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-    Logger.error("TCS: Received NAKNCC for seq=#{payload_seq}")
+    Logger.debug("TCS: Received NAKNCC for seq=#{payload_seq}")
     Transmitter.send_code(state.tx_pid, :nakncc, payload_seq)
     {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
   def handle_packet_in({packet, excess}, Type.RXMITP, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-    Logger.error("TCS: Received RXMITP for seq=#{payload_seq}, retransmitting from that sequence")
+    Logger.debug("TCS: Received RXMITP for seq=#{payload_seq}, retransmitting from that sequence")
     Transmitter.send_code(state.tx_pid, :rxmitp, payload_seq)
     {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
   def handle_packet_in({packet, excess}, Type.WACKPK, state) do
     <<payload_seq::integer-size(8), _rest::binary>> = packet.payload
-    Logger.warning("TCS: Received WACKPK for seq=#{payload_seq}")
+    Logger.debug("TCS: Received WACKPK for seq=#{payload_seq}")
 
     case ReceiveBuffer.get_packet_status(state.rx_buffer, payload_seq) do
       :received ->
         # In window and received, send ACK
-        Logger.info("TCS: Packet seq=#{payload_seq} was received, sending ACKPKT")
+        Logger.debug("TCS: Packet seq=#{payload_seq} was received, sending ACKPKT")
         state.transport.send(state.socket, Packet.ackpkt(payload_seq))
         {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
 
       :pending ->
         # In window but not received, send NAKNCC
-        Logger.warning("TCS: Packet seq=#{payload_seq} NOT received, sending NAKNCC")
+        Logger.debug("TCS: Packet seq=#{payload_seq} NOT received, sending NAKNCC")
         state.transport.send(state.socket, Packet.nakncc(payload_seq))
         {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
 
       :outside_window ->
         # Outside window, send RXMITP for next expected sequence
         next_expected = state.rx_buffer.next_expected
-        Logger.error("TCS: WACKPK for seq=#{payload_seq} outside window, sending RXMITP for seq=#{next_expected}")
+        Logger.debug("TCS: WACKPK for seq=#{payload_seq} outside window, sending RXMITP for seq=#{next_expected}")
         state.transport.send(state.socket, Packet.rxmitp(next_expected))
         {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
     end
   end
 
   def handle_packet_in({_packet, excess}, Type.TXABOD, state) do
-    Logger.error("TCS: Received TXABOD - transmission aborted by remote")
+    Logger.debug("TCS: Received TXABOD - transmission aborted by remote")
     {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
   end
 
@@ -368,7 +368,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
         [first | rest] = binary_chunk_every(response, @max_payload_size)
         out_packet = %Packet{seq: tx_seq, type: Type.UD1ACK, payload: first}
 
-        Logger.info("TCS: Sending data packet type=UD1ACK, seq=#{tx_seq}, queuing for transmission")
+        Logger.debug("TCS: Sending data packet type=UD1ACK, seq=#{tx_seq}, queuing for transmission")
 
         encoded_packet = Packet.encode(out_packet)
         Transmitter.transmit_packet(state.tx_pid, encoded_packet, tx_seq)
@@ -379,7 +379,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
           Enum.reduce(rest, new_tx_seq, fn chunk, current_tx_seq ->
             out_packet = %Packet{seq: current_tx_seq, type: Type.UD2ACK, payload: chunk}
 
-            Logger.info("TCS: Sending data packet type=UD2ACK, seq=#{current_tx_seq}, queuing for transmission")
+            Logger.debug("TCS: Sending data packet type=UD2ACK, seq=#{current_tx_seq}, queuing for transmission")
 
             encoded_packet = Packet.encode(out_packet)
             Transmitter.transmit_packet(state.tx_pid, encoded_packet, current_tx_seq)

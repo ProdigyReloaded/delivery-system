@@ -1,12 +1,50 @@
-:8080, :8443 {
-	# Serve static files from /var/www
-	root * /var/www
-	file_server
+{$DOMAIN} {
+    root * /var/www
 
-	# Forward websocket requests to wsrelay:8081
-	@websockets {
-		header Connection *Upgrade*
-		header Upgrade websocket
-	}
-	reverse_proxy @websockets wsrelay:8081
+    # Enable compression
+    encode gzip zstd
+
+    # Handle WebSocket connections
+    @websockets {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websockets wsrelay:8081
+
+    # Cache control for different file types
+    @immutable {
+        path *.wasm *.data
+    }
+    header @immutable Cache-Control "public, max-age=31536000, immutable"
+    
+    @javascript {
+        path *.js
+    }
+    header @javascript Cache-Control "public, max-age=86400"
+    
+    @html {
+        path *.html
+    }
+    header @html Cache-Control "no-cache"
+
+    # Serve static files for everything else
+    file_server
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Add CORS headers for SharedArrayBuffer if needed
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Embedder-Policy "require-corp"
+    }
+
+    # Logging
+    #log {
+    #    output stdout
+    #    format console
+    #}
 }

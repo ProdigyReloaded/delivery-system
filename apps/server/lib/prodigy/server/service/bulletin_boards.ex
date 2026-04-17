@@ -28,6 +28,10 @@ defmodule Prodigy.Server.Service.BulletinBoards do
         hour::bytes-size(2), topic_id::16-big>> ->
         handle_start_note_cursor(mon, day, min, hour, topic_id, context)
 
+      # note cursor page selection
+      <<0, 0, 0x67, 8, page_no::16-big, _mon::bytes-size(2), _day::bytes-size(2), _rest::binary >> ->
+        handle_select_note_cursor_page(page_no, context)
+
       # Navigate note headers
       <<0, 0, 0x67, direction, _mon::bytes-size(2), _day::bytes-size(2),
         topic_len::16-big, _topic_text::binary-size(topic_len)>> ->
@@ -296,6 +300,16 @@ defmodule Prodigy.Server.Service.BulletinBoards do
 
     {context, {:ok, get_index_page(context.bb)}}
   end
+
+  defp handle_select_note_cursor_page(page_no, context) do
+    Logger.debug("note pagination, select page: #{page_no}")
+
+    new_offset = (page_no - 1) * 3
+    new_context = %{context | bb: %{context.bb | offset: new_offset}}
+
+    {new_context, {:ok, get_index_page(new_context.bb)}}
+  end
+
 
   defp handle_navigate_note_cursor(direction, context) do
     Logger.debug("note pagination, direction: #{direction}")

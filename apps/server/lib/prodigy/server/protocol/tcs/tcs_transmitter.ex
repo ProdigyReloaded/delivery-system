@@ -58,7 +58,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
 
   @impl true
   def handle_cast({:ackpkt, sequence}, state) do
-    Logger.info("TCS TX: Processing ACKPKT for seq=#{sequence}")
+    Logger.debug("TCS TX: Processing ACKPKT for seq=#{sequence}")
 
     # Log current buffer state
     unacked_before = TransmitBuffer.get_unacked_sequences(state.tx_buffer)
@@ -75,11 +75,11 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
 
   @impl true
   def handle_cast({:nakcce, sequence}, state) do
-    Logger.info("TCS TX: Processing NAKCCE for seq=#{sequence}")
+    Logger.debug("TCS TX: Processing NAKCCE for seq=#{sequence}")
 
     case TransmitBuffer.get_by_sequence(state.tx_buffer, sequence) do
       %PacketState{packet: packet} = _packet_state ->
-        Logger.info("TCS TX: Resending packet seq=#{sequence} due to CRC error")
+        Logger.debug("TCS TX: Resending packet seq=#{sequence} due to CRC error")
         state.transport.send(state.socket, packet)
 
         new_buffer = TransmitBuffer.update_by_sequence(state.tx_buffer, sequence, fn ps ->
@@ -88,7 +88,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
         {:noreply, %{state | tx_buffer: new_buffer}}
 
       nil ->
-        Logger.warning("TCS TX: NAKCCE for seq=#{sequence}, but no packet in buffer")
+        Logger.debug("TCS TX: NAKCCE for seq=#{sequence}, but no packet in buffer")
         {:noreply, state}
     end
   end
@@ -107,30 +107,30 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
         {:noreply, state}
 
       nil ->
-        Logger.warning("NAKNCC for sequence: #{sequence}, but no packet in buffer")
+        Logger.debug("NAKNCC for sequence: #{sequence}, but no packet in buffer")
         {:noreply, state}
     end
   end
 
   @impl true
   def handle_cast({:rxmitp, sequence}, state) do
-    Logger.warning("TCS TX: RXMITP received for sequence #{sequence}")
+    Logger.debug("TCS TX: RXMITP received for sequence #{sequence}")
 
     # Log current buffer state
     all_packets = TransmitBuffer.get_all_packets(state.tx_buffer)
     buffer_seqs = Enum.map(all_packets, fn {seq, _} -> seq end) |> Enum.sort()
-    Logger.info("TCS TX: Current buffer contains sequences: #{inspect(buffer_seqs)}")
+    Logger.debug("TCS TX: Current buffer contains sequences: #{inspect(buffer_seqs)}")
 
     # Check if we have the requested sequence
     case TransmitBuffer.get_by_sequence(state.tx_buffer, sequence) do
       nil ->
         Logger.error("TCS TX: Sequence #{sequence} NOT in buffer")
         # Log what we DO have
-        Logger.info("TCS TX: Buffer state - available sequences: #{inspect(buffer_seqs)}")
+        Logger.debug("TCS TX: Buffer state - available sequences: #{inspect(buffer_seqs)}")
         {:noreply, state}
 
       %PacketState{packet: packet} ->
-        Logger.info("TCS TX: Found sequence #{sequence} in buffer, retransmitting")
+        Logger.debug("TCS TX: Found sequence #{sequence} in buffer, retransmitting")
         state.transport.send(state.socket, packet)
 
         # Also retransmit subsequent unacked packets
@@ -138,7 +138,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
         |> Enum.filter(fn {seq, ps} -> seq > sequence and not ps.acked end)
         |> Enum.sort_by(fn {seq, _} -> seq end)
         |> Enum.each(fn {seq, %PacketState{packet: pkt}} ->
-          Logger.info("TCS TX: Also retransmitting sequence #{seq}")
+          Logger.debug("TCS TX: Also retransmitting sequence #{seq}")
           state.transport.send(state.socket, pkt)
         end)
 
@@ -185,7 +185,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
           end
 
         _ ->
-          Logger.warning("No packet state or sent_time for unacked sequence #{sequence}")
+          Logger.debug("No packet state or sent_time for unacked sequence #{sequence}")
           buffer
       end
     end)
@@ -195,11 +195,11 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
 
   defp handle_wack_timeout(state, buffer, sequence, _packet_state, wack_count, now) do
     if wack_count >= @wack_threshold do
-      Logger.error("TCS TX: WACK threshold reached for seq=#{sequence}, aborting transmission")
+      Logger.debug("TCS TX: WACK threshold reached for seq=#{sequence}, aborting transmission")
       send(state.from, {:wp_limit_exceeded, state.socket})
       buffer
     else
-      Logger.warning("TCS TX: Sending WACKPK for seq=#{sequence}, attempt #{wack_count}")
+      Logger.debug("TCS TX: Sending WACKPK for seq=#{sequence}, attempt #{wack_count}")
       state.transport.send(state.socket, Packet.wackpk(sequence))
 
       TransmitBuffer.update_by_sequence(buffer, sequence, fn ps ->
@@ -214,7 +214,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     else
       case :queue.out(state.packet_queue) do
         {{:value, {packet, sequence}}, new_queue} ->
-          Logger.info("TCS TX: Actually sending packet with sequence #{sequence} to socket")
+          Logger.debug("TCS TX: Actually sending packet with sequence #{sequence} to socket")
 
           # Apply error injection if configured
           packet_to_send = if state.error_injection && state.error_injection.enabled do

@@ -41,6 +41,8 @@ defmodule Prodigy.Server.Service.Profile do
     Timex.parse!(input, "{0M}{0D}{YY}") |> Timex.to_date()
   end
 
+  defp to2digitdate("999999"), do: nil
+
   defp to2digitdate(input) do
     parsed_date = todate(input)
     if parsed_date.year >= 2039 do
