@@ -1,0 +1,9 @@
+fastapi==0.115.5
+uvicorn==0.32.1
+# Match the version the operator uses locally - the library had a
+# 0.x to 1.x bump and the cache schema + auth path both moved. The
+# seeded cache is written by 1.x and 0.x can't read it.
+yfinance==1.3.0
+# Let the quote library resolve the curl_cffi version it needs;
+# pinning here lagged it last time.
+curl_cffi

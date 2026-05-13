@@ -25,7 +25,7 @@ defmodule Prodigy.Server.Service.DowJones do
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
   alias Prodigy.Server.Context
 
-  defmodule YahooFinanceData do
+  defmodule QuoteData do
     @moduledoc false
     defstruct quoteResponse: nil
   end
@@ -47,26 +47,36 @@ defmodule Prodigy.Server.Service.DowJones do
   end
 
   defp decode_quote(symbol) do
+    # Task.async_nolink so a crash in the upstream HTTP work doesn't
+    # propagate via process link and kill the per-connection handler
+    # (CM4 / "carrier loss" on the client). Task.shutdown after yield
+    # ensures any task that took longer than the 6s deadline is
+    # actively killed instead of left orphaned to crash later.
+    task = Task.Supervisor.async_nolink(Prodigy.Server.TaskSup, fn -> get_quote(symbol) end)
+
     json =
-      try do
-        case Task.async(fn -> get_quote(symbol) end)
-             |> Task.yield(3000) do
-          nil -> raise RuntimeError, message: "Timeout"
-          {:exit, _reason} -> raise RuntimeError, message: "Timeout"
-          {:ok, {:ok, {_symbol, json}}} -> json
-        end
-      catch
-        :exit, _reason -> raise RuntimeError, message: "Timeout"
+      case Task.yield(task, 6_000) || Task.shutdown(task, :brutal_kill) do
+        {:ok, {:ok, {_symbol, json}}} ->
+          json
+
+        {:ok, {:error, reason}} ->
+          raise RuntimeError, message: "DowJones API error: #{inspect(reason)}"
+
+        {:exit, reason} ->
+          raise RuntimeError, message: "DowJones API task exit: #{inspect(reason)}"
+
+        nil ->
+          raise RuntimeError, message: "DowJones API timeout"
       end
 
-    yahoo_data =
-      Poison.decode!(json, as: %YahooFinanceData{quoteResponse: %Response{result: [%Quote{}]}})
+    quote_data =
+      Poison.decode!(json, as: %QuoteData{quoteResponse: %Response{result: [%Quote{}]}})
 
-    Enum.at(yahoo_data.quoteResponse.result, 0)
+    Enum.at(quote_data.quoteResponse.result, 0)
   end
 
   defp get_quote(symbol) do
-    YahooFinance.custom_quote(String.trim(symbol), [
+    Prodigy.Server.Service.DowJones.Api.custom_quote(String.trim(symbol), [
       :longName,
       :shortName,
       :regularMarketChange,
@@ -82,18 +92,34 @@ defmodule Prodigy.Server.Service.DowJones do
   This method handles Stock Symbol to Company Name resolution requests from the newly created logic in BNB00037.PGM.
   """
   def handle(%Fm0{dest: 0x009900, payload: symbol} = request, %Context{} = context) do
-    Logger.debug("dow jones resolve symbol '#{symbol}' to short name")
+    Logger.info("dow jones resolve symbol '#{symbol}' to short name")
 
     shortName =
-      case(:ets.lookup(:dow_jones, symbol)) do
-        [{_key, value}] ->
-          value
+      try do
+        case(:ets.lookup(:dow_jones, symbol)) do
+          [{_key, value}] ->
+            value
 
-        _ ->
-          quote = decode_quote(symbol)
-          Logger.info("Symbol #{symbol} not found in table, adding.")
-          :ets.insert_new(:dow_jones, {symbol, quote.shortName})
-          quote.shortName
+          _ ->
+            quote = decode_quote(symbol)
+            # All-caps to match the original Prodigy display convention
+            # (1990s ticker pages were rendered in uppercase).
+            short_name = (quote.shortName || symbol) |> to_string() |> String.upcase()
+            Logger.info("Symbol #{symbol} not found in table, adding as '#{short_name}'.")
+            :ets.insert_new(:dow_jones, {symbol, short_name})
+            short_name
+        end
+      rescue
+        e ->
+          Logger.warning(
+            "dow_jones symbol-resolve failed for '#{symbol}': #{Exception.message(e)}"
+          )
+
+          # Echo the symbol back as the "short name" so the client gets
+          # a non-empty response and the connection survives. The user
+          # sees the raw ticker rather than a friendly name; better
+          # than CM4-ing them off the service.
+          symbol
       end
 
     Logger.debug("short name is #{shortName}")
@@ -122,7 +148,8 @@ defmodule Prodigy.Server.Service.DowJones do
     response =
       try do
         quote = decode_quote(symbol)
-        :ets.insert_new(:dow_jones, {symbol, quote.shortName})
+        short_name = (quote.shortName || symbol) |> to_string() |> String.upcase()
+        :ets.insert_new(:dow_jones, {symbol, short_name})
 
         data =
           List.to_string(
@@ -149,7 +176,10 @@ defmodule Prodigy.Server.Service.DowJones do
         }
       rescue
         # TODO shouldn't be this broad in catching errors
-        _ ->
+        e ->
+          Logger.warning(
+            "dow_jones quote failed for '#{symbol}': #{Exception.message(e)}"
+          )
           # ok, sending statustype INFORMATION or ERROR shows XXME47F4D\x01\x0c to the client
           fm64 = %Fm64{
             concatenated: false,
