@@ -83,7 +83,7 @@ directly with `prodigydev/*` defaults.
 
 3. Fetch deps and migrate:
    ```
-   cd ~/NewProjects/Prodigy/delivery-system
+   cd delivery-system
    mix deps.get
    mix ecto.migrate
    ```
@@ -127,7 +127,7 @@ To exit: Ctrl-C twice.
 1. Copy `.env.example` to `.env`.
 2. Bring up just the docker postgres:
    ```
-   cd ~/NewProjects/Prodigy/delivery-system
+   cd delivery-system
    docker compose up -d db
    ```
    The dev override maps it to host `:5433` to avoid colliding with
@@ -171,7 +171,7 @@ DB_NAME=prodigy DB_USER=prodigy DB_PASS=prodigy DB_PORT=5433 mix phx.server
 1. Copy `.env.example` to `.env`.
 2. Build + bring everything up:
    ```
-   cd ~/NewProjects/Prodigy/delivery-system
+   cd delivery-system
    docker compose up -d --build
    ```
    First build is ~5 min (Phoenix release + Python sidecar). Subsequent

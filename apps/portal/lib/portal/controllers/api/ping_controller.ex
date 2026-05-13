@@ -1,0 +1,28 @@
+# Copyright 2026, Phillip Heller
+#
+# This file is part of Prodigy Reloaded.
+#
+# Prodigy Reloaded is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# Prodigy Reloaded is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
+# see <https://www.gnu.org/licenses/>.
+
+defmodule Prodigy.Portal.Api.PingController do
+  @moduledoc """
+  Tiny smoke-test endpoint for the `/api/v1` auth pipeline. Returns
+  the caller's user id so clients can confirm their Bearer token is
+  recognized before sending anything heavier.
+  """
+  use Prodigy.Portal, :controller
+
+  def index(conn, _params) do
+    user = conn.assigns.current_user
+    json(conn, %{ok: true, user_id: user.id, email: user.email})
+  end
+end
