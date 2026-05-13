@@ -78,6 +78,13 @@ defmodule Prodigy.OmsUtil.CLI do
           --concurrency-limit <n>  Set the maximum concurrent sessions for this user
                                   (default: 1, use 0 for unlimited)
 
+          --enroll "First Last"    Mark the A user enrolled (sets date_enrolled,
+                                  first_name, last_name, default gender/title) and
+                                  mirror the name into the household's A slot so
+                                  the RS client reads back the right values. Skip
+                                  this flag to create a blank account that will
+                                  go through the enrollment wizard on first logon.
+
           If XXXXYY already exists, an error is given.
 
         delete <XXXXYY[Z]>
@@ -113,7 +120,8 @@ defmodule Prodigy.OmsUtil.CLI do
           port: :integer,
           database: :string,
           like: :string,
-          concurrency_limit: :integer
+          concurrency_limit: :integer,
+          enroll: :string
         ]
       )
 
@@ -148,7 +156,8 @@ defmodule Prodigy.OmsUtil.CLI do
 
         args = %{
           id: id,
-          concurrency_limit: Map.get(args, :concurrency_limit, 1)
+          concurrency_limit: Map.get(args, :concurrency_limit, 1),
+          enroll: Map.get(args, :enroll)
         }
 
         Create.exec(rest, args)

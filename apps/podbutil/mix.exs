@@ -10,7 +10,7 @@ defmodule Prodigy.OdbUtil.MixProject do
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
       lockfile: "../../mix.lock",
-      elixir: "~> 1.13",
+      elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
@@ -19,7 +19,10 @@ defmodule Prodigy.OdbUtil.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      # :inets + :ssl for the HTTP upload mode (`podbutil import --url ...`).
+      # Stays in the Erlang standard library so podbutil doesn't grow a
+      # third-party HTTP dep.
+      extra_applications: [:logger, :inets, :ssl]
     ]
   end
 
@@ -30,7 +33,13 @@ defmodule Prodigy.OdbUtil.MixProject do
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
       # {:sibling_app_in_umbrella, in_umbrella: true}
       {:core, in_umbrella: true},
-      {:exprintf, "~> 0.2.0"}
+      {:exprintf, "~> 0.2.0"},
+      # Test-only: a real-but-tiny HTTP listener so `Import.exec_http/2`
+      # can be exercised end-to-end without a Phoenix endpoint behind it.
+      # (Bypass would be cleaner but its `ranch ~> 1.3` conflicts with the
+      # umbrella's ranch 2.1.0 pin from cowboy.)
+      {:plug, "~> 1.14", only: :test},
+      {:plug_cowboy, "~> 2.7", only: :test}
     ]
   end
 end

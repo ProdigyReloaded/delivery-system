@@ -16,7 +16,8 @@
 defmodule Dir do
   @moduledoc false
 
-  alias Prodigy.Core.Data.{Object, Repo}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.Object
 
   import Ecto.Query
   import ExPrintf

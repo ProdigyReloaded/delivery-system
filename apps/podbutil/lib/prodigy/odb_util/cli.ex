@@ -90,15 +90,33 @@ defmodule Prodigy.OdbUtil.CLI do
                                 incrementing non-zero integer.
                                 Defaults to the current working directory.
 
-        import <object1> ... <objectN>
+        import <path1> ... <pathN>
           Import specified objects to <datasource>
 
-          <object1> ... <objectN> - a space separated list of filesystem
-                                    paths or globs to files containing the
-                                    objects to be imported
+          <path1> ... <pathN> - filesystem paths, globs, or directories.
+                                Directory args are expanded to all regular
+                                files directly inside them (one level, not
+                                recursive). Useful for batches that would
+                                overflow the shell's ARG_MAX via glob.
 
           All objects will be imported within a single transaction, so if
           any are unable to be imported, none should be.
+
+          HTTP mode:
+            --url <base>            Upload via the portal's HTTP API
+                                    instead of the local Repo. When
+                                    supplied, DB_* env vars are not
+                                    consulted.
+            --api-key-file <path>   File containing the plaintext API
+                                    key (one line, whitespace trimmed).
+            --api-key-env <var>     Read the key from the given env var.
+                                    Default: PRODIGY_API_KEY.
+            --insecure              Skip TLS cert verification. Use
+                                    against dev stacks where Caddy's
+                                    internal CA isn't on the host trust
+                                    store. Never use against prod.
+
+          Without --url, podbutil connects directly to Postgres as before.
 
         list-object-types
           Lists all object types
@@ -136,31 +154,15 @@ defmodule Prodigy.OdbUtil.CLI do
           dest: :string,
           like: :string,
           type: :keep,
-          comment: :string
+          comment: :string,
+          url: :string,
+          api_key_file: :string,
+          api_key_env: :string,
+          insecure: :boolean
         ]
       )
 
     args = Enum.into(parsed, %{})
-
-    target = Map.get(args, :dest, ".")
-
-    target =
-      case File.exists?(target) do
-        true ->
-          case File.stat(target) do
-            {:ok, %File.Stat{type: :directory}} ->
-              Path.expand(target)
-
-            {:error, errno} ->
-              usage(:terse, "Error accessing destination path '#{target}: #{errno}")
-
-            _ ->
-              usage(:terse, "Error accessing destination path '#{target}', it is not a directory")
-          end
-
-        _ ->
-          usage(:terse, "Destination path '#{target}' does not exist.")
-      end
 
     if Map.get(args, :help, false), do: usage(:verbose)
 
@@ -169,32 +171,52 @@ defmodule Prodigy.OdbUtil.CLI do
     [command | rest] = rest
     command = String.downcase(command)
 
-    Util.start_repo()
-
     case command do
       "list-object-types" ->
         list_object_types()
 
       "dir" ->
-        args = %{
-          like: Map.get(args, :like, "%")
-        }
-
-        Dir.exec(rest, args)
+        Util.start_repo()
+        Dir.exec(rest, %{like: Map.get(args, :like, "%")})
 
       "export" ->
-        args = %{
-          like: Map.get(args, :like, "%"),
-          target: target
-        }
-
-        Export.exec(rest, args)
+        Util.start_repo()
+        Export.exec(rest, %{like: Map.get(args, :like, "%"), target: resolve_target(args)})
 
       "import" ->
-        Import.exec(rest, args)
+        # HTTP mode if --url is supplied - skips the local Repo start
+        # entirely so podbutil can run without DB_* env vars. Local
+        # mode still uses the Repo as before.
+        if Map.has_key?(args, :url) do
+          Import.exec_http(rest, args)
+        else
+          Util.start_repo()
+          Import.exec(rest, args)
+        end
 
       _ ->
         usage(:verbose)
+    end
+  end
+
+  defp resolve_target(args) do
+    target = Map.get(args, :dest, ".")
+
+    case File.exists?(target) do
+      true ->
+        case File.stat(target) do
+          {:ok, %File.Stat{type: :directory}} ->
+            Path.expand(target)
+
+          {:error, errno} ->
+            usage(:terse, "Error accessing destination path '#{target}: #{errno}")
+
+          _ ->
+            usage(:terse, "Error accessing destination path '#{target}', it is not a directory")
+        end
+
+      _ ->
+        usage(:terse, "Destination path '#{target}' does not exist.")
     end
   end
 end

@@ -16,7 +16,8 @@
 defmodule ListAccount do
   @moduledoc false
 
-  alias Prodigy.Core.Data.{Household, Repo, User}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.{Household, User}
 
   import Ecto.Query
   import ExPrintf
