@@ -1,0 +1,61 @@
+<div class="container py-4" style="max-width: 640px;">
+  <header class="mb-4 text-center">
+    <h1 class="h4 mb-1">Invitation issued</h1>
+    <p class="text-muted small mb-0">
+      Share this URL or the bare code with the person you're inviting.
+      <strong>This is the only time we'll show it</strong> - copy it now.
+    </p>
+  </header>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label small text-muted">Invitation URL</label>
+        <div class="input-group">
+          <input
+            id="invite-url"
+            type="text"
+            class="form-control font-monospace small"
+            value={@invite_url}
+            readonly
+          />
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            onclick="navigator.clipboard.writeText(document.getElementById('invite-url').value); this.innerText='Copied'; setTimeout(() => this.innerText='Copy', 1500);"
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label small text-muted">Code only</label>
+        <div class="input-group">
+          <input
+            id="invite-code"
+            type="text"
+            class="form-control font-monospace"
+            value={@invite.code}
+            readonly
+          />
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            onclick="navigator.clipboard.writeText(document.getElementById('invite-code').value); this.innerText='Copied'; setTimeout(() => this.innerText='Copy', 1500);"
+          >
+            Copy
+          </button>
+        </div>
+        <p class="form-text small">
+          For SMS / voice / anywhere a long URL doesn't fit. The recipient
+          enters this on the login page after the "I have an invite" prompt.
+        </p>
+      </div>
+
+      <div class="text-end">
+        <a href={~p"/start"} class="btn btn-secondary">Done</a>
+      </div>
+    </div>
+  </div>
+</div>

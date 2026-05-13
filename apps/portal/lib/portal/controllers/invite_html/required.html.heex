@@ -1,0 +1,39 @@
+<div class="container py-4" style="max-width: 540px;">
+  <header class="mb-4 text-center">
+    <h1 class="h4 mb-1">Invitation required</h1>
+    <p class="text-muted small mb-0">
+      Sign-up is currently invite-only. Enter your code below to continue.
+    </p>
+  </header>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <.form
+        for={%{}}
+        as={:invite}
+        action={~p"/users/invite/submit"}
+        method="post"
+      >
+        <div class="mb-3">
+          <label for="invite_code" class="form-label small text-muted">Invitation code</label>
+          <input
+            id="invite_code"
+            type="text"
+            name="code"
+            class="form-control font-monospace"
+            placeholder="paste your code"
+            autocomplete="off"
+            spellcheck="false"
+            autofocus
+          />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Continue</button>
+      </.form>
+
+      <p class="text-muted small mt-3 mb-0 text-center">
+        Don't have a code? Ask the person who invited you to share their
+        invitation URL.
+      </p>
+    </div>
+  </div>
+</div>
