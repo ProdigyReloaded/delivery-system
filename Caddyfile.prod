@@ -1,0 +1,59 @@
+# Production Caddyfile. Used by docker-compose.prod.yaml.
+#
+# Topology: Cloudflare Tunnel terminates TLS at CF edge, then forwards plain
+# HTTP to caddy:80 inside this docker network. Caddy does NOT issue or
+# terminate TLS itself in this configuration.
+#
+# Phoenix needs accurate X-Forwarded-* so URL helpers + Ueberauth callbacks
+# come out as https://{$PHX_HOST}/... rather than the in-network
+# http://server:4000/.... cloudflared adds these headers, but Caddy by
+# default overrides them with its own connection's scheme/port - so we
+# explicitly pin them via header_up inside each reverse_proxy block.
+# PHX_HOST is the same env var the app reads for its URL config, so the
+# two can't drift.
+(forwarded) {
+    header_up X-Forwarded-Proto https
+    header_up X-Forwarded-Host {$PHX_HOST}
+    header_up X-Forwarded-Port 443
+    # Replace X-Forwarded-For with Cloudflare's CF-Connecting-IP so the
+    # upstream sees the real originating client address. Without this,
+    # Caddy's default appends the docker-bridge IP and Phoenix's
+    # Plug.RewriteOn :x_forwarded_for ends up with the bridge address
+    # in conn.remote_ip - making every audit log row look like the
+    # same "user" connected. CF-Connecting-IP is set by Cloudflare's
+    # edge and preserved by cloudflared; we trust it because port 80
+    # on the host is reachable only via the tunnel.
+    header_up X-Forwarded-For {http.request.header.cf-connecting-ip}
+}
+
+:80 {
+    encode gzip zstd
+
+    # LiveView / Phoenix WebSocket upgrade.
+    @liveview_ws path /live/*
+    reverse_proxy @liveview_ws server:4000 {
+        import forwarded
+    }
+
+    # Native TCS-over-WebSocket endpoint inside Phoenix.
+    @tcs_ws {
+        path /tcs
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @tcs_ws server:4000 {
+        import forwarded
+    }
+
+    # Everything else (HTTP pages + static assets) goes to the Phoenix app.
+    reverse_proxy server:4000 {
+        import forwarded
+    }
+
+    # Security headers Caddy is the right owner of even behind a tunnel:
+    # HSTS travels to the client unchanged, X-Frame-Options likewise.
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+    }
+}

@@ -1,0 +1,66 @@
+# Dev overlay - auto-merged by `docker compose up`.
+# Production launches with both files explicit, which suppresses the
+# auto-merge of this overlay:
+#   docker compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d --build
+#
+# This file:
+#   - exposes the prodigy DB on host :5433 for method b (host-side mix test)
+#   - turns on PHX_DEV_ROUTES so /dev/mailbox + mock auth work in method c
+#   - adds a one-shot db-seed service that clones the ProdigyReloaded/objects
+#     repo, imports it via podbutil, and creates a default user (AAAA11/SECRET)
+services:
+  # Expose the prodigy DB on a non-default host port so `mix test`
+  # on the dev machine can reach it without colliding with another
+  # Postgres on 5432. Run the suite with:
+  #   DB_PORT=5433 mix test
+  # CI provisions its own Postgres service (see .github/workflows/
+  # elixir.yml) and doesn't read this override file, so this mapping
+  # is dev-only.
+  db:
+    ports:
+      - "5433:5432"
+
+  # Method c (full compose dev) wants the dev-only routes - /dev/mailbox
+  # for the Swoosh local-adapter inbox, /dev/mock-auth for the bypass
+  # login, etc. Base sets PHX_DEV_ROUTES from the env (default false);
+  # forcing it true here means a fresh `docker compose up` produces the
+  # dev experience without the developer remembering to set the var.
+  server:
+    environment:
+      - PHX_DEV_ROUTES=true
+      # Dev Caddy serves plain http on :80, so off-conn URL generation
+      # (signup emails, OAuth callbacks) must use http/80 to match.
+      # Prod is unaffected - this overlay is excluded by the explicit
+      # `-f docker-compose.yaml -f docker-compose.prod.yaml` launch.
+      - URL_SCHEME=http
+      - URL_PORT=80
+
+  db-seed:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    environment:
+      - DB_NAME=${DB_NAME:?Set DB_NAME}
+      - DB_USER=${DB_USER:?Set DB_USER}
+      - DB_PASS=${DB_PASS:?Set DB_PASS}
+      - DB_HOST=${DB_HOST:-db}
+      - MIX_ENV=prod
+      - PHX_HOST=${PHX_HOST:-localhost}
+      - PHX_PORT=${PHX_PORT:-4000}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:?Set SECRET_KEY_BASE}
+      - INIT_USER=${INIT_USER:-AAAA11}
+      - INIT_PASS=${INIT_PASS:-SECRET}
+    volumes:
+      - objects_data:/objects
+      - init_state:/init_state
+      - ./apps/server/seed.sh:/seed.sh:ro
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    command: ["bash", "/seed.sh"]
+    networks:
+      - prodigy-net
+
+volumes:
+  objects_data:
+  init_state:

@@ -1,37 +1,46 @@
 name: prodigy
 services:
   db:
-    image: postgres
+    image: postgres:16-alpine
     environment:
-      POSTGRES_USER: prodigy
-      POSTGRES_PASSWORD: prodigy
-      POSTGRES_DB: prodigy
+      - POSTGRES_DB=${DB_NAME:?Set DB_NAME (copy .env.example to .env for dev, or export in prod)}
+      - POSTGRES_USER=${DB_USER:?Set DB_USER (copy .env.example to .env for dev, or export in prod)}
+      - POSTGRES_PASSWORD=${DB_PASS:?Set DB_PASS (copy .env.example to .env for dev, or export in prod)}
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U prodigy -d prodigy"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - prodigy-net
 
-  db-init:
+  db-migrate:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
     environment:
-      - DB_NAME=prodigy
-      - DB_USER=prodigy
-      - DB_PASS=prodigy
-      - DB_HOST=db
+      - DB_NAME=${DB_NAME:?Set DB_NAME}
+      - DB_USER=${DB_USER:?Set DB_USER}
+      - DB_PASS=${DB_PASS:?Set DB_PASS}
+      - DB_HOST=${DB_HOST:-db}
       - MIX_ENV=prod
-    volumes:
-      - objects_data:/objects
-      - init_state:/init_state
-      - ./apps/server/init-prodigy.sh:/init-prodigy.sh:ro
+      - PHX_HOST=${PHX_HOST:-localhost}
+      - PHX_PORT=${PHX_PORT:-4000}
+      - PHX_DEV_ROUTES=${PHX_DEV_ROUTES:-false}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:?Set SECRET_KEY_BASE}
     depends_on:
       db:
         condition: service_healthy
-    command: ["sh", "/init-prodigy.sh"]
+    command: ["/prod/rel/server/bin/server", "eval", "Prodigy.Core.Release.migrate()"]
+    networks:
+      - prodigy-net
 
   server:
     build:
@@ -40,16 +49,68 @@ services:
     ports:
       - "25234:25234"
     environment:
-      - DB_NAME=prodigy
-      - DB_USER=prodigy
-      - DB_PASS=prodigy
-      - DB_HOST=db
+      - DB_NAME=${DB_NAME:?Set DB_NAME}
+      - DB_USER=${DB_USER:?Set DB_USER}
+      - DB_PASS=${DB_PASS:?Set DB_PASS}
+      - DB_HOST=${DB_HOST:-db}
       - MIX_ENV=prod
+      - PHX_HOST=${PHX_HOST:-localhost}
+      - PHX_PORT=${PHX_PORT:-4000}
+      - PHX_DEV_ROUTES=${PHX_DEV_ROUTES:-false}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:?Set SECRET_KEY_BASE}
     depends_on:
-      db-init:
+      db-migrate:
         condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - prodigy-net
+
+  caddy:
+    image: caddy:2.10.0-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    depends_on:
+      - server
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - PHX_HOST=${PHX_HOST:-localhost}
+    restart: unless-stopped
+    networks:
+      - prodigy-net
+
+  dowjones-sidecar:
+    build:
+      context: ./dowjones_sidecar
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    volumes:
+      # Persist the upstream cookie/crumb cache across container
+      # rebuilds. A blank cache forces a fresh mint on every startup,
+      # which the upstream rate-limits aggressively. Seeded once from
+      # a working install, then maintained automatically.
+      - dowjones_cache:/root/.cache/py-yfinance
+    restart: unless-stopped
+    networks:
+      - prodigy-net
+
+networks:
+  prodigy-net:
+    driver: bridge
 
 volumes:
   db_data:
-  objects_data:
-  init_state:
+  caddy_data:
+  caddy_config:
+  dowjones_cache:

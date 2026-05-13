@@ -28,3 +28,9 @@ erl_crash.dump
 .elixir_ls
 .idea
 *.iml
+
+# Local env - copied from .env.example, may contain real passwords in prod
+.env
+
+# Local, never-pushed scratch workspace.
+/private/

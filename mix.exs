@@ -4,7 +4,7 @@ defmodule DeliverySystem.MixProject do
   def project do
     [
       name: "Delivery System",
-      apps: [:core, :podbutil, :pomsutil, :server],
+      apps: [:core, :podbutil, :pomsutil, :server, :portal],
       apps_path: "apps",
       version: "0.1.0",
       start_permanent: Mix.env() == :prod,
@@ -23,7 +23,8 @@ defmodule DeliverySystem.MixProject do
         server: [
           applications: [
             core: :permanent,
-            server: :permanent
+            server: :permanent,
+            portal: :permanent
           ]
         ]
       ],

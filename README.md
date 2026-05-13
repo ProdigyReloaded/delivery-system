@@ -23,7 +23,9 @@ the service was created by the _Producer System_.
 
 ## Start the service
 ```
-docker compose up
+cp .env.example .env
+docker compose up -d --build 
+docker compose logs -f db-seed
 ```
 
 This command will:
@@ -34,12 +36,17 @@ This command will:
 * Create a user `AAAA11A` with an initial password `SECRET`
 * Run the server.
 
+## Connect via browser
 
-## Download dosbox-staging
+The docker build will launch the service listening on localhost:80 by default.
+[Connect](http://localhost/start) to the service here.
+
+## Connect via Dosbox
+### Download dosbox-staging
 
 Get the latest release for your operating system [here](https://dosbox-staging.github.io)
 
-## Download the client
+### Download the client
 
 As of this writing, the client version software that shipped with the IBM PS/1 (RS 6.03.17); this version has produced
 the best results but it does require a small tweak which will be described below.
@@ -47,7 +54,7 @@ the best results but it does require a small tweak which will be described below
 The software is archived [here](https://archive.org/details/ibm-ps-1-users-club-and-prodigy-software-1990) and
 the disk image is [here](https://archive.org/download/ibm-ps-1-users-club-and-prodigy-software-1990/IBM%20PS1%20Users%27%20Club%20and%20PRODIGY%20Software%20%281990%29.img).
 
-## Prepare the client
+### Prepare the client
 
 Instructions below are prototypical for Linux, but may vary for your preferred operating system.
 
@@ -65,7 +72,7 @@ EOF
 %
 ```
 
-## Dosbox Configuration
+### Dosbox Configuration
 
 Dosbox configuration is beyond the scope of this document, but the default should work with a few tweaks:
 ```
@@ -81,7 +88,7 @@ PRODIGY.BAT
 ```
 
 
-## Run dosbox and prepare the client
+### Run dosbox and prepare the client
 ```
 % dosbox -conf /tmp/prodigy/dosbox.conf
 ```
@@ -92,10 +99,10 @@ When you first run the client software, step through the prompts, responding as 
 * Type the Prodigy service/Users' Club phone number, then press [ENTER]. `5551212`
 * Now, simply close dosbox.
 
-## Make a small adjustment
+### Make a small adjustment
 Edit `CONFIG.SM` however you wish and remove the line that reads `OBJECT:XTG00000.PG1;` and save the file.
 
-## Run dosbox and connect
+### Run dosbox and connect
 ```
 % dosbox -conf /tmp/prodigy/dosbox.conf
 ```
@@ -118,7 +125,7 @@ docker compose down -v
 
 
 ## Caveats
-
-Neither DIA nor TCS protocols as implemented by the Reception System version targeted here provide a keepalive mechanism.
 If the server is run behind anything with aggressive TCP timeouts, such as a load balancer or NAT device, one may 
-experience `CM 4` errors in the Reception System.
+experience `CM 4` errors in the Reception System.  Similarly, modern browsers suspend activity in idle tabs after
+some time, so even though the web-based connections do use a keepalive, the Server may consider the carrier lost if
+the client browser stops responding to these keepalives, whether the connection is healthy or not.

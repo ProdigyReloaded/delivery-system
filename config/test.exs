@@ -15,14 +15,34 @@
 
 import Config
 
+# Only in tests, remove the complexity from the password hashing algorithm
+config :pbkdf2_elixir, :rounds, 1
+
 config :core, Prodigy.Core.Data.Repo,
-  database: "prodigytest",
-  username: "prodigytest",
-  password: "prodigytest",
-  hostname: "localhost",
+  database: System.get_env("DB_NAME", "prodigytest"),
+  username: System.get_env("DB_USER", "prodigytest"),
+  password: System.get_env("DB_PASS", "prodigytest"),
+  hostname: System.get_env("DB_HOST", "localhost"),
+  port: String.to_integer(System.get_env("DB_PORT", "5432")),
   pool: Ecto.Adapters.SQL.Sandbox
 
 config :server,
-  auth_timeout: 3000
+  auth_timeout: 3000,
+  # OS-assigned ephemeral port so the test listener doesn't collide with
+  # a locally-running compose server (which holds 25234).
+  tcs_port: 0
+
+config :portal, Prodigy.Portal.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4002],
+  secret_key_base: "test_secret_key_base_not_used_in_production_LH0YXxKfjfZxxxxxxxxxxxxxx",
+  server: false
+
+# Use the no-IO Test adapter for tests - different from the compile-time
+# default (`Swoosh.Adapters.Local`). Tests assert against the email-link
+# / password-form UI which is gated on `mail_disabled?` returning false;
+# the gate triggers when adapter == Swoosh.Adapters.Local, so the Test
+# adapter unblocks those assertions while keeping mail a no-op in tests.
+config :portal, Prodigy.Portal.Mailer, adapter: Swoosh.Adapters.Test
+config :swoosh, :api_client, false
 
 config :logger, level: :none

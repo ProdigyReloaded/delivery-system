@@ -1,0 +1,54 @@
+# Production overlay. NOT auto-merged by `docker compose up` -
+# explicit:
+#   docker compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d --build
+#
+# Differs from docker-compose.override.yaml (the dev overlay) in that:
+#   - The dev overlay exposes Postgres on host :5433 for `mix test` from the
+#     workstation; this overlay does not.
+#   - Caddy here listens on :80 only (Cloudflare terminates TLS upstream)
+#     and mounts Caddyfile.prod instead of Caddyfile.
+#   - Both overlays include db-seed; same script, sentinel-gated.
+services:
+  # Drop the 25234 host-port mapping the base file declares for vintage TCS
+  # clients. The hosted alpha instance does not expose that port; clients
+  # would reach it via Tailscale or a future port-forward VM.
+  server:
+    ports: !reset []
+
+  caddy:
+    ports: !override
+      - "80:80"
+    volumes: !override
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+  db-seed:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    environment:
+      - DB_NAME=${DB_NAME:?Set DB_NAME}
+      - DB_USER=${DB_USER:?Set DB_USER}
+      - DB_PASS=${DB_PASS:?Set DB_PASS}
+      - DB_HOST=${DB_HOST:-db}
+      - MIX_ENV=prod
+      - PHX_HOST=${PHX_HOST:?Set PHX_HOST}
+      - PHX_PORT=${PHX_PORT:-4000}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:?Set SECRET_KEY_BASE}
+      - INIT_USER=${INIT_USER:-AAAA11}
+      - INIT_PASS=${INIT_PASS:-SECRET}
+    volumes:
+      - objects_data:/objects
+      - init_state:/init_state
+      - ./apps/server/seed.sh:/seed.sh:ro
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    command: ["bash", "/seed.sh"]
+    networks:
+      - prodigy-net
+
+volumes:
+  objects_data:
+  init_state:

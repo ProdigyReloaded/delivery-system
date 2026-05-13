@@ -1,0 +1,31 @@
+# Dev Caddyfile. Plain :80 listener (no TLS) so `docker compose up` lands
+# at http://localhost without browser cert warnings. Production uses
+# Caddyfile.prod (also :80, but behind a Cloudflare Tunnel that handles
+# TLS at the edge).
+:80 {
+    encode gzip zstd
+
+    # LiveView / Phoenix WebSocket upgrade goes to portal.
+    @liveview_ws path /live/*
+    reverse_proxy @liveview_ws server:4000
+
+    # Native TCS-over-WebSocket endpoint inside Phoenix.
+    @tcs_ws {
+        path /tcs
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @tcs_ws server:4000
+
+    # Everything else (HTTP pages + static assets) goes to portal.
+    # Portal serves /css, /images, /start/*.js, /start/*.wasm, /start/*.data
+    # via Plug.Static, and renders /, /faq, /history, /start via templates.
+    reverse_proxy server:4000
+
+    # X-Frame-Options is the only header that still makes sense in dev;
+    # HSTS is meaningless without TLS. App-level security headers
+    # (COOP/COEP etc.) are set by the Phoenix Endpoint.
+    header {
+        X-Frame-Options "DENY"
+    }
+}
