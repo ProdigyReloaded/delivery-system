@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2026, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -13,28 +13,21 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Repo.Migrations.FixMessageIds do
+defmodule Prodigy.Core.Data.Repo.Migrations.LinkServiceUserToPortalUser do
   use Ecto.Migration
 
-  def up do
-    # Drop the existing composite primary key constraint
-    drop constraint(:message, "message_pkey")
-
-    # Remove the old primary key columns and add new id
-    alter table(:message) do
-      remove :index
-      add :id, :bigserial, primary_key: true
-    end
-  end
-
-  def down do
-    # Reverse the changes
-    alter table(:message) do
-      remove :id
-      add :index, :integer
+  def change do
+    alter table(:user) do
+      # Nullable: legacy service users provisioned by pomsutil before the
+      # portal existed may have no portal account, and some service users
+      # may never have one (head-of-household exists only on the service side).
+      # set null on delete so dropping a portal user unlinks their service
+      # users without cascading.
+      add :portal_user_id,
+          references(:portal_users, on_delete: :nilify_all),
+          null: true
     end
 
-    # Recreate the composite primary key
-    create constraint(:message, "message_pkey", primary_key: [:to_id, :index])
+    create index(:user, [:portal_user_id])
   end
 end

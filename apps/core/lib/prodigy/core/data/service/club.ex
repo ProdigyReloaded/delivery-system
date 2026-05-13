@@ -13,28 +13,28 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Repo.Migrations.FixMessageIds do
-  use Ecto.Migration
+defmodule Prodigy.Core.Data.Service.Club do
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  def up do
-    # Drop the existing composite primary key constraint
-    drop constraint(:message, "message_pkey")
+  @moduledoc """
+  Schema for Prodigy Bulletin Board clubs
+  """
 
-    # Remove the old primary key columns and add new id
-    alter table(:message) do
-      remove :index
-      add :id, :bigserial, primary_key: true
-    end
+  schema "club" do
+    field(:handle, :string)  # 3 character handle
+    field(:name, :string)    # Full display name
+
+    has_many(:topics, Prodigy.Core.Data.Service.Topic)
+
+    timestamps()
   end
 
-  def down do
-    # Reverse the changes
-    alter table(:message) do
-      remove :id
-      add :index, :integer
-    end
-
-    # Recreate the composite primary key
-    create constraint(:message, "message_pkey", primary_key: [:to_id, :index])
+  def changeset(club, attrs) do
+    club
+    |> cast(attrs, [:handle, :name])
+    |> validate_required([:handle, :name])
+    |> validate_length(:handle, is: 3)
+    |> unique_constraint(:handle)
   end
 end

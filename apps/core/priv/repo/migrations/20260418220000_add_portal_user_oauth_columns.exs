@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2026, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -13,28 +13,19 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Repo.Migrations.FixMessageIds do
+defmodule Prodigy.Core.Data.Repo.Migrations.AddPortalUserOauthColumns do
   use Ecto.Migration
 
-  def up do
-    # Drop the existing composite primary key constraint
-    drop constraint(:message, "message_pkey")
-
-    # Remove the old primary key columns and add new id
-    alter table(:message) do
-      remove :index
-      add :id, :bigserial, primary_key: true
-    end
-  end
-
-  def down do
-    # Reverse the changes
-    alter table(:message) do
-      remove :id
-      add :index, :integer
+  def change do
+    alter table(:portal_users) do
+      add :provider, :string, null: false, default: "identity"
+      add :provider_uid, :string
     end
 
-    # Recreate the composite primary key
-    create constraint(:message, "message_pkey", primary_key: [:to_id, :index])
+    # A provider+uid pair uniquely identifies a user on that provider.
+    # Allow NULL for :identity users (no external uid).
+    create unique_index(:portal_users, [:provider, :provider_uid],
+             where: "provider_uid IS NOT NULL"
+           )
   end
 end

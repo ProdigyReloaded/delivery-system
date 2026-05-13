@@ -21,4 +21,38 @@ defmodule Prodigy.Core.Data.Repo do
   use Ecto.Repo,
     otp_app: :core,
     adapter: Application.compile_env!(:core, :ecto_adapter)
+
+  import Ecto.Query, only: [from: 2]
+
+  @doc """
+  Convenience wrapper used by Phoenix 1.7 phx.gen.auth-generated code:
+  `Repo.all_by(Schema, key: value)` returns all rows matching the clauses.
+  """
+  def all_by(queryable, clauses) when is_list(clauses) do
+    all(from q in queryable, where: ^clauses)
+  end
+
+  @doc """
+  Convenience wrapper used by Phoenix 1.7 phx.gen.auth-generated code:
+  equivalent to `transaction/1` but returning `{:ok, result} | {:error, reason}`
+  for plain anonymous functions.
+  """
+  def transact(fun, opts \\ []) when is_function(fun, 0) do
+    transaction(
+      fn ->
+        case fun.() do
+          {:ok, value} -> value
+          :ok -> :transact_ok
+          {:error, reason} -> rollback(reason)
+          :error -> rollback(:error)
+          other -> other
+        end
+      end,
+      opts
+    )
+    |> case do
+      {:ok, :transact_ok} -> :ok
+      result -> result
+    end
+  end
 end

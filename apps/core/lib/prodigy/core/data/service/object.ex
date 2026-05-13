@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Object do
+defmodule Prodigy.Core.Data.Service.Object do
   use Ecto.Schema
 
   @moduledoc """
@@ -27,6 +27,9 @@ defmodule Prodigy.Core.Data.Object do
     field(:type, :integer, primary_key: true)
     field(:version, :integer, primary_key: true)
     field(:contents, :binary)
+    # SHA-256 of the canonicalized blob (version bits zeroed). Drives
+    # the admin upload pipeline's same-content detection.
+    field(:content_hash, :binary)
   end
 end
 

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Session do
+defmodule Prodigy.Core.Data.Service.Session do
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -22,7 +22,7 @@ defmodule Prodigy.Core.Data.Session do
   """
 
   schema "session" do
-    belongs_to(:user, Prodigy.Core.Data.User, type: :string)
+    belongs_to(:user, Prodigy.Core.Data.Service.User, type: :string)
     field(:logon_timestamp, :utc_datetime)
     field(:logon_status, :integer)  # 0=success, 1=enroll_other, 2=enroll_subscriber
     field(:logoff_timestamp, :utc_datetime)
@@ -33,6 +33,8 @@ defmodule Prodigy.Core.Data.Session do
     field(:source_address, :string)
     field(:source_port, :integer)
     field(:last_activity_at, :utc_datetime)
+    # "tcp" or "websocket" - how the client reached the TCS endpoint.
+    field(:transport, :string)
 
     timestamps()
   end
@@ -41,7 +43,7 @@ defmodule Prodigy.Core.Data.Session do
     session
     |> cast(attrs, [:user_id, :logon_timestamp, :logon_status, :logoff_timestamp,
       :logoff_status, :rs_version, :node, :pid, :source_address,
-      :source_port, :last_activity_at])
+      :source_port, :last_activity_at, :transport])
     |> validate_required([:user_id, :logon_timestamp, :logon_status, :node, :pid])
   end
 end

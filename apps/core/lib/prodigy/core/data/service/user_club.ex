@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller
+# Copyright 2022, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.UserClub do
+defmodule Prodigy.Core.Data.Service.UserClub do
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -28,11 +28,11 @@ defmodule Prodigy.Core.Data.UserClub do
     field(:club_id, :integer, primary_key: true)
     field(:last_read_date, :utc_datetime)
 
-    belongs_to(:user, Prodigy.Core.Data.User,
+    belongs_to(:user, Prodigy.Core.Data.Service.User,
       foreign_key: :user_id,
       references: :id,
       define_field: false)
-    belongs_to(:club, Prodigy.Core.Data.Club,
+    belongs_to(:club, Prodigy.Core.Data.Service.Club,
       foreign_key: :club_id,
       references: :id,
       define_field: false)

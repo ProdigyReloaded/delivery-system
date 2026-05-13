@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2026, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -13,28 +13,22 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Repo.Migrations.FixMessageIds do
+defmodule Prodigy.Core.Data.Repo.Migrations.AddProfileJsonbColumns do
   use Ecto.Migration
 
-  def up do
-    # Drop the existing composite primary key constraint
-    drop constraint(:message, "message_pkey")
+  @moduledoc """
+  Add JSONB profile columns to user + household. Default `'{}'` so
+  existing rows are legal; the follow-up backfill migration populates
+  them from the named columns.
+  """
 
-    # Remove the old primary key columns and add new id
-    alter table(:message) do
-      remove :index
-      add :id, :bigserial, primary_key: true
-    end
-  end
-
-  def down do
-    # Reverse the changes
-    alter table(:message) do
-      remove :id
-      add :index, :integer
+  def change do
+    alter table(:user) do
+      add :profile, :jsonb, null: false, default: fragment("'{}'::jsonb")
     end
 
-    # Recreate the composite primary key
-    create constraint(:message, "message_pkey", primary_key: [:to_id, :index])
+    alter table(:household) do
+      add :profile, :jsonb, null: false, default: fragment("'{}'::jsonb")
+    end
   end
 end

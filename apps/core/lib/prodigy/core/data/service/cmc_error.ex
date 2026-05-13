@@ -1,4 +1,19 @@
-defmodule Prodigy.Core.Data.CmcError do
+# Copyright 2022, Phillip Heller
+#
+# This file is part of Prodigy Reloaded.
+#
+# Prodigy Reloaded is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# Prodigy Reloaded is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
+# see <https://www.gnu.org/licenses/>.
+
+defmodule Prodigy.Core.Data.Service.CmcError do
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -7,12 +22,12 @@ defmodule Prodigy.Core.Data.CmcError do
   """
 
   schema "cmc_error" do
-    belongs_to(:session, Prodigy.Core.Data.Session)
+    belongs_to(:session, Prodigy.Core.Data.Service.Session)
     field(:user_id, :string)
     field(:system_origin, :string)
     field(:msg_origin, :string)
-    field(:unit_id, :string)
-    field(:error_code, :string)
+    field(:unit_id, :string)      # These correspond to RS components
+    field(:error_code, :string)   # These are component-specific errors
     field(:severity_level, :string)
     field(:error_threshold, :string)
     field(:error_date, :string)  # Original format from client

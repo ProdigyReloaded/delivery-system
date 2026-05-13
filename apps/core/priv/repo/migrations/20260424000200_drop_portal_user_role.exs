@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2026, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -13,28 +13,23 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Repo.Migrations.FixMessageIds do
+defmodule Prodigy.Core.Data.Repo.Migrations.DropPortalUserRole do
   use Ecto.Migration
 
-  def up do
-    # Drop the existing composite primary key constraint
-    drop constraint(:message, "message_pkey")
+  # The :role column on portal_users is replaced by the RBAC scope
+  # model landed in 20260424000000 / 20260424000100. Bootstrap seed
+  # already translated every `role = 'admin'` row into a platform-admin
+  # role membership, so dropping the column loses no capability.
 
-    # Remove the old primary key columns and add new id
-    alter table(:message) do
-      remove :index
-      add :id, :bigserial, primary_key: true
+  def up do
+    alter table(:portal_users) do
+      remove :role
     end
   end
 
   def down do
-    # Reverse the changes
-    alter table(:message) do
-      remove :id
-      add :index, :integer
+    alter table(:portal_users) do
+      add :role, :string, null: false, default: "user"
     end
-
-    # Recreate the composite primary key
-    create constraint(:message, "message_pkey", primary_key: [:to_id, :index])
   end
 end

@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller
+# Copyright 2026, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -13,29 +13,14 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Topic do
-  use Ecto.Schema
-  import Ecto.Changeset
+defmodule Prodigy.Core.Data.Repo.Migrations.AddSessionTransport do
+  use Ecto.Migration
 
-  @moduledoc """
-  Schema for Bulletin Board topics within clubs
-  """
-
-  # Using id type which will map to smallserial in the migration
-  schema "topic" do
-    belongs_to(:club, Prodigy.Core.Data.Club)
-    field(:title, :string)
-    field(:closed, :boolean, default: false)  # Flag to close topic to new posts
-
-    has_many(:posts, Prodigy.Core.Data.Post)
-
-    timestamps()
-  end
-
-  def changeset(topic, attrs) do
-    topic
-    |> cast(attrs, [:club_id, :title, :closed])
-    |> validate_required([:club_id, :title])
-    |> foreign_key_constraint(:club_id)
+  def change do
+    alter table(:session) do
+      # "tcp" (Ranch listener on 25234) or "websocket" (Phoenix /tcs endpoint).
+      # Nullable for legacy rows inserted before this migration.
+      add :transport, :string
+    end
   end
 end

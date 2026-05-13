@@ -13,35 +13,29 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Message do
+defmodule Prodigy.Core.Data.Service.Topic do
   use Ecto.Schema
+  import Ecto.Changeset
 
   @moduledoc """
-  Schema specific to messaging and related change functions
+  Schema for Bulletin Board topics within clubs
   """
 
-  # set this by select count(*) from messages where to = 'AAAA12A'
-  # next message slot will be count + 1 % 2^16
+  # Using id type which will map to smallserial in the migration
+  schema "topic" do
+    belongs_to(:club, Prodigy.Core.Data.Service.Club)
+    field(:title, :string)
+    field(:closed, :boolean, default: false)  # Flag to close topic to new posts
 
-  # TODO denormalize this
+    has_many(:posts, Prodigy.Core.Data.Service.Post)
 
-  schema "message" do
-    field(:from_id, :string)
-    field(:from_name, :string)
-    field(:to_id, :string)
-    field(:subject, :string)
-    field(:sent_date, :utc_datetime)
-    field(:retain_date, :utc_datetime)
-    field(:contents, :binary)
-    field(:retain, :boolean)
-    field(:read, :boolean)
+    timestamps()
   end
 
-  def changeset(message, params \\ %{}) do
-    message
-    |> Ecto.Changeset.change(params)
-
-    #    |> Ecto.Changeset.cast(params, [:logged_on])
-    #    |> Ecto.Changeset.validate_required([:logged_on])
+  def changeset(topic, attrs) do
+    topic
+    |> cast(attrs, [:club_id, :title, :closed])
+    |> validate_required([:club_id, :title])
+    |> foreign_key_constraint(:club_id)
   end
 end

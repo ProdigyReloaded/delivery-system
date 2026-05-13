@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller
+# Copyright 2026, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -13,28 +13,27 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Club do
+defmodule Prodigy.Core.Data.Portal.RoleScope do
+  @moduledoc """
+  Join row binding a scope string to a role. Composite primary key
+  `(role_id, scope)` - a scope is either in the role or it isn't.
+  """
   use Ecto.Schema
   import Ecto.Changeset
 
-  @moduledoc """
-  Schema for Prodigy Bulletin Board clubs
-  """
+  @primary_key false
+  schema "portal_role_scopes" do
+    belongs_to :role, Prodigy.Core.Data.Portal.Role, primary_key: true
+    field :scope, :string, primary_key: true
 
-  schema "club" do
-    field(:handle, :string)  # 3 character handle
-    field(:name, :string)    # Full display name
-
-    has_many(:topics, Prodigy.Core.Data.Topic)
-
-    timestamps()
+    timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
-  def changeset(club, attrs) do
-    club
-    |> cast(attrs, [:handle, :name])
-    |> validate_required([:handle, :name])
-    |> validate_length(:handle, is: 3)
-    |> unique_constraint(:handle)
+  def changeset(attrs) do
+    %__MODULE__{}
+    |> cast(attrs, [:role_id, :scope])
+    |> validate_required([:role_id, :scope])
+    |> unique_constraint([:role_id, :scope], name: :portal_role_scopes_pkey)
+    |> assoc_constraint(:role)
   end
 end

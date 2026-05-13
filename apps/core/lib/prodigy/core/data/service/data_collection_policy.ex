@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.DataCollectionPolicy do
+defmodule Prodigy.Core.Data.Service.DataCollectionPolicy do
   use Ecto.Schema
 
   @moduledoc """

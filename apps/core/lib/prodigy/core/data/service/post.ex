@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller
+# Copyright 2022, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
-defmodule Prodigy.Core.Data.Post do
+defmodule Prodigy.Core.Data.Service.Post do
   use Ecto.Schema
   import Ecto.Changeset
   import Ecto.Query
@@ -23,7 +23,7 @@ defmodule Prodigy.Core.Data.Post do
   """
 
   schema "post" do
-    belongs_to(:topic, Prodigy.Core.Data.Topic)
+    belongs_to(:topic, Prodigy.Core.Data.Service.Topic)
     field(:sent_date, :utc_datetime)
     field(:in_reply_to, :integer)  # NULL for top-level posts, post_id for replies
     field(:to_id, :string, default: "")  # Empty defaults to "All"
@@ -69,10 +69,10 @@ defmodule Prodigy.Core.Data.Post do
   """
   def with_from_name(query) do
     from p in query,
-         left_join: u in Prodigy.Core.Data.User,
+         left_join: u in Prodigy.Core.Data.Service.User,
          on: u.id == p.from_id,
          select: %{p |
-           from_name: fragment("COALESCE(?, ?)", u.first_name, p.from_id)
+           from_name: fragment("COALESCE(?->>'015F', ?)", u.profile, p.from_id)
          }
   end
 end
