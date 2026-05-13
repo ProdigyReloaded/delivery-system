@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{assigns[:page_title] || "Prodigy Reloaded"}</title>
+  <meta name="description" content="Prodigy Reloaded is a project to resurrect as much as possible of the original Prodigy online service, which was active from the mid-1980s through early 1990s." />
+  <meta name="author" content="Kim Moser" />
+  <meta name="keywords" content="Prodigy, Prodigy Reloaded, RS8, RS9, Reception System" />
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+  <link href="/css/style.css" rel="stylesheet" />
+  <link :if={assigns[:extra_css] == :rs} href="/css/rs.css" rel="stylesheet" />
+
+  <link rel="icon" type="image/x-icon" href="/images/favicon.png" />
+
+  <meta name="csrf-token" content={Plug.CSRFProtection.get_csrf_token()} />
+  <script defer src="/assets/phoenix/phoenix.js"></script>
+  <script defer src="/assets/phoenix_html/phoenix_html.js"></script>
+  <script defer src="/assets/phoenix_live_view/phoenix_live_view.js"></script>
+  <script defer>
+    window.addEventListener("DOMContentLoaded", function() {
+      var csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
+
+      // LiveView hooks. Lightweight, colocated with the template code that uses
+      // them; if this list grows we'll move it out to a priv/static file.
+      var hooks = {
+        // Duration: given data-logon-at="<ISO8601>", updates el text every
+        // second with a human-friendly elapsed time. Used in the admin
+        // "Who's online" table so sessions show a live-ticking counter
+        // without server round-trips.
+        Duration: {
+          mounted() {
+            this.tick = setInterval(() => this.updateDuration(), 1000);
+            this.updateDuration();
+          },
+          updated() { this.updateDuration(); },
+          destroyed() { clearInterval(this.tick); },
+          updateDuration() {
+            var logonAt = new Date(this.el.dataset.logonAt);
+            if (isNaN(logonAt)) return;
+            var seconds = Math.max(0, Math.floor((Date.now() - logonAt) / 1000));
+            var h = Math.floor(seconds / 3600);
+            var m = Math.floor((seconds % 3600) / 60);
+            var s = seconds % 60;
+            if (h > 0) { this.el.textContent = h + "h " + m + "m"; }
+            else if (m > 0) { this.el.textContent = m + "m " + s + "s"; }
+            else { this.el.textContent = s + "s"; }
+          }
+        },
+        // SignupIdMask: positional keystroke filter for the signup wizard's
+        // custom user-id input. Positions 1-4 accept A-Z only (letters are
+        // auto-uppercased); positions 5-6 accept 0-9 only. Out-of-range or
+        // out-of-position keys are swallowed at keydown so they never
+        // appear in the field. Paste is filtered the same way.
+        SignupIdMask: {
+          mounted() {
+            this._onKeyDown = this.onKeyDown.bind(this);
+            this._onPaste = this.onPaste.bind(this);
+            this.el.addEventListener("keydown", this._onKeyDown);
+            this.el.addEventListener("paste", this._onPaste);
+          },
+          destroyed() {
+            this.el.removeEventListener("keydown", this._onKeyDown);
+            this.el.removeEventListener("paste", this._onPaste);
+          },
+          validAt(pos, ch) {
+            if (pos < 4) return /^[A-Z]$/.test(ch);
+            if (pos < 6) return /^[0-9]$/.test(ch);
+            return false;
+          },
+          onKeyDown(e) {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            if (e.key.length > 1) return; // arrow keys, backspace, etc.
+            var ch = e.key.toUpperCase();
+            var pos = this.el.selectionStart;
+            if (!this.validAt(pos, ch)) {
+              e.preventDefault();
+              return;
+            }
+            if (ch !== e.key) {
+              // uppercase the letter ourselves and fire input
+              e.preventDefault();
+              var start = this.el.selectionStart;
+              var end = this.el.selectionEnd;
+              var v = this.el.value;
+              this.el.value = v.slice(0, start) + ch + v.slice(end);
+              this.el.setSelectionRange(start + 1, start + 1);
+              this.el.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+          },
+          onPaste(e) {
+            e.preventDefault();
+            var text = (e.clipboardData || window.clipboardData).getData("text").toUpperCase();
+            var start = this.el.selectionStart;
+            var end = this.el.selectionEnd;
+            var filtered = "";
+            for (var i = 0; i < text.length; i++) {
+              var p = start + filtered.length;
+              if (this.validAt(p, text[i])) filtered += text[i];
+              else if (p >= 6) break;
+              // silently drop chars that don't fit the current position
+            }
+            var v = this.el.value;
+            this.el.value = v.slice(0, start) + filtered + v.slice(end);
+            var caret = start + filtered.length;
+            this.el.setSelectionRange(caret, caret);
+            this.el.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        },
+        // InfiniteScroll: fires a "load_more" event to the element's
+        // phx-target (a LiveComponent) when the sentinel intersects the
+        // scroll container. Used at the end of admin tables to grow the
+        // visible window as the admin scrolls. Throttled by a pending
+        // flag so fast scrolls don't fire rapid repeats before the server
+        // has responded and moved the sentinel out of view.
+        InfiniteScroll: {
+          mounted() {
+            var hook = this;
+            var root = this.el.closest(".admin-table-scroll") || null;
+            this.pending = false;
+            this.observer = new IntersectionObserver(function(entries) {
+              if (!entries[0].isIntersecting) return;
+              if (hook.pending) return;
+              hook.pending = true;
+              hook.pushEventTo(hook.el, "load_more", {});
+              // Let the DOM update land; sentinel moves down, we unflag
+              // and the next intersection (if any) will re-trigger.
+              setTimeout(function() { hook.pending = false; }, 200);
+            }, { root: root, rootMargin: "0px 0px 200px 0px" });
+            this.observer.observe(this.el);
+          },
+          destroyed() {
+            if (this.observer) { this.observer.disconnect(); this.observer = null; }
+          }
+        },
+        // SidebarPasswordEdit: owns the /start sidebar password input
+        // while the user is editing. Pauses DOSBox keyboard handlers
+        // on mount so the input actually gets keystrokes, restores
+        // them on unmount. Enter / Tab save and refocus the canvas;
+        // Escape cancels and refocuses the canvas; a plain blur
+        // (click elsewhere) just saves.
+        SidebarPasswordEdit: {
+          mounted() {
+            var hook = this;
+            this.saved = false;
+
+            if (window.ProdigyDOSBox) window.ProdigyDOSBox.pauseKeyboard();
+            this.el.focus();
+            this.el.select();
+
+            // Pre-validate client-side so an invalid pick doesn't
+            // escape the field on Enter/Tab/blur. Empty counts as
+            // valid: the server treats blank as "cancel back to the
+            // generated password."
+            this._isValid = function (v) {
+              return v === "" || /^[A-Za-z0-9]{2,10}$/.test(v);
+            };
+
+            this._push = function () {
+              hook.pushEvent("save_password", {
+                password: hook.el.value,
+                "user-id": hook.el.dataset.userId
+              });
+            };
+
+            this._save = function () {
+              hook.saved = true;
+              hook._push();
+            };
+
+            this._focusCanvas = function () {
+              var c = document.getElementById("canvas");
+              if (c) c.focus();
+            };
+
+            this._onKey = function (e) {
+              if (e.key === "Enter" || e.key === "Tab") {
+                e.preventDefault();
+                if (!hook._isValid(hook.el.value)) {
+                  // Push so the server flags the error + rerenders
+                  // with the inline feedback, but keep focus here.
+                  hook._push();
+                  return;
+                }
+                hook._save();
+                hook._focusCanvas();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                hook.saved = true;
+                hook.pushEvent("cancel_edit_password", {});
+                hook._focusCanvas();
+              }
+            };
+
+            this._onBlur = function () {
+              if (hook.saved) return;
+
+              if (!hook._isValid(hook.el.value)) {
+                // Browser already moved focus away; steal it back
+                // after this tick. Push invalid-value so the server
+                // surfaces the is-invalid feedback on the next patch.
+                setTimeout(function () { hook.el.focus(); }, 0);
+                hook._push();
+                return;
+              }
+
+              hook._save();
+            };
+
+            this.el.addEventListener("keydown", this._onKey);
+            this.el.addEventListener("blur", this._onBlur);
+          },
+          destroyed() {
+            this.el.removeEventListener("keydown", this._onKey);
+            this.el.removeEventListener("blur", this._onBlur);
+            if (window.ProdigyDOSBox) window.ProdigyDOSBox.resumeKeyboard();
+          }
+        },
+        // QuotaInput: keystroke + paste filter for the admin Portal
+        // Users quota number input. Blocks any character that isn't a
+        // digit and clamps any value (typed or pasted) into the field's
+        // [min, max] range so phx-change never receives anything the
+        // server would reject.
+        QuotaInput: {
+          mounted() {
+            var el = this.el;
+            var min = parseInt(el.getAttribute("min"), 10);
+            var max = parseInt(el.getAttribute("max"), 10);
+
+            this._navKeys = ["Backspace","Delete","Tab","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End","Enter","Escape"];
+
+            this._onKeyDown = function (e) {
+              if (e.ctrlKey || e.metaKey || e.altKey) return;
+              if (this._navKeys.indexOf(e.key) !== -1) return;
+              if (!/^[0-9]$/.test(e.key)) e.preventDefault();
+            }.bind(this);
+
+            this._clamp = function () {
+              var n = parseInt(el.value, 10);
+              if (isNaN(n)) return;
+              if (n < min) el.value = String(min);
+              else if (n > max) el.value = String(max);
+            };
+
+            this._onBlur = function () {
+              var n = parseInt(el.value, 10);
+              if (isNaN(n)) el.value = String(min);
+            };
+
+            // Select the existing value on focus so typing replaces
+            // it rather than appending - matches the user's mental
+            // model of "click in, type the new number, tab out."
+            this._onFocus = function () {
+              el.select();
+            };
+
+            el.addEventListener("keydown", this._onKeyDown);
+            el.addEventListener("input", this._clamp);
+            el.addEventListener("blur", this._onBlur);
+            el.addEventListener("focus", this._onFocus);
+          },
+          destroyed() {
+            this.el.removeEventListener("keydown", this._onKeyDown);
+            this.el.removeEventListener("input", this._clamp);
+            this.el.removeEventListener("blur", this._onBlur);
+            this.el.removeEventListener("focus", this._onFocus);
+          }
+        }
+      };
+
+      var liveSocket = new LiveView.LiveSocket("/live", Phoenix.Socket, {
+        longPollFallbackMs: 2500,
+        params: {_csrf_token: csrfToken},
+        hooks: hooks
+      });
+      liveSocket.connect();
+      window.liveSocket = liveSocket;
+    });
+  </script>
+</head>
+<body>
+  <div>
+    <nav class="navbar navbar-expand-sm bg-dark border-bottom border-body sticky-top" data-bs-theme="dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+          <img src="/images/star.png" alt="Prodigy Reloaded" class="me-2" />
+          Prodigy Reloaded
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class={"nav-link #{if assigns[:page] == :home, do: "active"}"} aria-current={if assigns[:page] == :home, do: "page"} href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class={"nav-link #{if assigns[:page] == :start, do: "active"}"} aria-current={if assigns[:page] == :start, do: "page"} href="/start">Quick Start</a>
+            </li>
+            <li class="nav-item">
+              <a class={"nav-link #{if assigns[:page] == :history, do: "active"}"} aria-current={if assigns[:page] == :history, do: "page"} href="/history">History</a>
+            </li>
+            <li class="nav-item">
+              <a class={"nav-link #{if assigns[:page] == :faq, do: "active"}"} aria-current={if assigns[:page] == :faq, do: "page"} href="/faq">FAQ</a>
+            </li>
+            <li
+              :if={assigns[:current_scope] && Prodigy.Portal.AdminLive.Layouts.default_path_for(assigns[:current_scope])}
+              class="nav-item"
+            >
+              <a class={"nav-link #{if assigns[:page] == :admin, do: "active"}"} href="/admin">Admin</a>
+            </li>
+            <li :if={assigns[:current_scope] && assigns[:current_scope].user} class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                {@current_scope.user.email}
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li :if={
+                  Prodigy.Portal.Settings.invitation_only?() &&
+                    Prodigy.Portal.Invites.available(@current_scope.user) > 0
+                }>
+                  <a
+                    class="dropdown-item"
+                    href={~p"/users/invite/new"}
+                    data-invite-trigger
+                  >
+                    Invite a friend
+                  </a>
+                </li>
+                <li :if={
+                  Prodigy.Portal.Settings.invitation_only?() &&
+                    Prodigy.Portal.Invites.available(@current_scope.user) > 0
+                }>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li><.link class="dropdown-item" navigate={~p"/users/settings"}>Settings</.link></li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <.link class="dropdown-item" href={~p"/users/logout"} method="delete">Logout</.link>
+                </li>
+              </ul>
+            </li>
+            <li :if={!assigns[:current_scope] || !assigns[:current_scope].user} class="nav-item">
+              <a class="nav-link" href="/users/login">Login or Sign Up</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class={assigns[:body_class] || ""}>
+      <main>
+        {@inner_content}
+      </main>
+    </div>
+
+    <hr />
+
+    <footer class="text-center">
+      <div class="container">
+        <nav class="nav justify-content-center">
+          <a class={"nav-link text-muted #{if assigns[:page] == :home, do: "active"}"} href="/">Home</a>
+          <a class={"nav-link text-muted #{if assigns[:page] == :start, do: "active"}"} href="/start">Quick Start</a>
+          <a class={"nav-link text-muted #{if assigns[:page] == :history, do: "active"}"} href="/history">History</a>
+          <a class={"nav-link text-muted #{if assigns[:page] == :faq, do: "active"}"} href="/faq">FAQ</a>
+        </nav>
+      </div>
+
+      <p class="small text-muted mt-2 mb-4">
+        Copyright &copy; 2025 by Phillip Heller &bull; All Rights Reserved &bull; Prodigy Reloaded is not affiliated with Prodigy Services Company, Sears, IBM, or CBS.
+      </p>
+    </footer>
+  </div>
+
+  <!-- Invite-issuance modal. Hidden by default; populated + shown by
+       the JS handler below when the operator clicks "Invite a friend"
+       in the navbar. The modal owns the network call so /start (or any
+       other LiveView-heavy page) doesn't unmount when issuing an invite. -->
+  <div class="modal fade" id="invite-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Invitation issued</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small">
+            Share this URL or the bare code with the person you're inviting.
+            <strong>This is the only time we'll show it</strong> - copy it now.
+          </p>
+
+          <div class="mb-3">
+            <label class="form-label small text-muted">Invitation URL</label>
+            <div class="input-group">
+              <input
+                id="invite-modal-url"
+                type="text"
+                class="form-control font-monospace small"
+                readonly
+              />
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                data-copy-target="invite-modal-url"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div class="mb-0">
+            <label class="form-label small text-muted">Code only</label>
+            <div class="input-group">
+              <input
+                id="invite-modal-code"
+                type="text"
+                class="form-control font-monospace"
+                readonly
+              />
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                data-copy-target="invite-modal-code"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div id="invite-modal-error" class="alert alert-danger small mt-3 d-none"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    $(document).ready(function() {
+      $(".scroll").click(function() {
+        $("html, body").animate({
+          scrollTop: $(window).scrollTop() + $(window).height()
+        }, "slow");
+      });
+
+      // Invite-a-friend modal trigger. Intercepts the navbar link's
+      // navigation, POSTs the mint endpoint with Accept: application/json,
+      // and pops the Bootstrap modal with the URL/code. Stays on the
+      // current page so a /start visitor's DOSBox session survives.
+      document.addEventListener("click", function (ev) {
+        var trigger = ev.target.closest("[data-invite-trigger]");
+        if (!trigger) return;
+        ev.preventDefault();
+
+        var modalEl = document.getElementById("invite-modal");
+        var urlInput = document.getElementById("invite-modal-url");
+        var codeInput = document.getElementById("invite-modal-code");
+        var errorBox = document.getElementById("invite-modal-error");
+        if (!modalEl || !window.bootstrap) return;
+
+        urlInput.value = "";
+        codeInput.value = "";
+        errorBox.classList.add("d-none");
+        errorBox.textContent = "";
+        var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+
+        var csrf = document.querySelector('meta[name="csrf-token"]');
+        fetch("/users/invite/new", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Accept": "application/json",
+            "X-CSRF-Token": csrf ? csrf.getAttribute("content") : ""
+          }
+        }).then(function (resp) {
+          return resp.json().then(function (body) {
+            return { ok: resp.ok, body: body };
+          });
+        }).then(function (r) {
+          if (r.ok && r.body.url) {
+            urlInput.value = r.body.url;
+            codeInput.value = r.body.code;
+          } else {
+            errorBox.textContent = (r.body && r.body.error) || "Couldn't issue invitation.";
+            errorBox.classList.remove("d-none");
+          }
+        }).catch(function () {
+          errorBox.textContent = "Network error issuing invitation.";
+          errorBox.classList.remove("d-none");
+        });
+      });
+
+      // While the invite modal is open, pause DOSBox's keyboard handler
+      // so typing into the URL/code inputs (Cmd-A / Cmd-C, etc.) doesn't
+      // reach the emulator. Restore on close. No-op when ProdigyDOSBox
+      // isn't loaded (admin pages, /faq, etc.).
+      var inviteModalEl = document.getElementById("invite-modal");
+      if (inviteModalEl) {
+        inviteModalEl.addEventListener("shown.bs.modal", function () {
+          if (window.ProdigyDOSBox) window.ProdigyDOSBox.pauseKeyboard();
+        });
+        inviteModalEl.addEventListener("hidden.bs.modal", function () {
+          if (window.ProdigyDOSBox) window.ProdigyDOSBox.resumeKeyboard();
+        });
+      }
+
+      // Copy-to-clipboard buttons inside the modal.
+      document.addEventListener("click", function (ev) {
+        var btn = ev.target.closest("[data-copy-target]");
+        if (!btn) return;
+        var target = document.getElementById(btn.getAttribute("data-copy-target"));
+        if (!target) return;
+        navigator.clipboard.writeText(target.value).then(function () {
+          var prev = btn.textContent;
+          btn.textContent = "Copied";
+          setTimeout(function () { btn.textContent = prev; }, 1500);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<div class="container-fluid">
+  <div class="start-top">
+    <div class="spinner" id="spinner"></div>
+    <div class="emscripten" id="status">Downloading...</div>
+
+    <div id="controls">
+      <span>
+        <input type="checkbox" id="resize" />
+        <label for="resize">Resize canvas</label>
+      </span>
+      <span>
+        <input type="checkbox" id="pointerLock" checked />
+        <label for="pointerLock">Lock/hide mouse pointer</label>
+      </span>
+      <span>
+        <input type="checkbox" id="toggle-output" />
+        <label for="toggle-output">Show console</label>
+      </span>
+    </div>
+    <div class="emscripten">
+      <progress hidden id="progress" max="100" value="0"></progress>
+    </div>
+  </div>
+
+  <div class="start-row">
+    {live_render(@conn, Prodigy.Portal.StartLive.Sidebar,
+      id: "start-sidebar",
+      container: {:div, class: "start-sidebar-wrap"},
+      session: %{"fresh_passwords" => @fresh_passwords})}
+
+    <div class="start-main">
+      <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault();" tabindex="-1"></canvas>
+    </div>
+  </div>
+
+  <textarea id="output" class="invisible" rows="8"></textarea>
+
+  <script src="/start/init.js">
+  </script>
+  <script async src="/start/dosbox.js">
+  </script>
+  <script src="/start/loader.js">
+  </script>
+
+  <script>
+    // Bootstrap popovers are opt-in; init any that exist on /start.
+    // Kept inline rather than global because only /start uses popovers
+    // today and the Bootstrap JS bundle is loaded via the shared layout.
+    document.addEventListener("DOMContentLoaded", function () {
+      if (!window.bootstrap || !window.bootstrap.Popover) return;
+      document.querySelectorAll('[data-bs-toggle="popover"]')
+        .forEach(function (el) { new window.bootstrap.Popover(el); });
+    });
+  </script>
+</div>

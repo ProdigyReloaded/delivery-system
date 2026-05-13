@@ -1,0 +1,185 @@
+.invisible {
+	display: none;
+}
+
+.emscripten {
+	padding-right: 0;
+	margin-left: auto;
+	margin-right: auto;
+	display: block
+}
+
+div.emscripten {
+	text-align: center
+}
+
+canvas.emscripten {
+	display: block;
+	border: 0;
+	background-color: #000;
+	width: 100%;
+	height: 100%;
+}
+
+/* /start layout.
+   .start-top holds the spinner / status / controls / progress - sits
+   above both the notice and the canvas so they share the same top edge.
+   .start-row is the flex container for the notice + canvas; flex-wrap
+   drops the notice to its own full-width row (above the canvas, since
+   it's first in DOM) when side-by-side would overflow. Default
+   align-items (stretch) lets the sidebar match the canvas column's
+   computed height; the canvas column opts out of stretching (see
+   .start-main's align-self) so its aspect-ratio isn't overridden. */
+.start-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+}
+
+/* Sidebar column sizing lives on the live_render container wrapper
+   (set via :container option in the /start template) because Phoenix
+   creates its own div around the LiveView's output, and that wrapper is what
+   the outer flex row actually sees as a child. No explicit height -
+   align-self: stretch (inherited from .start-row's default) makes the
+   wrapper grow to match the canvas column's computed height, so the
+   sidebar is always canvas-tall regardless of viewport width. The
+   max-height cap matches the canvas's max so we don't grow beyond
+   what the canvas can. */
+.start-sidebar-wrap {
+	flex: 0 1 clamp(220px, 22vw, 340px);
+	max-height: calc(80vh - 70px);
+	overflow-y: auto;
+}
+
+.start-main {
+	/* 4:3 aspect-ratio locked, capped at calc(80vh - 70px) tall AND at
+	   a width that would produce that cap (in case vertical space is
+	   generous). flex: 1 1 0 lets us grow into the row's remaining
+	   width; aspect-ratio + max-width + max-height cooperate so
+	   whichever limit binds first, the other dimension follows
+	   proportionally. Result: the canvas always renders 4:3, shrinks
+	   on narrow viewports, grows (up to max-height) on wide ones. */
+	flex: 1 1 0;
+	min-width: 0;
+	aspect-ratio: 4 / 3;
+	max-width: calc((80vh - 70px) * 4 / 3);
+	max-height: calc(80vh - 70px);
+	align-self: flex-start;
+}
+
+#emscripten_logo {
+	display: inline-block;
+	margin: 0;
+	padding: 6px;
+	width: 265px
+}
+
+.spinner {
+	height: 30px;
+	width: 30px;
+	margin: 0;
+	margin-top: 20px;
+	margin-left: 20px;
+	display: inline-block;
+	vertical-align: top;
+	-webkit-animation: rotation .8s linear infinite;
+	-moz-animation: rotation .8s linear infinite;
+	-o-animation: rotation .8s linear infinite;
+	animation: rotation .8s linear infinite;
+	border-left: 5px solid #ebebeb;
+	border-right: 5px solid #ebebeb;
+	border-bottom: 5px solid #ebebeb;
+	border-top: 5px solid #787878;
+	border-radius: 100%;
+	background-color: #bdd72e
+}
+
+@-webkit-keyframes rotation {
+	from {
+		-webkit-transform: rotate(0)
+	}
+
+	to {
+		-webkit-transform: rotate(360deg)
+	}
+}
+
+@-moz-keyframes rotation {
+	from {
+		-moz-transform: rotate(0)
+	}
+
+	to {
+		-moz-transform: rotate(360deg)
+	}
+}
+
+@-o-keyframes rotation {
+	from {
+		-o-transform: rotate(0)
+	}
+
+	to {
+		-o-transform: rotate(360deg)
+	}
+}
+
+@keyframes rotation {
+	from {
+		transform: rotate(0)
+	}
+
+	to {
+		transform: rotate(360deg)
+	}
+}
+
+#status {
+	display: inline-block;
+	vertical-align: top;
+	margin-top: 30px;
+	margin-left: 20px;
+	font-weight: 700;
+	color: #787878
+}
+
+#progress {
+	height: 20px;
+	width: 300px
+}
+
+#controls {
+	text-align: center;
+}
+
+#controls span {
+	white-space: nowrap;
+}
+
+#controls span label {
+	cursor: pointer;
+}
+
+#controls span+span {
+	padding-left: 10px;
+}
+
+#output {
+	width: 100%;
+	height: 200px;
+	margin: 0 auto;
+	margin-top: 10px;
+	border-left: 0;
+	border-right: 0px;
+	padding-left: 0;
+	padding-right: 0;
+	background-color: #000;
+	color: #fff;
+	font-family: 'Lucida Console', Monaco, monospace;
+	outline: 0;
+}
+
+#output:focus {
+	outline: none;
+	/* Specifically removing outline when focused */
+}

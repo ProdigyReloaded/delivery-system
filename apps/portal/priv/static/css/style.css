@@ -1,0 +1,153 @@
+@import url('//fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap');
+
+h1,
+h2,
+h3,
+nav,
+.nav-link,
+.navbar-brand {
+	font-family: 'Chakra Petch';
+	color: #ffa301;
+}
+
+button,
+a.btn {
+	font-family: 'Chakra Petch';
+}
+
+.btn {
+	box-shadow: 3px 3px 4px rgba(0, 0, 0, 0.5);
+}
+
+nav {
+	opacity: 0.9;
+}
+
+nav.sticky-top {
+	z-index: 2000;
+	/* So nav dropdowns appear above home carousel */
+}
+
+.navbar-brand img {
+	height: 35px;
+	width: auto;
+}
+
+main {
+	min-height: 70vh;
+}
+
+footer a {
+	margin-top: 0;
+	margin-bottom: 0;
+	padding-top: 0;
+	padding-bottom: 0;
+}
+
+footer p.small {
+	opacity: 0.6;
+	font-size: 0.7rem;
+}
+
+.home-logo {
+	background-color: #ffc107;
+}
+
+.home-logo * {
+	max-width: 800px;
+	width: 100%;
+}
+
+.reloaded {
+	text-align: center;
+	font-family: 'Chakra Petch';
+	font-size: clamp(12px, 6vw, 100px);
+	line-height: clamp(12px, 6vw, 100px);
+	font-weight: bold;
+	letter-spacing: 22px;
+	text-transform: uppercase;
+	background-color: rgba(0, 0, 0, 1.0);
+	color: red;
+	transform: rotate(-3deg);
+	box-shadow: 2px 2px 2px red;
+}
+
+.card {
+	background-color: #00a0f1;
+	width: 100%;
+	max-width: 30rem;
+}
+
+.four-oh-four::before {
+	color: #ffa301;
+	content: ':(';
+	font-size: 15rem;
+	line-height: 20rem;
+}
+
+dt {
+	position: relative;
+	padding-left: 1.4em;
+	/* make room for the image */
+}
+
+dt::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.15em;
+	/* tweak vertically to align with text */
+	width: 1em;
+	height: 1em;
+	background-image: url('/images/star.png');
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+dd {
+	margin-left: 1.4em;
+}
+
+/* Admin table scrolling. Keeps the page length stable as the dataset grows;
+   thead stays pinned while the body scrolls. Height is viewport-relative so
+   small screens still leave room for the page chrome. */
+.admin-table-scroll {
+	max-height: 65vh;
+	overflow-y: auto;
+	overflow-x: auto;
+}
+
+.admin-table-sticky thead th {
+	position: sticky;
+	top: 0;
+	background: #fff;
+	z-index: 2;
+	box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.075);
+}
+
+/* Second header row (filter inputs) sticks just below the column headers.
+   Keep the height in sync with the first row so nothing peeks through. */
+.admin-table-sticky thead tr:nth-child(2) th {
+	top: 2.3rem;
+}
+
+/* Admin Users edit modal: stack every tab pane in the same grid cell so
+   the container sizes itself to the tallest pane. Only the active pane
+   is visible; inactive ones reserve layout with visibility:hidden so
+   switching tabs never jumps the modal height. */
+.edit-tab-content {
+	display: grid;
+}
+
+.edit-tab-pane {
+	grid-column: 1;
+	grid-row: 1;
+	visibility: hidden;
+	pointer-events: none;
+}
+
+.edit-tab-pane.is-active {
+	visibility: visible;
+	pointer-events: auto;
+}
