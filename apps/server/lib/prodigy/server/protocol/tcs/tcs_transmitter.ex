@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller & Ralph Richard Cook
+# Copyright 2022, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -139,7 +139,7 @@ defmodule Prodigy.Server.Protocol.Tcs.Transmitter do
     # Check if we have the requested sequence
     case TransmitBuffer.get_by_sequence(state.tx_buffer, sequence) do
       nil ->
-        Logger.debug("TCS TX: Sequence #{sequence} NOT in buffer")
+        Logger.error("TCS TX: Sequence #{sequence} NOT in buffer")
         # Log what we DO have
         Logger.debug("TCS TX: Buffer state - available sequences: #{inspect(buffer_seqs)}")
         {:noreply, state}

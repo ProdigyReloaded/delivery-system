@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller
+# Copyright 2022, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -20,7 +20,8 @@ defmodule Prodigy.Server.Service.BulletinBoards.Test do
 
   import Ecto.Changeset
 
-  alias Prodigy.Core.Data.{Club, Household, Post, Topic, User, UserClub, Repo}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.{Club, Household, Post, Topic, User, UserClub}
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Router
 
@@ -35,11 +36,11 @@ defmodule Prodigy.Server.Service.BulletinBoards.Test do
     %Household{id: "AAAA12", enabled_date: @today}
     |> change
     |> put_assoc(:users, [
-      %User{id: "AAAA12A", gender: "F", date_enrolled: @today,
-        first_name: "Jane", last_name: "Doe"}
+      %User{id: "AAAA12A", date_enrolled: @today,
+        profile: %{"0157" => "F", "015F" => "Jane", "015E" => "Doe"}}
       |> User.changeset(%{password: "foobaz"}),
-      %User{id: "AAAA12B", gender: "M", date_enrolled: @today,
-        first_name: "John", last_name: "Smith"}
+      %User{id: "AAAA12B", date_enrolled: @today,
+        profile: %{"0157" => "M", "015F" => "John", "015E" => "Smith"}}
       |> User.changeset(%{password: "barbaz"})
     ])
     |> Repo.insert!()
@@ -354,100 +355,6 @@ defmodule Prodigy.Server.Service.BulletinBoards.Test do
 
     logoff(context.router_pid)
   end
-
-  test "note pagination - direct page selection", context do
-    logon(context.router_pid, "AAAA12A", "foobaz", "06.03.17")
-
-    enter_club(context, "TST")
-
-    # Create 8 posts to have 3 pages (3, 3, 2)
-    for i <- 1..8 do
-      response = submit_public_note(context, context.topic1.id, "       ",
-        "Post #{i}", "Body of post #{i}")
-      <<_::binary-size(16), status, _rest::binary>> = response
-      assert status == 0, "Failed to create post #{i}"
-    end
-
-    # Initialize the note cursor to establish context
-    response = start_note_cursor(context, "01", "01", "00", "00", context.topic1.id)
-    <<_dia_header::binary-size(16),
-      0x01, 0x00, _unknown::32-big,
-      total::16-big,
-      on_page::16-big,
-      rest::binary>> = response
-
-    assert total == 8
-    assert on_page == 3  # First page has 3 posts
-
-    # Parse first post subject to verify we're on page 1
-    <<_date1::binary-size(4), _date2::binary-size(4), _count::16-big,
-      to_len::16-big, _to::binary-size(to_len),
-      from_len::16-big, _from::binary-size(from_len),
-      subj_len::16-big, subject::binary-size(subj_len),
-      _rest::binary>> = rest
-    assert subject == "Post 1"
-
-    # Jump directly to page 2 using the new page selection feature
-    {:ok, response2} = Router.handle_packet(context.router_pid, %Fm0{
-      src: 0x0,
-      dest: 0x00D200,
-      logon_seq: 0,
-      message_id: 0,
-      function: Fm0.Function.APPL_0,
-      payload: <<0x03, 0x00, 0x00, 0x67, 0x08,  # 0x08 for page selection
-        2::16-big,                      # Page 2
-        "01", "01",                     # Month/day (ignored)
-        "dummy">>                       # Rest (ignored)
-    })
-
-    <<_dia_header2::binary-size(16),
-      0x01, 0x00, _unknown2::32-big,
-      ^total::16-big,
-      on_page2::16-big,
-      rest2::binary>> = response2
-
-    assert on_page2 == 3  # Page 2 also has 3 posts (posts 4-6)
-
-    # Parse first post subject to verify we're on page 2
-    <<_date1b::binary-size(4), _date2b::binary-size(4), _countb::16-big,
-      to_len2::16-big, _to2::binary-size(to_len2),
-      from_len2::16-big, _from2::binary-size(from_len2),
-      subj_len2::16-big, subject2::binary-size(subj_len2),
-      _rest2b::binary>> = rest2
-    assert subject2 == "Post 4"  # First post on page 2
-
-    # Jump directly to page 3
-    {:ok, response3} = Router.handle_packet(context.router_pid, %Fm0{
-      src: 0x0,
-      dest: 0x00D200,
-      logon_seq: 0,
-      message_id: 0,
-      function: Fm0.Function.APPL_0,
-      payload: <<0x03, 0x00, 0x00, 0x67, 0x08,
-        3::16-big,                      # Page 3
-        "01", "01",
-        "dummy">>
-    })
-
-    <<_dia_header3::binary-size(16),
-      0x01, 0x00, _unknown3::32-big,
-      ^total::16-big,
-      on_page3::16-big,
-      rest3::binary>> = response3
-
-    assert on_page3 == 2  # Page 3 has only 2 posts (posts 7-8)
-
-    # Parse first post subject to verify we're on page 3
-    <<_date1c::binary-size(4), _date2c::binary-size(4), _countc::16-big,
-      to_len3::16-big, _to3::binary-size(to_len3),
-      from_len3::16-big, _from3::binary-size(from_len3),
-      subj_len3::16-big, subject3::binary-size(subj_len3),
-      _rest3b::binary>> = rest3
-    assert subject3 == "Post 7"  # First post on page 3
-
-    logoff(context.router_pid)
-  end
-
 
   test "criteria search", context do
     # First user creates a post

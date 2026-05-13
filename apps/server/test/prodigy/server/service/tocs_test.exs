@@ -21,10 +21,21 @@ defmodule Prodigy.Server.Service.Tocs.Test do
   require Ecto.Query
   require Logger
 
-  alias Prodigy.Core.Data.Object
+  alias Prodigy.Core.Data.Service.Object
+  alias Prodigy.Core.Objects.Codec
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
   alias Prodigy.Server.Router
+
+  # The object table's content_hash column is NOT NULL post-2b; these
+  # tests write rows with ad-hoc `contents` blobs that don't parse as
+  # real Prodigy objects, so we compute a canonicalized-blob hash
+  # over whatever bytes the test hands us. The value doesn't matter
+  # for TOCS behavior - just has to satisfy the constraint.
+  defp object_fixture(attrs) do
+    hash = Codec.content_hash(Map.get(attrs, :contents, <<>>))
+    struct(%Object{content_hash: hash}, attrs)
+  end
 
   defp get_object(pid, object_id, seq, type, version \\ nil) do
     payload =
@@ -52,13 +63,15 @@ defmodule Prodigy.Server.Service.Tocs.Test do
   setup do
     {:ok, router_pid} = GenServer.start_link(Router, nil)
 
-    Repo.insert!(%Object{
-      name: "ITRC0001D  ",
-      sequence: 0x1,
-      type: 0xC,
-      version: 0x123,
-      contents: <<"foobar">>
-    })
+    Repo.insert!(
+      object_fixture(%{
+        name: "ITRC0001D  ",
+        sequence: 0x1,
+        type: 0xC,
+        version: 0x123,
+        contents: <<"foobar">>
+      })
+    )
 
     [router_pid: router_pid]
   end
@@ -106,24 +119,28 @@ defmodule Prodigy.Server.Service.Tocs.Test do
   end
 
   test "RS gets latest available version from TOCS", context do
-    Repo.insert!(%Object{
-      name: "FM00000APG ",
-      sequence: 0x0,
-      type: 0x4,
-      version: 0x123,
-      contents: <<"foobar">>
-    })
+    Repo.insert!(
+      object_fixture(%{
+        name: "FM00000APG ",
+        sequence: 0x0,
+        type: 0x4,
+        version: 0x123,
+        contents: <<"foobar">>
+      })
+    )
 
     {random_id, {:ok, response}} = get_object(context.router_pid, "FM00000APG ", 0x0, 0x4, 0x22)
     <<0x0, ^random_id, 0, 0, 6::16-big, "foobar"::binary>> = response
 
-    Repo.insert!(%Object{
-      name: "FM00000APG ",
-      sequence: 0x0,
-      type: 0x4,
-      version: 0x200,
-      contents: <<"bazqux">>
-    })
+    Repo.insert!(
+      object_fixture(%{
+        name: "FM00000APG ",
+        sequence: 0x0,
+        type: 0x4,
+        version: 0x200,
+        contents: <<"bazqux">>
+      })
+    )
 
     {random_id, {:ok, response}} = get_object(context.router_pid, "FM00000APG ", 0x0, 0x4, 0x22)
     <<0x0, ^random_id, 0, 0, 6::16-big, "bazqux"::binary>> = response

@@ -39,8 +39,10 @@ defmodule Prodigy.Server.RanchSup do
 
     Logger.debug("setting up the ranch supervision tree")
 
+    port = Application.get_env(:server, :tcs_port, 25_234)
+
     children = [
-      {Prodigy.Server.TcsListener, [[{:port, 25_234}], %Options{}]}
+      {Prodigy.Server.TcsListener, [[{:port, port}], %Options{}]}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

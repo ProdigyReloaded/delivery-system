@@ -41,7 +41,8 @@ end
 defmodule Server do
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Router
-  alias Prodigy.Core.Data.{Repo, Session}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.Session
 
   import Ecto.Query
 
@@ -104,6 +105,11 @@ defmodule TestTransport do
   # socket, for our testing, is the pid of the TestTransport process
   def setopts(_, _), do: :ok
   def start_link(_opts), do: Agent.start_link(fn -> [] end)
+
+  # TcsProtocol.peer_info_from_tcp calls this on init; return a stable
+  # loopback tuple so downstream code that logs or stores peer address
+  # gets the shape it expects.
+  def peername(_socket), do: {:ok, {{127, 0, 0, 1}, 0}}
 
   def send(socket, data),
     do: Agent.get_and_update(socket, fn queue -> {queue, queue ++ [data]} end)

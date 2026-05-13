@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller
+# Copyright 2022, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -23,7 +23,8 @@ defmodule Prodigy.Server.Service.BulletinBoards do
 
   require Logger
 
-  alias Prodigy.Core.Data.{Club, Post, Repo, Topic, User, UserClub}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.{Club, Post, Topic, User, UserClub}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Context
@@ -325,6 +326,7 @@ defmodule Prodigy.Server.Service.BulletinBoards do
     {new_context, {:ok, get_index_page(new_context.bb)}}
   end
 
+
   defp handle_navigate_note_cursor(direction, context) do
     Logger.debug("note pagination, direction: #{direction}")
 
@@ -539,14 +541,24 @@ defmodule Prodigy.Server.Service.BulletinBoards do
       left_join: from_user in User, on: from_user.id == p.from_id,
       left_join: to_user in User, on: to_user.id == p.to_id and p.to_id != "" and not is_nil(p.to_id),
       preload: [:topic],
-      group_by: [p.id, from_user.first_name, from_user.last_name, to_user.first_name, to_user.last_name],
+      group_by: [
+        p.id,
+        fragment("?->>'015F'", from_user.profile),
+        fragment("?->>'015E'", from_user.profile),
+        fragment("?->>'015F'", to_user.profile),
+        fragment("?->>'015E'", to_user.profile)
+      ],
       select: %Post{p |
         reply_count: count(r.id),
         last_reply_date: max(r.sent_date),
-        from_name: fragment("COALESCE(? || ' ' || ?, ?, ?)",
-          from_user.first_name, from_user.last_name, from_user.first_name, p.from_id),
-        to_name: fragment("COALESCE(? || ' ' || ?, ?, ?)",
-          to_user.first_name, to_user.last_name, to_user.first_name, p.to_id)
+        from_name: fragment(
+          "COALESCE((?->>'015F') || ' ' || (?->>'015E'), ?->>'015F', ?)",
+          from_user.profile, from_user.profile, from_user.profile, p.from_id
+        ),
+        to_name: fragment(
+          "COALESCE((?->>'015F') || ' ' || (?->>'015E'), ?->>'015F', ?)",
+          to_user.profile, to_user.profile, to_user.profile, p.to_id
+        )
       }
     )
 
@@ -610,7 +622,17 @@ defmodule Prodigy.Server.Service.BulletinBoards do
         left_join: r in Post, on: r.in_reply_to == p.id,
         left_join: from_user in User, on: from_user.id == p.from_id,
         left_join: to_user in User, on: to_user.id == p.to_id and p.to_id != "" and not is_nil(p.to_id),
-        group_by: [p.id, p.sent_date, p.to_id, p.from_id, p.subject, from_user.first_name, from_user.last_name, to_user.first_name, to_user.last_name],
+        group_by: [
+          p.id,
+          p.sent_date,
+          p.to_id,
+          p.from_id,
+          p.subject,
+          fragment("?->>'015F'", from_user.profile),
+          fragment("?->>'015E'", from_user.profile),
+          fragment("?->>'015F'", to_user.profile),
+          fragment("?->>'015E'", to_user.profile)
+        ],
         order_by: [asc: p.sent_date],
         select: %{
           sent_date: p.sent_date,
@@ -618,10 +640,14 @@ defmodule Prodigy.Server.Service.BulletinBoards do
           subject: p.subject,
           reply_count: count(r.id),
           last_reply_date: max(r.sent_date),
-          from_name: fragment("COALESCE(? || ' ' || ?, ?, ?)",
-            from_user.first_name, from_user.last_name, from_user.first_name, p.from_id),
-          to_name: fragment("COALESCE(? || ' ' || ?, ?, ?)",
-            to_user.first_name, to_user.last_name, to_user.first_name, p.to_id)
+          from_name: fragment(
+            "COALESCE((?->>'015F') || ' ' || (?->>'015E'), ?->>'015F', ?)",
+            from_user.profile, from_user.profile, from_user.profile, p.from_id
+          ),
+          to_name: fragment(
+            "COALESCE((?->>'015F') || ' ' || (?->>'015E'), ?->>'015F', ?)",
+            to_user.profile, to_user.profile, to_user.profile, p.to_id
+          )
         }
       )
 

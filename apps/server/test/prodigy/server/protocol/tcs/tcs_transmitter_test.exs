@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller & Ralph Richard Cook
+# Copyright 2022, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
+# test/prodigy/server/protocol/tcs/transmitter_test.exs
 defmodule Prodigy.Server.Protocol.Tcs.Transmitter.Test do
   use ExUnit.Case, async: true
   require Logger

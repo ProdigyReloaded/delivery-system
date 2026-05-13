@@ -43,7 +43,10 @@ defmodule Prodigy.Server.Protocol.Dia do
   defmodule Options do
     @moduledoc "An options module used for mocking `Prodigy.Server.Router` in tests"
     alias Prodigy.Server.Router
-    defstruct router_module: Router
+    # peer_info and transport_type are populated by TCS.init from the
+    # underlying socket / WebSock upgrade, passed down to Router so the
+    # Context carries the fields the admin "Who's online" tab surfaces.
+    defstruct router_module: Router, peer_info: nil, transport_type: nil
   end
 
   defmodule State do
@@ -60,12 +63,18 @@ defmodule Prodigy.Server.Protocol.Dia do
   end
 
   @impl GenServer
-  def init(%Options{router_module: router_module}) do
+  def init(%Options{router_module: router_module} = options) do
     Logger.debug("DIA protocol server initializing")
     Process.flag(:trap_exit, true)
 
     Logger.debug("DIA server starting a router")
-    {:ok, router_pid} = GenServer.start_link(router_module, nil)
+
+    router_opts = %{
+      peer_info: options.peer_info || %{},
+      transport_type: options.transport_type
+    }
+
+    {:ok, router_pid} = GenServer.start_link(router_module, router_opts)
     {:ok, %State{router_module: router_module, router_pid: router_pid}}
   end
 

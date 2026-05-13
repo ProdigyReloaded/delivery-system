@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller & Ralph Richard Cook
+# Copyright 2022, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -73,33 +73,89 @@ defmodule Prodigy.Server.Protocol.Tcs do
     Logger.debug("TCS server initializing")
     Process.flag(:trap_exit, true)
 
-    Logger.debug("TCS server spawning dia process")
-    {:ok, dia_pid} = GenServer.start_link(options.dia_module, nil)
-
-    Logger.debug("TCS server completing the client handshake")
+    Logger.debug("TCS server completing the Ranch client handshake")
     {:ok, socket} = options.ranch_module.handshake(ref)
+    # Ranch-specific: put the socket into active mode so data arrives as
+    # {:tcp, socket, data} messages. The WebSocket path does not do this -
+    # its handler delivers {:data_in, data} instead.
     :ok = transport.setopts(socket, active: true)
 
-    Logger.debug("TCS server entering genserver loop")
+    peer_info = peer_info_from_tcp(transport, socket)
 
-    # Configure error injection from environment
+    {:ok, dia_pid} =
+      GenServer.start_link(
+        options.dia_module,
+        %Prodigy.Server.Protocol.Dia.Options{
+          peer_info: peer_info,
+          transport_type: "tcp"
+        }
+      )
+
+    enter_loop(normalize_transport(transport), socket, options, dia_pid)
+  end
+
+  defp peer_info_from_tcp(transport, socket) do
+    case transport.peername(socket) do
+      {:ok, {ip, port}} -> %{address: ip_to_string(ip), port: port}
+      _ -> %{address: nil, port: nil}
+    end
+  end
+
+  defp ip_to_string(ip) when is_tuple(ip), do: :inet.ntoa(ip) |> to_string()
+  defp ip_to_string(other) when is_binary(other), do: other
+  defp ip_to_string(_), do: nil
+
+  # Maps the Ranch-supplied `:ranch_tcp` atom to our named wrapper module
+  # so the TCS state machine speaks to transports through a Prodigy-owned
+  # surface. Other values (TestTransport in the test suite, etc.) pass
+  # through unchanged so existing mocks keep working.
+  defp normalize_transport(:ranch_tcp), do: Prodigy.Server.Transport.Tcp
+  defp normalize_transport(other), do: other
+
+  @doc """
+  Entry point for non-Ranch transports (currently: WebSocket). Called from
+  the WebSock handler after it upgrades the HTTP connection. Bypasses the
+  Ranch handshake and active-mode setopts and walks straight into the
+  GenServer loop with the supplied transport + socket. `peer_info` is a
+  map `%{address: ip_string | nil, port: integer | nil}` extracted by the
+  upgrade controller from the HTTP conn.
+  """
+  def enter_loop_for_websocket(handler_pid, peer_info \\ %{}, %Options{} = options \\ %Options{})
+      when is_pid(handler_pid) and is_map(peer_info) do
+    Logger.debug("TCS server initializing (WebSocket transport)")
+    Process.flag(:trap_exit, true)
+
+    {:ok, dia_pid} =
+      GenServer.start_link(
+        options.dia_module,
+        %Prodigy.Server.Protocol.Dia.Options{
+          peer_info: peer_info,
+          transport_type: "websocket"
+        }
+      )
+
+    enter_loop(Prodigy.Server.Transport.Websocket, handler_pid, options, dia_pid)
+  end
+
+  defp enter_loop(transport_mod, socket, options, dia_pid) when is_atom(transport_mod) do
     error_config = configure_error_injection()
 
-    {:ok, tx_pid} = Transmitter.start_link(%{
-      transport: transport,
-      socket: socket,
-      from: self(),
-      error_injection: error_config
-    })
+    {:ok, tx_pid} =
+      Transmitter.start_link(%{
+        transport: transport_mod,
+        socket: socket,
+        from: self(),
+        error_injection: error_config
+      })
 
     :gen_server.enter_loop(__MODULE__, [], %State{
       socket: socket,
-      transport: transport,
+      transport: transport_mod,
       dia_module: options.dia_module,
       rx_buffer: ReceiveBuffer.new(2, 0),
       dia_pid: dia_pid,
       tx_pid: tx_pid,
-      error_injection: error_config  # Store for receive-side errors
+      error_injection: error_config
     })
   end
 
@@ -174,14 +230,14 @@ defmodule Prodigy.Server.Protocol.Tcs do
     end
   end
 
-  @impl GenServer
-  def handle_info({:tcp, _socket, data}, %State{socket: socket, transport: transport} = state) do
-    # Apply error injection to received data if configured
-    _corrupted_data = ErrorInjector.maybe_corrupt(
-      data,
-      Map.get(state, :error_injection, %ErrorInjector{enabled: false}),
-      :receive
-    )
+  # Shared helper used by both the TCP and WebSocket ingress paths.
+  defp process_incoming_bytes(data, %State{socket: socket, transport: transport} = state) do
+    _corrupted_data =
+      ErrorInjector.maybe_corrupt(
+        data,
+        Map.get(state, :error_injection, %ErrorInjector{enabled: false}),
+        :receive
+      )
 
     {new_buffer, new_tx_seq, new_rx_seq, rx_buffer} =
       case Packet.decode(state.buffer <> data) do
@@ -189,10 +245,14 @@ defmodule Prodigy.Server.Protocol.Tcs do
           handle_packet_in({packet, excess}, packet.type, state)
 
         {:error, :crc, _seq, excess} ->
-          # Don't trust seq from corrupted packet
-          # Send NAKCCE for next expected sequence
+          # Don't trust seq from corrupted packet.
+          # Send NAKCCE for next expected sequence.
           next_expected = state.rx_buffer.next_expected
-          Logger.debug("TCS: CRC error in packet, sending NAKCCE for expected seq=#{next_expected}")
+
+          Logger.debug(
+            "TCS: CRC error in packet, sending NAKCCE for expected seq=#{next_expected}"
+          )
+
           transport.send(socket, Packet.nakcce(next_expected))
           {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
 
@@ -201,23 +261,40 @@ defmodule Prodigy.Server.Protocol.Tcs do
       end
 
     {:noreply,
-      %{state | buffer: new_buffer, tx_seq: new_tx_seq, rx_seq: new_rx_seq, rx_buffer: rx_buffer},
-      @timeout}
+     %{state | buffer: new_buffer, tx_seq: new_tx_seq, rx_seq: new_rx_seq, rx_buffer: rx_buffer},
+     @timeout}
   end
 
-  @impl GenServer
-  def handle_info({:wp_limit_exceeded, socket}, state) do
-    Logger.debug("Too many wackpk packets sent, closing connection")
-    send(self(), {:tcp_closed, socket})
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_info({:tcp_closed, socket}, %State{transport: transport} = state) do
+  # Shared helper for both transport-close signals.
+  defp handle_transport_closed(%State{transport: transport, socket: socket} = state) do
     Logger.debug("TCS connection closed")
     transport.close(socket)
     {:stop, :shutdown, state}
   end
+
+  # Incoming bytes from the transport. Two message shapes reach this
+  # GenServer: {:tcp, socket, data} when TCP-active-mode delivers from
+  # Ranch, and {:data_in, data} when the WebSock handler forwards a
+  # binary frame. Both feed the same decoder state.
+  @impl GenServer
+  def handle_info({:tcp, _socket, data}, state), do: process_incoming_bytes(data, state)
+
+  @impl GenServer
+  def handle_info({:data_in, data}, state), do: process_incoming_bytes(data, state)
+
+  @impl GenServer
+  def handle_info({:wp_limit_exceeded, _socket}, state) do
+    Logger.debug("Too many wackpk packets sent, closing connection")
+    handle_transport_closed(state)
+  end
+
+  # Peer close. TCP delivers {:tcp_closed, socket}; the WebSock handler
+  # delivers the bare atom :data_closed.
+  @impl GenServer
+  def handle_info({:tcp_closed, _socket}, state), do: handle_transport_closed(state)
+
+  @impl GenServer
+  def handle_info(:data_closed, state), do: handle_transport_closed(state)
 
   @impl GenServer
   def handle_info({:EXIT, _pid, _reason}, state) do
@@ -229,6 +306,21 @@ defmodule Prodigy.Server.Protocol.Tcs do
     Logger.debug("TCS server got ranch error: #{inspect(code)}")
     transport.close(state.socket)
     {:stop, :shutdown, state}
+  end
+
+  @impl GenServer
+  def handle_info({:rxmitp_reset_needed, sequence}, state) do
+    Logger.debug("TCS: Transmission reset needed from sequence #{sequence}")
+
+    # Reset our transmission sequence
+    new_state = %{state | tx_seq: sequence}
+
+    # Optionally notify DIA layer to resend data if needed
+    # This depends on your protocol - you might need to:
+    # 1. Clear any pending DIA packets
+    # 2. Request retransmission from DIA layer
+
+    {:noreply, new_state}
   end
 
   @doc """

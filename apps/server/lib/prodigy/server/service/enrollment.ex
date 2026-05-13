@@ -24,7 +24,8 @@ defmodule Prodigy.Server.Service.Enrollment do
 
   import Ecto.Changeset
 
-  alias Prodigy.Core.Data.{Household, Repo, User}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.{Household, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Service.{Logon, Messaging, Profile}
@@ -34,39 +35,56 @@ defmodule Prodigy.Server.Service.Enrollment do
     Logger.debug("received enrollment packet: #{inspect(request, base: :hex, limit: :infinity)}")
     user_id = user.id
 
+    # The RS enrollment flow tells the subscriber that any additional
+    # household members they register here will use the *same initial
+    # password that was issued to the subscriber* - i.e., the welcome-kit
+    # credential they logged in with, NOT a new password they may choose
+    # during this enrollment (TAC 0x014F). Capture it now, before the
+    # changeset pipeline can stage the new password.
+    subscriber_initial_password = user.password
+
     <<0x2, type, 0x1, ^user_id::binary-size(7), _::40, _count::16-big, rest::binary>> = payload
 
     entries = Profile.parse_request_values(rest)
-    household_changeset = Profile.get_household_changeset(entries)
 
-    # propogate the subscriber given name/title to the related user account.  If the "user" data is
-    # normalized out ouf the household, workarounds like this won't be needed.
-    user_changeset =
+    # Route the wire entries through the unified ProfileDispatch path so
+    # top-level User fields (notably :password via TAC 0x014F, which
+    # User.changeset/2 hashes via put_password_hash) make it onto the
+    # changeset alongside the JSONB :profile patch. `member_patches`
+    # carries the name/title data for household slots B..F so we can
+    # materialize the per-slot User rows (AAAA11B..F) below.
+    {user_cs, household_cs, member_patches} =
+      Profile.build_changesets(entries, user, user.household)
+
+    # A subscriber enrollment (type 0x1) writes the name/title into the
+    # household's A slot (TACs 0x011A..0x011D). Mirror those into the
+    # user's own name TACs (0x015E..0x0161) so user.profile carries the
+    # same data - User.first_name/1, full_name/1, and the admin display
+    # depend on it. Non-subscriber users (type 0x2) send user-direct
+    # TACs in `entries` and don't need the mirror.
+    user_cs =
       case type do
-        0x2 ->  # user
-          %{}
-
-        0x1 ->  # subscriber
-          %{
-            last_name: Map.get(household_changeset, :user_a_last),
-            first_name: Map.get(household_changeset, :user_a_first),
-            middle_name: Map.get(household_changeset, :user_a_middle),
-            title: Map.get(household_changeset, :user_a_title)
-          }
+        0x1 -> apply_slot_a_mirror(user_cs, household_cs)
+        _ -> user_cs
       end
-      |> Map.merge(Profile.get_user_changeset(entries))
+
+    user_cs = user_cs |> change(date_enrolled: Timex.today())
 
     Repo.transaction(fn ->
-      Repo.update(Household.changeset(user.household, household_changeset))
+      if household_cs, do: Repo.update!(household_cs)
 
-      Repo.update(
-        user
-        # _cast_ external data
-        |> User.changeset(user_changeset)
-        # _change_ internal data
-        |> change(%{date_enrolled: Timex.today()})
-      )
+      # Create the member rows with the subscriber's *original* initial
+      # password, before applying the subscriber's own (possibly new)
+      # password via user_cs.
+      if user.household && map_size(member_patches) > 0 do
+        Profile.persist_members(member_patches, user.household, subscriber_initial_password)
+      end
+
+      Repo.update!(user_cs)
     end)
+
+    # Let admin views refresh the name/title fields that just landed.
+    Prodigy.Server.SessionManager.broadcast_profile_updated(user.id)
 
     user =
       User
@@ -92,5 +110,37 @@ defmodule Prodigy.Server.Service.Enrollment do
     Logger.info("Enrolled user #{user.id}")
 
     {:ok, %{context | user: user}, response}
+  end
+
+  # Read the household changeset's :profile change (if any), pull the
+  # slot-A name keys, and merge their values under the user's own name
+  # TACs into the user changeset's :profile change. Returns the user
+  # changeset unchanged when there's nothing to mirror.
+  defp apply_slot_a_mirror(user_cs, nil), do: user_cs
+
+  defp apply_slot_a_mirror(user_cs, household_cs) do
+    hh_profile = get_change(household_cs, :profile) || %{}
+    slot = Household.slot_keys("a")
+
+    mirror =
+      %{}
+      |> maybe_put(hh_profile, slot.last, "015E")
+      |> maybe_put(hh_profile, slot.first, "015F")
+      |> maybe_put(hh_profile, slot.middle, "0160")
+      |> maybe_put(hh_profile, slot.title, "0161")
+
+    if map_size(mirror) == 0 do
+      user_cs
+    else
+      current = get_change(user_cs, :profile) || %{}
+      put_change(user_cs, :profile, Map.merge(current, mirror))
+    end
+  end
+
+  defp maybe_put(acc, source, source_key, dest_key) do
+    case Map.get(source, source_key) do
+      nil -> acc
+      value -> Map.put(acc, dest_key, value)
+    end
   end
 end

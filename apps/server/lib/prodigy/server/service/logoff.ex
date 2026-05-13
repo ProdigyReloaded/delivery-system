@@ -27,10 +27,18 @@ defmodule Prodigy.Server.Service.Logoff do
   import Ecto.Changeset
   import Ecto.Query, only: [from: 2]
 
-  alias Prodigy.Core.Data.{Repo, User}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.ProfileSchema
+  alias Prodigy.Core.Data.Service.User
   alias Prodigy.Server.Protocol.Dia.Packet
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Context
+
+  # Bookkeeping fields stamped on every logoff. Names come from the
+  # XXCGTSYS catalogue via ProfileSchema; resolved to their JSONB keys
+  # at compile time.
+  @prf_last_logon_date ProfileSchema.jsonb_key(0x02C2)
+  @prf_last_logon_time ProfileSchema.jsonb_key(0x02C4)
   alias Prodigy.Server.SessionManager
 
   @normal_logoff_dest 0x00D202
@@ -98,10 +106,15 @@ defmodule Prodigy.Server.Service.Logoff do
     last_logon_time = Timex.format!(now, "{h24}.{m}")
 
     result = Repo.transaction(fn ->
-      fetch_user_for_update(user.id)
+      fresh = fetch_user_for_update(user.id)
+      profile = Map.get(fresh, :profile) || %{}
+
+      fresh
       |> change(%{
-        prf_last_logon_date: last_logon_date,
-        prf_last_logon_time: last_logon_time
+        profile:
+          profile
+          |> Map.put(@prf_last_logon_date, last_logon_date)
+          |> Map.put(@prf_last_logon_time, last_logon_time)
       })
       |> Repo.update!()
     end)

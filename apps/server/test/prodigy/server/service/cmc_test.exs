@@ -21,7 +21,8 @@ defmodule Prodigy.Server.Service.Cmc.Test do
 
   require Logger
 
-  alias Prodigy.Core.Data.{CmcError, Household, Repo, Session, User}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.{CmcError, Household, Session, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm9}
   alias Prodigy.Server.Protocol.Dia.Packet.Fm9.{Flags, Function, Reason}
@@ -54,7 +55,7 @@ defmodule Prodigy.Server.Service.Cmc.Test do
     %Household{id: "AAAA99", enabled_date: @today}
     |> change
     |> put_assoc(:users, [
-      %User{id: "AAAA99A", gender: "M", date_enrolled: @today}
+      %User{id: "AAAA99A", date_enrolled: @today, profile: %{"0157" => "M"}}
       |> User.changeset(%{password: "test"})
     ])
     |> Repo.insert()

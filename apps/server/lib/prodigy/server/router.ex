@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller
+# Copyright 2022, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -55,10 +55,30 @@ defmodule Prodigy.Server.Router do
   def handle_packet(pid, %Fm0{} = packet), do: GenServer.call(pid, {:handle_packet, packet})
 
   @impl GenServer
-  def init(_) do
+  def init(opts) do
     Logger.debug("router started")
     Process.flag(:trap_exit, true)
-    {:ok, %State{context: %Context{auth_timeout: Context.set_auth_timer()}}}
+
+    peer_info =
+      case opts do
+        %{peer_info: pi} when is_map(pi) -> pi
+        _ -> %{}
+      end
+
+    transport_type =
+      case opts do
+        %{transport_type: t} -> t
+        _ -> nil
+      end
+
+    context = %Context{
+      auth_timeout: Context.set_auth_timer(),
+      transport: transport_type,
+      source_address: Map.get(peer_info, :address),
+      source_port: Map.get(peer_info, :port)
+    }
+
+    {:ok, %State{context: context}}
   end
 
   defmodule Default do
@@ -183,7 +203,13 @@ defmodule Prodigy.Server.Router do
   end
 
   @impl GenServer
+  # Stop on any trapped exit. Router has no sub-processes whose deaths
+  # would be tolerable ignores, so the right move is always to tear the
+  # connection down. This also lets admin force-disconnect work: the LiveView
+  # sends Process.exit(router, :shutdown), Router stops, DIA gets the
+  # EXIT via its downward link and stops, TCS gets the EXIT from DIA
+  # and stops, the WebSock handler (or Ranch socket) closes the client.
   def handle_info({:EXIT, _pid, _reason}, state) do
-    {:noreply, state}
+    {:stop, :normal, state}
   end
 end

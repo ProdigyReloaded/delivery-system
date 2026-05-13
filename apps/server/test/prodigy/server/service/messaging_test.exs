@@ -20,7 +20,7 @@ defmodule Prodigy.Server.Service.Messaging.Test do
 
   import Ecto.Changeset
 
-  alias Prodigy.Core.Data.{Household, Message, User}
+  alias Prodigy.Core.Data.Service.{Household, Message, User}
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Router
   alias Prodigy.Server.Service.Messaging
@@ -35,7 +35,7 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     %Household{id: "AAAA12", enabled_date: @today}
     |> change
     |> put_assoc(:users, [
-      %User{id: "AAAA12A", gender: "F", date_enrolled: @today}
+      %User{id: "AAAA12A", profile: %{"0157" => "F"}, date_enrolled: @today}
       |> User.changeset(%{password: "foobaz"})
     ])
     |> Repo.insert!()
@@ -200,6 +200,27 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     {1, 1,
       <<^index::16-big, "ZZZZ00A", 0::3, 1::1, 0::12, _dates::binary-size(10), 9, "Test User", 6,
         "Test 1">>} = get_mailbox_page(context, 1)
+
+    logoff(context.router_pid)
+  end
+
+  test "body continuation (0x0b) returns zero-length payload", context do
+    # The RS 6.x reader (MSZB016X) sets &192=1 whenever the first-response
+    # body length is exactly 500 bytes, and issues <<0x0b, idx>> asking for
+    # the "rest". Our server never splits, so the only correct reply is a
+    # zero-length continuation - anything else would either stall the
+    # reader or append garbage to the body buffer.
+    logon(context.router_pid, "AAAA12A", "foobaz", "06.03.17")
+
+    {:ok, <<_::binary-size(16), 0::16>>} =
+      Router.handle_packet(context.router_pid, %Fm0{
+        src: 0x0,
+        dest: 0x00D200,
+        logon_seq: 0,
+        message_id: 0,
+        function: Fm0.Function.APPL_0,
+        payload: <<0x01, 0x0B, 42::16-big>>
+      })
 
     logoff(context.router_pid)
   end

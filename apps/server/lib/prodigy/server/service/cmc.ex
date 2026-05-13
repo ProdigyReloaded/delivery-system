@@ -21,7 +21,9 @@ defmodule Prodigy.Server.Service.Cmc do
 
   require Logger
 
-  alias Prodigy.Core.Data.{CmcError, Repo}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.CmcError
+  alias Prodigy.Core.ServiceEvents
   alias Prodigy.Server.Context
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm9}
 
@@ -82,8 +84,9 @@ defmodule Prodigy.Server.Service.Cmc do
           |> Repo.insert()
 
           case cmc_result do
-            {:ok, _} ->
+            {:ok, row} ->
               Logger.error("CMC error logged from #{user_id}: code=#{error_code}, severity=#{severity_level}")
+              ServiceEvents.broadcast_cmc_error(row)
 
             {:error, changeset} ->
               Logger.error("Failed to log CMC error: #{inspect(changeset.errors)}")

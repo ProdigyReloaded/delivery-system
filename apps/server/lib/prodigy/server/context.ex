@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller
+# Copyright 2022, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -21,7 +21,20 @@ defmodule Prodigy.Server.Context do
   persists until the connection is terminated.
   """
 
-  defstruct [:user, :session_id, :rs_version, :auth_timeout, :messaging, :bb]
+  defstruct [
+    :user,
+    :session_id,
+    :rs_version,
+    :auth_timeout,
+    :messaging,
+    :bb,
+    # Transport + peer info set on Router init from the TCS init chain.
+    # transport is "tcp" | "websocket"; source_address/source_port are
+    # the client-side remote endpoint. Surfaced in the admin Source column.
+    :transport,
+    :source_address,
+    :source_port
+  ]
 
   def set_auth_timer do
     Process.send_after(self(), :auth_timeout, Application.fetch_env!(:server, :auth_timeout))

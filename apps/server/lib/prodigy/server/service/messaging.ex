@@ -1,4 +1,4 @@
-# Copyright 2022-2025, Phillip Heller
+# Copyright 2022, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -25,7 +25,8 @@ defmodule Prodigy.Server.Service.Messaging do
 
   import Prodigy.Core.Util
 
-  alias Prodigy.Core.Data.{Message, Repo, User}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.{Message, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Context
@@ -92,7 +93,7 @@ defmodule Prodigy.Server.Service.Messaging do
 
     send_message(
       from.id,
-      "#{from.first_name} #{from.last_name}",
+      User.full_name(from),
       to_ids,
       to_others,
       subject,
@@ -329,6 +330,17 @@ defmodule Prodigy.Server.Service.Messaging do
           # Request for next message within full message view
         <<0x3, index::16-big>> ->
           {context, get_message(index, context)}
+
+        # Body-continuation request. The RS 6.x client's MSZB016X always
+        # sets &192=1 and sends <<0x0b, msg_index::16-big>> whenever the
+        # first-response body length is exactly 500 bytes; it then
+        # appends whatever the continuation returns. We never split
+        # bodies (messages flow end-to-end in the 0x0303 response), so a
+        # zero-length continuation is the graceful no-op the client
+        # needs. Without this handler, every 500-byte message would
+        # time out the reader with a "messaging down" error window.
+        <<0xB, _index::16-big>> ->
+          {context, {:ok, <<0::16>>}}
 
         <<0x4, _rest::binary>> ->
           {do_disposition(payload, context), :ok} # deletes

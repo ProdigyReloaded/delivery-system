@@ -24,7 +24,9 @@ defmodule Prodigy.Server.Service.Tocs do
   use EnumType
   import Bitwise
 
-  alias Prodigy.Core.Data.{Object, Repo}
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.MissingObject
+  alias Prodigy.Core.Data.Service.Object
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
   alias Prodigy.Server.Protocol.Tocs.Packet, as: TocsPacket
@@ -80,7 +82,7 @@ defmodule Prodigy.Server.Service.Tocs do
           <<legend::binary-size(4), _identification::binary-size(4), extension::binary>> = name
 
           if String.trim(extension) == "D" and legend in ["XXMH", "XXME"] do
-            Logger.warning("synthesizing response for '#{name}' which is missing from the database")
+            record_deficit(name, sequence, type, context)
             <<candidacy_version_high::3, candidacy_version_low::13>> = <<0::3, 0::13>>
 
             TocsPacket.encode(%TocsPacket{
@@ -100,7 +102,7 @@ defmodule Prodigy.Server.Service.Tocs do
               >>
             })
           else
-            Logger.warning("User requested #{user_request}, but it is missing from the database")
+            record_deficit(name, sequence, type, context)
 
             fm64 = %Fm64{
               status_type: Fm64.StatusType.ERROR,
@@ -112,7 +114,7 @@ defmodule Prodigy.Server.Service.Tocs do
           end
 
         object == nil ->
-          Logger.warning("User requested #{user_request}, but it is missing from the database")
+          record_deficit(name, sequence, type, context)
           TocsPacket.encode(%TocsPacket{seq: message_id})
 
         client_version < object.version or client_version == 0 ->
@@ -139,5 +141,46 @@ defmodule Prodigy.Server.Service.Tocs do
       end
 
     {:ok, context, response}
+  end
+
+  # Upsert into missing_objects so the deficit shows up on
+  # /admin/service/objects/deficits even though we couldn't serve it.
+  # Errors are swallowed (logged at warning) - we never want a write
+  # failure to gate the user-facing TOCS response.
+  defp record_deficit(name, sequence, type, %Context{} = context) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    user_id =
+      case context.user do
+        %{id: id} when is_binary(id) -> id
+        _ -> nil
+      end
+
+    attrs = %{
+      name: name,
+      sequence: sequence,
+      type: type,
+      first_seen: now,
+      last_seen: now,
+      last_user_id: user_id,
+      last_session_id: context.session_id,
+      hit_count: 1
+    }
+
+    try do
+      MissingObject.observation_changeset(attrs)
+      |> Repo.insert(
+        on_conflict: [
+          set: [last_seen: now, last_user_id: user_id, last_session_id: context.session_id],
+          inc: [hit_count: 1]
+        ],
+        conflict_target: [:name, :sequence, :type]
+      )
+    rescue
+      e ->
+        Logger.warning("missing_objects upsert failed: #{Exception.message(e)}")
+    end
+
+    :ok
   end
 end

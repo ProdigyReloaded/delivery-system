@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2026, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -13,3 +13,19 @@
 # You should have received a copy of the GNU Affero General Public License along with Prodigy Reloaded. If not,
 # see <https://www.gnu.org/licenses/>.
 
+defmodule Prodigy.Server.Transport.Tcp do
+  @moduledoc """
+  Raw TCP transport under TCS, implemented via Ranch's `:ranch_tcp` wrapper
+  around `:gen_tcp`. This is the current behaviour of the TCP listener on
+  port 25234 - we're just giving it a name so TCS can address transports
+  abstractly.
+  """
+
+  @behaviour Prodigy.Server.Transport
+
+  @impl true
+  def send(socket, data), do: :ranch_tcp.send(socket, data)
+
+  @impl true
+  def close(socket), do: :ranch_tcp.close(socket)
+end

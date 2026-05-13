@@ -20,7 +20,7 @@ defmodule Server.MixProject do
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
       lockfile: "../../mix.lock",
-      elixir: "~> 1.14",
+      elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       elixirc_paths: elixirc_paths(Mix.env())
@@ -47,10 +47,17 @@ defmodule Server.MixProject do
       {:calendar, "~> 1.0.0"},
       {:timex, "~> 3.0"},
       {:pbkdf2_elixir, "~> 1.0"},
-      {:yahoo_finance_elixir, "~> 0.1.3"},
+      # Explicit HTTP + JSON deps for the in-repo DowJones.Api client
+      # module (the previous quote-fetch dep had been pulling both
+      # transitively).
+      {:httpoison, "~> 1.0"},
+      {:poison, "~> 5.0"},
       {:number, "~> 1.0.3"},
       {:quantum, "~> 3.0"},
       {:core, in_umbrella: true},
+      # WebSock behavior - implemented by TcsWebSocket so portal's
+      # websock_adapter can upgrade browser sockets onto TCS.
+      {:websock, "~> 0.5"},
       {:mock, "~> 0.3.0", only: :test},
       {:ex_doc, "~> 0.21", only: :dev, runtime: false}
     ]

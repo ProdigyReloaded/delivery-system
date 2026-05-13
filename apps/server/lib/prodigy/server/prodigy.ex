@@ -31,10 +31,16 @@ defmodule Prodigy.Server.Application do
     # these processes are started in this order, then shutdown in reverse order when the process receives SIGKILL
     # SessionCleanup will close any active sessions on this node.  Good for routine shutdowns, but would also be good
     # if nodes had deterministic names and could clean stale sessions on restart.
+    # Repo is started by the :core application's supervisor (see
+    # Prodigy.Core.Application). The :server application depends on :core,
+    # so the Repo is up before these children start.
     children = [
-      {Prodigy.Core.Data.Repo, []},
       Prodigy.Server.SessionCleanup,
       {Prodigy.Server.RanchSup, {}},
+      # async_nolink supervisor for outbound work that must not crash
+      # the per-connection handler when it fails (currently: DowJones
+      # API fetches).
+      {Task.Supervisor, name: Prodigy.Server.TaskSup},
       Prodigy.Server.Scheduler
     ]
 

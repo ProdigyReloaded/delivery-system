@@ -16,13 +16,20 @@
 defmodule Prodigy.Server.Service.DataCollection do
   @behaviour Prodigy.Server.Service
   @moduledoc """
-  Handle data collection messages
+  Handle data-collection messages from the RS client. Parses the
+  stream of ObjectRecord (0x48) and FunctionRecord (0x49) entries,
+  persists each as a `%DataCollectionEvent{}`, and broadcasts a
+  `Prodigy.Core.ServiceEvents` message per row so the admin Events
+  feed can surface them live.
   """
 
   require Logger
 
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.DataCollectionEvent
+  alias Prodigy.Core.ServiceEvents
   alias Prodigy.Server.Context
+  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
 
   defmodule ObjectRecord do
     @moduledoc false
@@ -69,9 +76,50 @@ defmodule Prodigy.Server.Service.DataCollection do
     Logger.debug("data collection request #{inspect(request, base: :hex, limit: :infinity)}")
 
     entries = parse(rest)
-
-    Logger.debug("data collection records: #{inspect(entries, pretty: true)}")
+    Enum.each(entries, &persist_and_broadcast(&1, context))
 
     {:ok, context}
   end
+
+  defp persist_and_broadcast(record, context) do
+    attrs = attrs_for(record, context)
+
+    case %DataCollectionEvent{}
+         |> DataCollectionEvent.changeset(attrs)
+         |> Repo.insert() do
+      {:ok, row} ->
+        ServiceEvents.broadcast_data_collection(row)
+
+      {:error, cs} ->
+        Logger.error(
+          "data_collection insert failed for #{inspect(record)}: #{inspect(cs.errors)}"
+        )
+    end
+  end
+
+  defp attrs_for(%ObjectRecord{} = r, context) do
+    %{
+      session_id: context.session_id,
+      user_id: user_id_from(context),
+      kind: "object",
+      object_name: r.object_name,
+      object_sequence: r.seq,
+      object_type: r.type,
+      record_type: r.rec_type,
+      duration_seconds: r.minutes * 60 + r.seconds
+    }
+  end
+
+  defp attrs_for(%FunctionRecord{} = r, context) do
+    %{
+      session_id: context.session_id,
+      user_id: user_id_from(context),
+      kind: "function",
+      function_class: r.class,
+      duration_seconds: r.minutes * 60 + r.seconds
+    }
+  end
+
+  defp user_id_from(%Context{user: %{id: id}}) when is_binary(id), do: id
+  defp user_id_from(_), do: "unknown"
 end
