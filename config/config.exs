@@ -37,6 +37,10 @@ config :server, Prodigy.Server.Scheduler,
     expunge_job: [
       schedule: "@daily",
       task: {Prodigy.Server.Service.Messaging, :expunge, []}
+    ],
+    member_list_job: [
+      schedule: "@daily",
+      task: {Prodigy.Server.MemberList.Generator, :run, []}
     ]
   ]
 

@@ -47,7 +47,7 @@ defmodule Prodigy.Portal.Admin.UserFormTest do
           group <- tab.groups,
           spec <- group.fields do
         assert is_binary(spec.label)
-        assert spec.type in [:text, :date, :number, :select, :readonly, :name_row]
+        assert spec.type in [:text, :date, :number, :select, :checkbox, :readonly, :name_row]
 
         case spec.type do
           :readonly ->
@@ -278,6 +278,74 @@ defmodule Prodigy.Portal.Admin.UserFormTest do
     test "format_enabled shows ISO date or an em-dash" do
       assert UserForm.format_enabled(%Household{enabled_date: nil}) == "-"
       assert UserForm.format_enabled(%Household{enabled_date: ~D[2026-04-18]}) == "2026-04-18"
+    end
+
+    test "format_member_list_date returns '-' when never set" do
+      assert UserForm.format_member_list_date(blank_user()) == "-"
+    end
+
+    test "format_member_list_date renders the stored MMDDYYYY as MM/DD/YY" do
+      user = %{blank_user() | profile: %{"02AF" => "05131926"}}
+      assert UserForm.format_member_list_date(user) == "05/13/26"
+    end
+  end
+
+  describe "Member List opt-in" do
+    test "from_user/1 reads in_member_list from PRF_ML_INDICATOR" do
+      listed = %{blank_user() | profile: %{"02B0" => Base.encode64(<<1>>)}}
+      unlisted = %{blank_user() | profile: %{"02B0" => Base.encode64(<<0>>)}}
+      absent = blank_user()
+
+      assert UserForm.from_user(listed).in_member_list == true
+      assert UserForm.from_user(unlisted).in_member_list == false
+      assert UserForm.from_user(absent).in_member_list == false
+    end
+
+    test "flipping the checkbox emits 02B0 + 02AF in the user patch" do
+      cs = UserForm.changeset(UserForm.from_user(blank_user()), %{"in_member_list" => "true"})
+      assert cs.valid?
+
+      patch = UserForm.profile_patch(cs)
+      assert patch.user["02B0"] == Base.encode64(<<1>>)
+
+      # 02AF is stamped to today in the DOS client's 19YY format.
+      today = Date.utc_today()
+      mm = today.month |> Integer.to_string() |> String.pad_leading(2, "0")
+      dd = today.day |> Integer.to_string() |> String.pad_leading(2, "0")
+      yy = rem(today.year, 100) |> Integer.to_string() |> String.pad_leading(2, "0")
+      assert patch.user["02AF"] == "#{mm}#{dd}19#{yy}"
+    end
+
+    test "opt-out writes <<0>> indicator (mirrors MSPLDEL1's MOVE 0x00)" do
+      listed_user = %{blank_user() | profile: %{"02B0" => Base.encode64(<<1>>)}}
+
+      cs =
+        UserForm.changeset(UserForm.from_user(listed_user), %{"in_member_list" => "false"})
+
+      assert cs.valid?
+      patch = UserForm.profile_patch(cs)
+      assert patch.user["02B0"] == Base.encode64(<<0>>)
+      assert is_binary(patch.user["02AF"])
+    end
+
+    test "leaving the checkbox alone does NOT emit 02B0 or 02AF" do
+      # No `in_member_list` key in the submitted params - simulates the
+      # admin opening the modal, editing nothing in that group, saving.
+      cs = UserForm.changeset(UserForm.from_user(blank_user()), %{"first_name" => "Ada"})
+      patch = UserForm.profile_patch(cs)
+
+      refute Map.has_key?(patch.user, "02B0")
+      refute Map.has_key?(patch.user, "02AF")
+    end
+
+    test "submitting the same value as already loaded is also a no-op" do
+      listed = %{blank_user() | profile: %{"02B0" => Base.encode64(<<1>>)}}
+
+      cs = UserForm.changeset(UserForm.from_user(listed), %{"in_member_list" => "true"})
+      patch = UserForm.profile_patch(cs)
+
+      refute Map.has_key?(patch.user, "02B0")
+      refute Map.has_key?(patch.user, "02AF")
     end
   end
 

@@ -294,6 +294,90 @@ defmodule Prodigy.Core.Objects.CodecTest do
     end
   end
 
+  describe "build/1" do
+    # Captured golden blobs of the Prodigy data-object format that build/1
+    # must reproduce byte-for-byte.
+    @ref_data_obj Base.decode16!(
+                    "3342303030303030442020010C2100200101610F000268656C6C6F20776F726C64",
+                    case: :mixed
+                  )
+    @ref_index_obj Base.decode16!(
+                     "3342303030303132532020020C2A0020040761180002000102030405060708090A0B0C0D0E0F10111213",
+                     case: :mixed
+                   )
+
+    test "matches the golden blob byte-for-byte (data object, defaults)" do
+      assert Codec.build(%{name: "3B000000", ext: "D", sequence: 1, data: "hello world"}) ==
+               @ref_data_obj
+    end
+
+    test "matches the golden blob byte-for-byte (index object, non-default fields)" do
+      assert Codec.build(%{
+               name: "3B000012",
+               ext: "S",
+               sequence: 2,
+               set_size: 4,
+               version: 7,
+               data: :binary.list_to_bin(Enum.to_list(0..19))
+             }) == @ref_index_obj
+    end
+
+    test "round-trips with parse/1: header reflects spec, segment carries 0x02 + data" do
+      data = <<1, 2, 3, 0, 255, ?A>>
+
+      blob =
+        Codec.build(%{
+          name: "MSPLSTAT",
+          ext: "D",
+          sequence: 1,
+          set_size: 3,
+          version: 42,
+          data: data
+        })
+
+      assert {:ok, %Codec{header: h, segments: [seg]}} = Codec.parse(blob)
+      assert h.name == "MSPLSTATD  "
+      assert h.sequence == 1
+      assert h.type == 0x0C
+      assert h.set_size == 3
+      assert h.candidacy == 1
+      assert h.candidacy_name == :none
+      assert h.version == 42
+      assert h.length == byte_size(blob)
+      assert seg.type == 0x61
+      assert seg.type_name == :program_data
+      assert seg.payload == <<0x02>> <> data
+    end
+
+    test "defaults: candidacy 1 (:none), version 1, set_size 1, type 0x0C" do
+      assert {:ok, %Codec{header: h}} =
+               Codec.build(%{name: "3B000000", ext: "D", sequence: 1, data: ""}) |> Codec.parse()
+
+      assert {h.candidacy, h.version, h.set_size, h.type} == {1, 1, 1, 0x0C}
+    end
+
+    test "ext is space-padded to 3 bytes inside the 11-byte header name" do
+      blob = Codec.build(%{name: "3L000001", ext: "Y", sequence: 1, data: "x"})
+      assert {:ok, %Codec{header: %{name: "3L000001Y  "}}} = Codec.parse(blob)
+    end
+
+    test "rejects a name that isn't exactly 8 bytes" do
+      assert_raise FunctionClauseError, fn ->
+        Codec.build(%{name: "3B", ext: "D", sequence: 1, data: ""})
+      end
+    end
+
+    test "rejects out-of-range candidacy / version" do
+      assert_raise ArgumentError, fn ->
+        Codec.build(%{name: "3B000000", ext: "D", sequence: 1, data: "", candidacy: 8})
+      end
+
+      assert_raise ArgumentError, fn ->
+        Codec.build(%{name: "3B000000", ext: "D", sequence: 1, data: "", version: 0x2000})
+      end
+    end
+  end
+
   describe "public accessors" do
     test "header_size/0 returns 18" do
       assert Codec.header_size() == 18

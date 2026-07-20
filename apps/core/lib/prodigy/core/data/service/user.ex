@@ -91,6 +91,34 @@ defmodule Prodigy.Core.Data.Service.User do
   def last_logon_time(%__MODULE__{} = u), do: profile_string(u, "02C4")
 
   @doc """
+  `true` iff the user has opted in to the Member List directory.
+  Source: `PRF_ML_INDICATOR` (TAC 0x02B0), a 1-byte `:binary` flag
+  stored base64-encoded in JSONB (so the `<<0>>` "opted out" value
+  survives the JSONB-as-text round-trip). Listed when the decoded
+  byte is non-zero; nil/missing/undecodable is treated as not listed.
+  """
+  def in_member_list?(%__MODULE__{profile: profile}) do
+    case profile && Map.get(profile, "02B0") do
+      v when is_binary(v) and v != "" ->
+        case Base.decode64(v) do
+          {:ok, <<byte, _::binary>>} -> byte != 0
+          _ -> false
+        end
+
+      _ ->
+        false
+    end
+  end
+
+  @doc """
+  The stamp `PRF_ML_DATE` (TAC 0x02AF) carries - the date the indicator
+  was last flipped. Format on the wire is 8-char `MMDDYYYY` (the DOS
+  client's `SYS_DATE` includes a hard-coded `19xx` century, so a 2026
+  flip lands as `"05131926"`). Returns the raw string or `nil`.
+  """
+  def member_list_date(%__MODULE__{} = u), do: profile_string(u, "02AF")
+
+  @doc """
   Canonical "First Last" display string, skipping either half when
   absent. Used anywhere a user's name is shown - admin table, message
   attribution, logs.

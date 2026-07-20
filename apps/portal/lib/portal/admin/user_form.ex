@@ -134,6 +134,27 @@ defmodule Prodigy.Portal.Admin.UserForm do
               entity: :user
             }
           ]
+        },
+        %{
+          title: "Member List",
+          fields: [
+            # tac: nil keeps this out of the generic build_patch flow;
+            # profile_patch/1 writes 0x02B0 + 0x02AF together (mirroring
+            # MSPLADD1/MSPLDEL1 in TBOL).
+            %{
+              field: :in_member_list,
+              label: "Listed in Member List",
+              type: :checkbox,
+              tac: nil,
+              entity: :user
+            },
+            %{
+              label: "Last change",
+              type: :readonly,
+              source: :user,
+              value_fn: &__MODULE__.format_member_list_date/1
+            }
+          ]
         }
       ]
     },
@@ -263,6 +284,11 @@ defmodule Prodigy.Portal.Admin.UserForm do
 
     field(:concurrency_limit, :integer)
 
+    # Member-list opt-in (PRF_ML_INDICATOR 0x02B0). Modeled as a plain
+    # boolean here; profile_patch/1 translates back to the 1-byte
+    # base64-encoded JSONB form and stamps PRF_ML_DATE (0x02AF) on flip.
+    field(:in_member_list, :boolean)
+
     # Household-backed fields
     field(:address_1, :string)
     field(:address_2, :string)
@@ -294,6 +320,7 @@ defmodule Prodigy.Portal.Admin.UserForm do
       gender: User.gender(user),
       birthdate: User.birthdate(user),
       concurrency_limit: user.concurrency_limit,
+      in_member_list: User.in_member_list?(user),
       address_1: Household.address_1(household),
       address_2: Household.address_2(household),
       city: Household.city(household),
@@ -323,9 +350,36 @@ defmodule Prodigy.Portal.Admin.UserForm do
   """
   def profile_patch(%Ecto.Changeset{} = cs) do
     %{
-      user: build_patch(cs, @user_tac_fields),
+      user: build_patch(cs, @user_tac_fields) |> merge_member_list_patch(cs),
       household: build_patch(cs, @household_tac_fields)
     }
+  end
+
+  # When the admin flips `in_member_list`, write the 1-byte indicator
+  # (base64-encoded; ProfileSchema declares 0x02B0 as :binary) and stamp
+  # 0x02AF with today's date. Mirrors MSPLADD1/MSPLDEL1 in TBOL, which
+  # write both fields together via LINK profile_pgm. No-op when the
+  # checkbox value didn't change.
+  defp merge_member_list_patch(user_patch, %Ecto.Changeset{} = cs) do
+    case Map.fetch(cs.changes, :in_member_list) do
+      :error ->
+        user_patch
+
+      {:ok, new_value} ->
+        indicator = if new_value, do: <<1>>, else: <<0>>
+
+        user_patch
+        |> Map.put(tac_key(0x02B0), Base.encode64(indicator))
+        |> Map.put(tac_key(0x02AF), format_sys_date(Date.utc_today()))
+    end
+  end
+
+  # Today's date in the DOS client's hard-coded `MMDDYYYY` form with a
+  # `19YY` century prefix (parity with how the wire-side path stamps
+  # PRF_ML_DATE - see User.member_list_date for the format note).
+  defp format_sys_date(%Date{month: m, day: d, year: y}) do
+    pad = fn n -> n |> Integer.to_string() |> String.pad_leading(2, "0") end
+    pad.(m) <> pad.(d) <> "19" <> pad.(rem(y, 100))
   end
 
   @doc """
@@ -408,4 +462,23 @@ defmodule Prodigy.Portal.Admin.UserForm do
   @doc false
   def format_enabled(%Household{enabled_date: nil}), do: "-"
   def format_enabled(%Household{enabled_date: %Date{} = d}), do: Date.to_iso8601(d)
+
+  @doc """
+  Display string for the read-only "Last change" row in the Member List
+  group. Renders the stored `MMDDYYYY` as `MM/DD/YY` (the last two
+  digits match what the DOS client paints in the picker). Returns `-`
+  when the user has never been opted in or out.
+  """
+  def format_member_list_date(%User{} = u) do
+    case User.member_list_date(u) do
+      nil ->
+        "-"
+
+      <<m::binary-2, d::binary-2, _cc::binary-2, yy::binary-2>> ->
+        "#{m}/#{d}/#{yy}"
+
+      raw ->
+        raw
+    end
+  end
 end

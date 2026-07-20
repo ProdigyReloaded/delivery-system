@@ -311,4 +311,116 @@ defmodule Prodigy.Core.Objects.StoreTest do
       assert keyword_row_for("A", 0, 0x04) == "NEWS"
     end
   end
+
+  describe "reconcile_prefix/2" do
+    alias Prodigy.Core.Data.Repo
+    alias Prodigy.Core.Data.Service.Object
+    alias Prodigy.Core.Objects.Codec
+    import Ecto.Query
+
+    # Build a real Prodigy object via Codec.build/1 - exactly what the
+    # member-list generator passes to reconcile_prefix.
+    defp obj_blob(name, ext, sequence, version, data) do
+      Codec.build(%{
+        name: name,
+        ext: ext,
+        sequence: sequence,
+        set_size: 1,
+        version: version,
+        data: data
+      })
+    end
+
+    defp count_with_prefix(pat) do
+      Repo.aggregate(from(o in Object, where: like(o.name, ^pat)), :count, :name)
+    end
+
+    defp insert_raw!(name11, sequence, type, version, contents) do
+      Repo.insert!(%Object{
+        name: name11,
+        sequence: sequence,
+        type: type,
+        version: version,
+        contents: contents,
+        content_hash: :crypto.hash(:sha256, contents)
+      })
+    end
+
+    test "inserts everything when the namespace starts empty" do
+      blobs = [
+        obj_blob("3B000000", "D", 1, 1, "DAD!"),
+        obj_blob("3B000011", "S", 1, 1, "seq-set"),
+        obj_blob("3B000012", "S", 1, 1, "leaf-1"),
+        obj_blob("MSPLSTAT", "D", 1, 1, "states")
+      ]
+
+      assert {:ok, %{upserted: 4, deleted: 0}} =
+               Store.reconcile_prefix(["3B", "MSPLSTAT"], blobs)
+
+      assert count_with_prefix("3B%") == 3
+      assert count_with_prefix("MSPLSTAT%") == 1
+    end
+
+    test "replaces prior-run rows; stale rows pruned (e.g. a leaf that vanished)" do
+      # First run: seq set + 2 leaves.
+      run1 = [
+        obj_blob("3B000011", "S", 1, 1, "seq-old"),
+        obj_blob("3B000012", "S", 1, 1, "leaf1-old"),
+        obj_blob("3B000022", "S", 1, 1, "leaf2-old")
+      ]
+
+      {:ok, %{upserted: 3, deleted: 0}} = Store.reconcile_prefix(["3B"], run1)
+      assert count_with_prefix("3B%") == 3
+
+      # Second run: population shrank to 1 leaf - leaf 2 must disappear,
+      # leaf 1 and the seq set are replaced.
+      run2 = [
+        obj_blob("3B000011", "S", 1, 2, "seq-new"),
+        obj_blob("3B000012", "S", 1, 2, "leaf1-new")
+      ]
+
+      assert {:ok, %{upserted: 2, deleted: 3}} = Store.reconcile_prefix(["3B"], run2)
+      assert count_with_prefix("3B%") == 2
+
+      leaf1 = Repo.one!(from o in Object, where: o.name == "3B000012S  ")
+      assert leaf1.version == 2
+      assert :binary.match(leaf1.contents, "leaf1-new") != :nomatch
+
+      refute Repo.exists?(from o in Object, where: o.name == "3B000022S  ")
+    end
+
+    test "does NOT touch rows outside the prefix namespace" do
+      # An MSPL* program object that must survive a member-list reconcile.
+      insert_raw!("MSPLNAMEP01", 1, 0x0C, 1, <<1, 2, 3>>)
+      assert count_with_prefix("MSPLNAME%") == 1
+
+      blobs = [obj_blob("MSPLSTAT", "D", 1, 1, "states")]
+      {:ok, _} = Store.reconcile_prefix(["MSPLSTAT"], blobs)
+
+      assert count_with_prefix("MSPLNAME%") == 1,
+             "MSPLNAME (program) must survive a member-list reconcile"
+
+      assert count_with_prefix("MSPLSTAT%") == 1
+    end
+
+    test "rolls back when a blob is malformed; namespace unchanged" do
+      insert_raw!("3BSEED   D ", 1, 0x0C, 1, <<>>)
+      pre = count_with_prefix("3B%")
+
+      bad = [obj_blob("3B000011", "S", 1, 1, "ok"), <<1, 2, 3>>]
+      assert {:error, {:bad_blob, _}} = Store.reconcile_prefix(["3B"], bad)
+
+      assert count_with_prefix("3B%") == pre,
+             "transaction must roll back when a blob fails to parse"
+    end
+
+    test "empty blob list with a matching prefix deletes everything in that namespace" do
+      insert_raw!("3BWIPE  D  ", 1, 0x0C, 1, <<>>)
+      insert_raw!("3BWIPE2 D  ", 1, 0x0C, 1, <<>>)
+      assert count_with_prefix("3B%") == 2
+
+      assert {:ok, %{upserted: 0, deleted: 2}} = Store.reconcile_prefix(["3B"], [])
+      assert count_with_prefix("3B%") == 0
+    end
+  end
 end

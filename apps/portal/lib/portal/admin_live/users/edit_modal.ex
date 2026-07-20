@@ -379,6 +379,29 @@ defmodule Prodigy.Portal.AdminLive.Users.EditModal do
     """
   end
 
+  defp horiz_control(%{spec: %{type: :checkbox}} = assigns) do
+    # Hidden "false" sibling ensures the form always submits a value for
+    # this name even when the checkbox is unchecked (no native checkbox
+    # round-trip otherwise). Plug parses duplicate keys "last wins", so
+    # a checked box overrides the hidden via its later position.
+    checked? = Phoenix.HTML.Form.normalize_value("checkbox", assigns.field.value)
+    assigns = assign(assigns, :checked?, checked?)
+
+    ~H"""
+    <div class="form-check form-switch">
+      <input type="hidden" name={@field.name} value="false" />
+      <input
+        type="checkbox"
+        id={@field.id}
+        name={@field.name}
+        value="true"
+        checked={@checked?}
+        class="form-check-input"
+      />
+    </div>
+    """
+  end
+
   defp horiz_control(%{spec: %{type: :select}} = assigns) do
     options = select_options(assigns.spec.options)
     assigns = assign(assigns, :options, options)

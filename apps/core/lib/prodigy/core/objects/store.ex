@@ -392,6 +392,79 @@ defmodule Prodigy.Core.Objects.Store do
     }
   end
 
+  # reconcile_prefix
+
+  @doc """
+  Make the `object` table exactly match `blobs` for the name namespace
+  covered by `prefixes` (`["3B", "3L", "MSPLSTAT"]`-style). Used by the
+  member-list nightly task: every run we generate the full set of
+  member-list objects, then call this to replace whatever was there.
+
+  Mechanics, all in one transaction:
+
+    1. Delete every `object` row whose `name LIKE ANY(prefixes)` and
+       every `keyword` row whose `object_name LIKE ANY(prefixes)`.
+    2. Insert each new blob (parsed via `parse_import_blob/1`).
+    3. Broadcast `:objects_upserted` on success.
+
+  Returns `{:ok, %{upserted: integer, deleted: integer}}` on success
+  (`deleted` counts only the object rows; keyword rows in this namespace
+  shouldn't exist), or `{:error, reason}` if any blob fails to parse
+  (rolls the whole transaction back).
+
+  Caller is responsible for not passing a prefix that overlaps another
+  app's namespace: e.g. pass `"MSPLSTAT"` not `"MSPL"` to avoid
+  clobbering the member-list program objects (`MSPLNAME.PGM`, etc.).
+
+  Object-level uniqueness inside `blobs`: the function assumes each
+  `(name, sequence, type)` appears at most once. Duplicates will fail
+  the PK constraint and roll the transaction back.
+  """
+  @spec reconcile_prefix([String.t()], [binary()]) ::
+          {:ok, %{upserted: non_neg_integer(), deleted: non_neg_integer()}}
+          | {:error, term()}
+  def reconcile_prefix(prefixes, blobs) when is_list(prefixes) and is_list(blobs) do
+    patterns = Enum.map(prefixes, &(&1 <> "%"))
+
+    Repo.transaction(fn ->
+      parsed =
+        Enum.map(blobs, fn blob ->
+          case parse_import_blob(blob) do
+            {:ok, attrs} ->
+              attrs
+
+            {:error, reason} ->
+              Repo.rollback({:bad_blob, reason})
+          end
+        end)
+
+      {object_deleted, _} =
+        from(o in Object, where: fragment("? LIKE ANY(?)", o.name, ^patterns))
+        |> Repo.delete_all()
+
+      {_kw_deleted, _} =
+        from(k in Keyword, where: fragment("? LIKE ANY(?)", k.object_name, ^patterns))
+        |> Repo.delete_all()
+
+      Enum.each(parsed, fn attrs ->
+        %Object{}
+        |> cast(attrs, [:name, :sequence, :type, :version, :contents, :content_hash])
+        |> validate_required([:name, :sequence, :type, :version, :contents, :content_hash])
+        |> Repo.insert!()
+      end)
+
+      %{upserted: length(parsed), deleted: object_deleted}
+    end)
+    |> case do
+      {:ok, %{} = result} ->
+        broadcast(:objects_upserted)
+        {:ok, result}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   # read helpers
 
   @doc """

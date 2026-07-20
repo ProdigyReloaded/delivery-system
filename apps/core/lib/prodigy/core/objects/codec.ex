@@ -81,6 +81,11 @@ defmodule Prodigy.Core.Objects.Codec do
 
   @segment_keyword_navigation 0x71
   @segment_embedded_object 0x52
+  @segment_program_data 0x61
+
+  # The customary first byte inside a 0x61 (:program_data) segment's
+  # payload - a sub-type marker that precedes the actual data.
+  @program_data_subtype 0x02
 
   @segment_type_names %{
     0x01 => :program_call,
@@ -198,6 +203,74 @@ defmodule Prodigy.Core.Objects.Codec do
   end
 
   def parse_header(_), do: {:error, :too_short}
+
+  @doc """
+  Build a Prodigy data object blob: an 18-byte header followed by one
+  `0x61` (`:program_data`) segment that wraps `:data` behind the
+  customary `0x02` sub-type byte. This is the inverse of `parse/1` for
+  the data objects this codebase emits - CCDAM database objects
+  (`.D01`/`.S*`/`.Y*`), `MSPLSTAT.D01`, `ITRC0001.D`, etc.
+
+  Keys in `spec`:
+
+    * `:name` (required) - exactly 8 ASCII chars; the object base name.
+    * `:ext` (required) - up to 3 ASCII chars; space-padded to 3
+      (`"D"`, `"S"`, `"Y"`). Stored as the back 3 bytes of the 11-byte
+      header name field.
+    * `:sequence` (required) - 0..255. For CCDAM index objects this is
+      the search key id.
+    * `:data` (required) - the payload bytes (everything after the
+      segment framing).
+    * `:set_size` - default `1`.
+    * `:type` - the object type byte; default `0x0C` (`:program`),
+      which is what the reception system expects on these data objects.
+    * `:candidacy` - 0..7; default `1` (`:none` - ineligible for
+      staging; the DOS client never version-checks it).
+    * `:version` - 0..#{@max_version_value}; default `1`.
+
+  `parse(build(spec))` round-trips: the resulting `%Codec{}` has one
+  segment whose payload is `<<#{@program_data_subtype}, data::binary>>`.
+  """
+  @spec build(map()) :: binary()
+  def build(%{name: name, ext: ext, sequence: sequence, data: data} = spec)
+      when is_binary(name) and byte_size(name) == 8 and
+             is_binary(ext) and byte_size(ext) <= 3 and
+             is_integer(sequence) and sequence in 0..255 and is_binary(data) do
+    set_size = Map.get(spec, :set_size, 1)
+    type = Map.get(spec, :type, @type_program)
+    candidacy = Map.get(spec, :candidacy, @candidacy_none)
+    version = Map.get(spec, :version, 1)
+
+    unless candidacy in 0..7 and version in 0..@max_version_value and set_size in 0..255 and
+             type in 0..255 do
+      raise ArgumentError,
+            "Codec.build/1: candidacy must be 0..7, version 0..#{@max_version_value}, " <>
+              "set_size 0..255, type 0..255"
+    end
+
+    ext_padded = String.pad_trailing(ext, 3)
+
+    # 0x61 segment frame: type(1) + frame_len(2 LE) + 0x02 sub-type(1) + data.
+    # frame_len counts the whole frame, including the type byte and the 0x02.
+    segment_frame_len = 4 + byte_size(data)
+    total_len = @header_size + segment_frame_len
+
+    if total_len > 0xFFFF do
+      raise ArgumentError,
+            "Codec.build/1: object too large (#{total_len} bytes; the length field is 16-bit)"
+    end
+
+    <<cv_high, cv_low>> = <<candidacy::3, version::13>>
+
+    header =
+      name <>
+        ext_padded <>
+        <<sequence, type, total_len::16-little, cv_high, set_size, cv_low>>
+
+    segment = <<@segment_program_data, segment_frame_len::16-little, @program_data_subtype>> <> data
+
+    header <> segment
+  end
 
   @type t :: %__MODULE__{
           header: Header.t(),
