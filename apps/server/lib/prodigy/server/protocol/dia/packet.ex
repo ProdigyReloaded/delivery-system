@@ -18,7 +18,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
   DIA Protocol packet decoding functions
   """
   require Logger
-  alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm4, Fm64, Fm9}
+  alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm2, Fm4, Fm64, Fm9}
 
   import Prodigy.Core.Util
 
@@ -76,6 +76,22 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
   end
 
   @dialyzer {:nowarn_function, {:decode, 2}}
+
+  # FM2 - Transport Level Information (block sequencing for messages > 1K).
+  # Per spec section 3.1.2 the header is exactly 4 bytes; per section 2.1
+  # the high bit of byte 1 is the concatenation flag, so when set the
+  # next sub-header follows immediately in `rest` and we recurse, else
+  # `rest` is the application text.
+  @spec decode(binary(), Fm0.t()) :: {:ok, Fm0.t()}
+  def decode(<<4, 0::1, 2::7, num_blocks, block_num, rest::binary>>, fm0) do
+    {:ok, %Fm0{fm0 | fm2: %Fm2{num_blocks: num_blocks, block_num: block_num}, payload: rest}}
+  end
+
+  @spec decode(binary(), Fm0.t()) :: {:ok, Fm0.t()}
+  def decode(<<4, 1::1, 2::7, num_blocks, block_num, rest::binary>>, fm0) do
+    decode(rest, %Fm0{fm0 | fm2: %Fm2{num_blocks: num_blocks, block_num: block_num}})
+  end
+
   @spec decode(binary(), Fm0.t()) :: {:ok, Fm0.t()}
   def decode(<<length, 4, user_id::binary-size(7), "0", rest::binary>> = _data, fm0) do
     correlation_id_length = length - 10
@@ -132,6 +148,14 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
 
     payload = fm4 <> fm9 <> fm64 <> packet.payload
 
+    # Note: outbound FM2 block-chunking is intentionally not implemented.
+    # Server responses are emitted as a single Fm0 packet; in practice the
+    # RS client accepts oversized server->client payloads, so subdividing
+    # into 1K FM2 blocks (spec section 3.1.2: an Fm2 header per block,
+    # consistent Number-of-Blocks, Current-Block incremented 1..N) does not
+    # appear to be required toward the client. If a future case proves
+    # otherwise - a large messaging.ex bounce body carrying the original
+    # message is the most likely candidate - the chunking would go here.
     <<16, bool2int(packet.concatenated)::1, 0::7, packet.function.value(),
       Fm0.Mode.encode(packet.mode)::binary, packet.src::32, packet.logon_seq, packet.message_id,
       packet.dest::32, byte_size(payload)::16, payload::binary>>

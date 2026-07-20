@@ -27,6 +27,7 @@ defmodule Prodigy.Server.Service.Messaging do
 
   alias Prodigy.Core.Data.Repo
   alias Prodigy.Core.Data.Service.{Message, User}
+  alias Prodigy.Core.MessagingLists
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Context
@@ -91,16 +92,148 @@ defmodule Prodigy.Server.Service.Messaging do
 
     to_others = length_value_chunk(others)
 
+    # Resolve nicknames + mailing-list names + literal IDs the user typed
+    # into the compose page. See MessagingLists.resolve_recipients/2 for
+    # the precedence rule (nicknames win over lists; lists expand to
+    # member nicknames; literal IDs are User-table-verified).
+    {resolved_others, failed_others} =
+      MessagingLists.resolve_recipients(from.id, to_others)
+
+    # The fixed 7-char ids the client routed via the multi-recipient
+    # to_ids slot need the same existence check; misses join failed_others
+    # for the bounce.
+    {resolved_fixed, failed_fixed} = verify_fixed_ids(to_ids)
+
+    all_recipients = Enum.uniq(resolved_fixed ++ resolved_others)
+    failed = Enum.uniq(failed_fixed ++ failed_others)
+
     send_message(
       from.id,
       User.full_name(from),
-      to_ids,
-      to_others,
+      all_recipients,
+      [],
       subject,
       message
     )
 
+    if failed != [] do
+      send_bounce(from.id, failed, subject, message)
+    end
+
     :ok
+  end
+
+  # Existence check for the fixed 7-char id slots, in one batched query.
+  # Empty/blank ids are dropped (the client pads trailing slots with
+  # spaces). Misses land in `failed` so the synthesized bounce surfaces
+  # them. Returns {existing_ids, missing_ids}, input order preserved.
+  defp verify_fixed_ids(ids) do
+    trimmed =
+      ids
+      |> Enum.map(&String.trim(to_string(&1)))
+      |> Enum.reject(&(&1 == ""))
+
+    existing =
+      Repo.all(
+        Ecto.Query.from(u in User, where: u.id in ^Enum.uniq(trimmed), select: u.id)
+      )
+      |> MapSet.new()
+
+    Enum.split_with(trimmed, &MapSet.member?(existing, &1))
+  end
+
+  # Insert a single bounce row in the sender's mailbox. The body is
+  # pre-formatted into the wire shape the v2 synth MSZB025X.PGM variant
+  # expects, starting at what the client treats as byte 5 (1-indexed) of
+  # the message-fetch response:
+  #
+  #   byte 0    flags - low 7 bits = MSZB0R2S sequence (0x63 = 99 selects
+  #             our v2 synth template MSZB0R2S.D99); bit 7
+  #             (recipient-count >255 extension) intentionally not set
+  #   byte 1    failed-id count (low 8 bits)
+  #   bytes 2.. n * 7 fixed-width failed ids (Prodigy-ID-shaped only)
+  #   2 bytes   variable-extras length (BE) - additional non-7-char failed
+  #             strings packed as <1-byte len><text> entries
+  #   M bytes   variable-extras payload
+  #   2 bytes   original message body length (BE)   (* v2 wire extension *)
+  #   N bytes   original message body              (* v2 wire extension *)
+  #
+  # get_message/1 prepends the 4-byte response filler (bytes 0..3, unread
+  # by MSZB025X) and ships this as the body.
+  defp send_bounce(to_id, failed, orig_subject, orig_body) do
+    {fixed_ids, variable_extras} = split_failed_for_bounce(failed)
+
+    fixed_bin =
+      fixed_ids
+      |> Enum.take(255)
+      |> Enum.reduce(<<>>, fn id, acc -> acc <> pad_field(id, 7) end)
+
+    variable_bin =
+      variable_extras
+      |> Enum.reduce(<<>>, fn s, acc ->
+        bytes = :erlang.binary_part(s, 0, min(byte_size(s), 255))
+        acc <> <<byte_size(bytes)::8, bytes::binary>>
+      end)
+
+    send_date = DateTime.truncate(Timex.now(), :second)
+    expunge_date = Timex.shift(send_date, days: 14)
+
+    # Prefix the original body with Subject + Sent-on metadata. The
+    # MSZB0R2S.D99 template footer ends after "...can get messages.";
+    # this prefix gives the bounce display its dynamic per-message
+    # lines (40-col padded for column alignment) before the actual
+    # body bytes flow into the page. Subject is truncated to match
+    # the 0..19 slice send_message/6 uses when storing delivered
+    # rows; date renders in US/Eastern per the codebase convention
+    # established in Service.Logoff.
+    truncated_subject = orig_subject |> to_string() |> String.slice(0..19)
+
+    date_str =
+      send_date
+      |> Timex.Timezone.convert("US/Eastern")
+      |> Timex.format!("{0M}/{0D}/{YY} {0h12}:{0m} {AM}")
+
+    blank_line = :binary.copy(" ", 40)
+    subject_line = pad_field("Subject: #{truncated_subject}", 40)
+    date_line = pad_field("Sent on: #{date_str}", 40)
+
+    body_with_meta =
+      blank_line <> subject_line <> date_line <> blank_line <> orig_body
+
+    payload =
+      <<
+        0x63,
+        length(fixed_ids)::8,
+        fixed_bin::binary,
+        byte_size(variable_bin)::16-big,
+        variable_bin::binary,
+        byte_size(body_with_meta)::16-big,
+        body_with_meta::binary
+      >>
+
+    Repo.insert!(%Message{
+      from_id: "HELP99A",
+      from_name: "PRODIGY SERVICE",
+      to_id: to_id,
+      subject: "Return To Sender",
+      sent_date: send_date,
+      retain_date: expunge_date,
+      contents: payload,
+      retain: false,
+      read: false,
+      bounce: true
+    })
+
+    :ok
+  end
+
+  # Failed recipients shaped like a Prodigy ID (7 chars, exactly 4 alpha +
+  # 2 digit + 1 hex alpha) go in the fixed-width list; everything else
+  # (nicknames, list names the user typoed, free-form garbage) lands in
+  # the variable-extras list so MSZB025X displays them with full text.
+  @prodigy_id_regex ~r/^[A-Za-z]{4}\d{2}[A-Fa-f]$/
+  defp split_failed_for_bounce(failed) do
+    Enum.split_with(failed, fn s -> Regex.match?(@prodigy_id_regex, s) end)
   end
 
   defp load_message_ids(user_id) do
@@ -136,13 +269,22 @@ defmodule Prodigy.Server.Service.Messaging do
         end)
 
       if message do
-        length = byte_size(message.contents)
+        res =
+          if message.bounce do
+            # Bounce body wire format expected by MSZB025X.PGM. The first
+            # 4 bytes are filler (unread by the parser); message.contents
+            # already starts at what MSZB025X treats as byte 5 (1-indexed)
+            # of the response - see send_bounce/4 for the layout.
+            <<0::32, message.contents::binary>>
+          else
+            length = byte_size(message.contents)
 
-        res = <<
-          0::104,
-          length::16-big,
-          message.contents::binary
-        >>
+            <<
+              0::104,
+              length::16-big,
+              message.contents::binary
+            >>
+          end
 
         {:ok, res}
       else
@@ -189,6 +331,11 @@ defmodule Prodigy.Server.Service.Messaging do
         retain_date = Timex.format!(message.retain_date, "{0M}/{0D}")
         retain = bool2int(message.retain)
         read = bool2int(message.read)
+        # MSZB016X.src line 141 reads msg_flags1 & 0x04 as the
+        # return-to-sender bit; when set the inbox display LINKs to
+        # MSZB025X.PGM (bounce parser). Bit at position 2 of the low
+        # nibble below.
+        bounce_bit = bool2int(message.bounce)
         from_name_length = String.length(message.from_name)
         subject_length = String.length(message.subject)
 
@@ -204,8 +351,12 @@ defmodule Prodigy.Server.Service.Messaging do
           0::1,
           # 1 = read, 0 = unread (show "*")
           read::1,
-          # ?
-          0x0::4,
+          # bit 3 (0x08): unused
+          0::1,
+          # bit 2 (0x04): return-to-sender (bounce)
+          bounce_bit::1,
+          # bits 1-0: unused
+          0::2,
           # 2nd flag byte - one of these indicates another field follows the subject, I think
           0,
           sent_date::binary-size(5),
@@ -297,6 +448,25 @@ defmodule Prodigy.Server.Service.Messaging do
     context
   end
 
+  # MSZX0BIP "message count" query reached from compose OPTIONS -> Count.
+  # Wire format (5 bytes): <<0x11, 0x01, 0x01, 0x00, month::8>>.
+  #
+  # The 1990 MSZX011X.WND has only two display fields - &10 (header
+  # suffix) and &11 (count text) - so the response shape is
+  # correspondingly simple (matches the v2 synth MSZX011A.src):
+  #
+  #   bytes 0-8     9-char month label                     -> &10
+  #   bytes 9-29    21-char total-sent count, left-padded  -> &11
+  #
+  # Count = total personal messages sent by all members of the
+  # household this month, with bounces excluded.  (HELP99A is the
+  # only from_id used for bounces and isn't a household member id,
+  # but explicit exclusion is robust.)
+  def handle(%Fm0{payload: <<0x11, 0x01, 0x01, 0x00, month_byte>>} = request, %Context{} = context) do
+    payload = build_message_count_response(context.user, month_byte)
+    {:ok, context, DiaPacket.encode(Fm0.make_response(payload, request))}
+  end
+
   def handle(%Fm0{payload: <<0x1, payload::binary>>} = request, %Context{} = context) do
     Logger.debug("messaging got payload: #{inspect(payload, base: :hex, limit: :infinity)}")
 
@@ -359,6 +529,85 @@ defmodule Prodigy.Server.Service.Messaging do
     case response do
       {:ok, payload} -> {:ok, context, DiaPacket.encode(Fm0.make_response(payload, request))}
       _ -> {:ok, context}
+    end
+  end
+
+  # Build the 30-byte response MSZX011A.src expects (v2 synth).
+  # See the handle/2 clause above for the wire-format spec.
+  defp build_message_count_response(%User{household_id: household_id}, month_byte) do
+    {year, month} = resolve_year_and_month(month_byte)
+    {first_dt, next_first_dt} = month_bounds(year, month)
+
+    # Up to 6 household members - join over user.id since Message.from_id
+    # carries the per-user id, not the household id.
+    member_ids =
+      User
+      |> Ecto.Query.where([u], u.household_id == ^household_id)
+      |> Ecto.Query.select([u], u.id)
+      |> Repo.all()
+
+    total_sent =
+      Message
+      |> Ecto.Query.where([m], m.from_id in ^member_ids)
+      |> Ecto.Query.where([m], m.bounce == false)
+      |> Ecto.Query.where([m], m.sent_date >= ^first_dt and m.sent_date < ^next_first_dt)
+      |> Repo.aggregate(:count, :id)
+
+    month_label = format_month_label(year, month)
+    count_text = pad_field(Integer.to_string(total_sent), 21)
+
+    <<month_label::binary-size(9), count_text::binary-size(21)>>
+  end
+
+  # Month byte comes from MSZX0BIP via SYS_DATE; year is the current
+  # year in US/Eastern (same convention as Logoff and the bounce
+  # "Sent on:" line).
+  defp resolve_year_and_month(month_byte) do
+    eastern_now = Timex.now() |> Timex.Timezone.convert("US/Eastern")
+    {eastern_now.year, month_byte}
+  end
+
+  defp month_bounds(year, month) do
+    {:ok, first_date} = Date.new(year, month, 1)
+    first_dt = DateTime.new!(first_date, ~T[00:00:00], "Etc/UTC")
+
+    next_first_date =
+      case month do
+        12 -> Date.new!(year + 1, 1, 1)
+        _ -> Date.new!(year, month + 1, 1)
+      end
+
+    next_first_dt = DateTime.new!(next_first_date, ~T[00:00:00], "Etc/UTC")
+    {first_dt, next_first_dt}
+  end
+
+  # Render " MMM YYYY" (9 chars) for the &10 field.
+  defp format_month_label(year, month) do
+    name =
+      case month do
+        1 -> "JAN"
+        2 -> "FEB"
+        3 -> "MAR"
+        4 -> "APR"
+        5 -> "MAY"
+        6 -> "JUN"
+        7 -> "JUL"
+        8 -> "AUG"
+        9 -> "SEP"
+        10 -> "OCT"
+        11 -> "NOV"
+        12 -> "DEC"
+        _ -> "???"
+      end
+
+    " #{name} #{year}"
+  end
+
+  # Left-align text, right-pad with spaces to width; truncate if too long.
+  defp pad_field(text, width) when is_binary(text) do
+    case byte_size(text) do
+      n when n >= width -> :erlang.binary_part(text, 0, width)
+      n -> text <> :binary.copy(" ", width - n)
     end
   end
 end

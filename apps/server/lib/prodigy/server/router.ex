@@ -131,6 +131,8 @@ defmodule Prodigy.Server.Router do
             <<0x04, _rest::binary>> -> DataCollection
             # sends 0xF on entry and exit; Mailing List sends 06
             <<0x0D, _rest::binary>> -> AddressBook
+            # MSZX0BIP message-count query (compose OPTIONS -> Count)
+            <<0x11, _rest::binary>> -> Messaging
           end
 
         0x00D201 ->

@@ -40,6 +40,29 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     ])
     |> Repo.insert!()
 
+    # The "send message" test below addresses BBBB12B and CCCC12C
+    # alongside two free-form names.  Both need to be real users
+    # now that internal_send_message verifies recipients via
+    # MessagingLists.resolve_recipients/2 - an unknown literal id
+    # used to silently insert into a phantom inbox; today it routes
+    # to the bounce path.  Seed both so the test continues to
+    # exercise the plain delivery branch.
+    %Household{id: "BBBB12", enabled_date: @today}
+    |> change
+    |> put_assoc(:users, [
+      %User{id: "BBBB12B", profile: %{}, date_enrolled: @today}
+      |> User.changeset(%{password: "foobaz"})
+    ])
+    |> Repo.insert!()
+
+    %Household{id: "CCCC12", enabled_date: @today}
+    |> change
+    |> put_assoc(:users, [
+      %User{id: "CCCC12C", profile: %{}, date_enrolled: @today}
+      |> User.changeset(%{password: "foobaz"})
+    ])
+    |> Repo.insert!()
+
     {:ok, router_pid} = GenServer.start_link(Router, nil)
 
     # would like to put logon here, and logoff in a callback, but there is only on_exit which is called after
@@ -128,8 +151,18 @@ defmodule Prodigy.Server.Service.Messaging.Test do
       Message
       |> Repo.all()
 
-    # there should now be two messages, one to BBBB12B and one to CCCC12C
-    assert(length(messages) == 2)
+    # Two deliveries to the fixed-id recipients (BBBB12B + CCCC12C),
+    # plus one bounce row to AAAA12A from HELP99A for the "others"
+    # field - "JOHN DOE" and "SALLY SMITH" don't match any nickname,
+    # list, or real user id under this owner.  The bounce path is
+    # exercised by messaging_recipient_resolution_test in detail;
+    # here we just confirm the basic delivery wire works and that
+    # the bounce row tags itself correctly so the count stays sane.
+    deliveries = Enum.filter(messages, &(&1.bounce == false))
+    bounces = Enum.filter(messages, & &1.bounce)
+
+    assert ["BBBB12B", "CCCC12C"] = deliveries |> Enum.map(& &1.to_id) |> Enum.sort()
+    assert [%Message{to_id: "AAAA12A", from_id: "HELP99A"}] = bounces
 
     logoff(context.router_pid)
   end

@@ -35,6 +35,11 @@ defmodule Prodigy.Core.Data.Service.Message do
     field(:contents, :binary)
     field(:retain, :boolean)
     field(:read, :boolean)
+    # Return-to-Sender notification synthesized by the server. See the
+    # 20260516000000_add_bounce_to_message migration for the wire-format
+    # rationale and Prodigy.Server.Service.Messaging.get_message for how
+    # this changes the body wire format the DOS client receives.
+    field(:bounce, :boolean, default: false)
   end
 
   def changeset(message, params \\ %{}) do

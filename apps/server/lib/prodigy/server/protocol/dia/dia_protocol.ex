@@ -37,7 +37,7 @@ defmodule Prodigy.Server.Protocol.Dia do
   use GenServer
 
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
-  alias Prodigy.Server.Protocol.Dia.Packet.Fm0
+  alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm2}
   alias Prodigy.Server.Protocol.Tcs.Packet, as: TcsPacket
 
   defmodule Options do
@@ -51,7 +51,15 @@ defmodule Prodigy.Server.Protocol.Dia do
 
   defmodule State do
     @moduledoc false
-    defstruct router_module: Prodigy.Server.Router, router_pid: nil, buffer: <<>>
+    # fm2_blocks: accumulated application-text payloads for an in-flight
+    # multi-block FM2 message. Per the DIA spec (section 3.1.2) a logical
+    # message > 1K is sent as a series of DIA packets each carrying its
+    # own Fm0 + Fm2 header; only the block_num varies. We buffer until
+    # the last block arrives, then concatenate and dispatch.
+    defstruct router_module: Prodigy.Server.Router,
+              router_pid: nil,
+              buffer: <<>>,
+              fm2_blocks: <<>>
   end
 
   def handle_packet(pid, %TcsPacket{} = packet) do
@@ -118,6 +126,40 @@ defmodule Prodigy.Server.Protocol.Dia do
 
       {:ok, response, new_state} ->
         {:reply, {:ok, response}, new_state}
+    end
+  end
+
+  # Multi-block FM2: not the final block. Buffer this block's payload
+  # and clear the TCS-level buffer so the next packet decodes fresh.
+  # Send no response - the client doesn't expect one per intermediate
+  # block (a server reply would trip the same OMCM 10 "out of sequence
+  # message received" path documented in fm0_packet.ex).
+  defp process_packet(
+         %Fm0{fm2: %Fm2{num_blocks: num_blocks, block_num: block_num}, payload: payload},
+         %State{} = state
+       )
+       when num_blocks > 1 and block_num < num_blocks do
+    Logger.debug("DIA Fm2: received block #{block_num} of #{num_blocks}, buffering")
+    {:ok, %{state | buffer: <<>>, fm2_blocks: state.fm2_blocks <> payload}}
+  end
+
+  # Multi-block FM2: final block. Concatenate any buffered earlier blocks
+  # with this one and dispatch the reassembled application text as a
+  # single logical packet. The packet handed to the router carries the
+  # final Fm0/Fm2 metadata; downstream services see the full payload.
+  defp process_packet(
+         %Fm0{fm2: %Fm2{num_blocks: num_blocks, block_num: block_num}, payload: payload} =
+           packet,
+         %State{} = state
+       )
+       when num_blocks > 0 and block_num == num_blocks do
+    Logger.debug("DIA Fm2: received final block #{block_num} of #{num_blocks}, dispatching")
+
+    reassembled = %Fm0{packet | payload: state.fm2_blocks <> payload}
+
+    case state.router_module.handle_packet(state.router_pid, reassembled) do
+      {:ok, response} -> {:ok, response, %{state | buffer: <<>>, fm2_blocks: <<>>}}
+      _ -> {:ok, %{state | buffer: <<>>, fm2_blocks: <<>>}}
     end
   end
 

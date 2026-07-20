@@ -25,7 +25,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet.Fm0 do
   use EnumType
 
   import Prodigy.Core.Util
-  alias Prodigy.Server.Protocol.Dia.Packet.{Fm4, Fm64, Fm9}
+  alias Prodigy.Server.Protocol.Dia.Packet.{Fm2, Fm4, Fm64, Fm9}
 
   defenum Function do
     @moduledoc "An enumeration of Fm0 Functions"
@@ -195,6 +195,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet.Fm0 do
             logon_seq: nil,
             message_id: nil,
             dest: nil,
+            fm2: nil,
             fm4: nil,
             fm9: nil,
             fm64: nil,
@@ -208,6 +209,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet.Fm0 do
           logon_seq: integer,
           message_id: integer,
           dest: integer,
+          fm2: Fm2.t(),
           fm4: Fm4.t(),
           fm9: Fm9.t(),
           fm64: Fm64.t(),
