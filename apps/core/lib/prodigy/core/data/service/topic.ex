@@ -1,4 +1,4 @@
-# Copyright 2022, Phillip Heller
+# Copyright 2022-2026, Phillip Heller
 #
 # This file is part of Prodigy Reloaded.
 #
