@@ -9,11 +9,9 @@
 #     and mounts Caddyfile.prod instead of Caddyfile.
 #   - Both overlays include db-seed; same script, sentinel-gated.
 services:
-  # Drop the 25234 host-port mapping the base file declares for vintage TCS
-  # clients. The hosted alpha instance does not expose that port; clients
-  # would reach it via Tailscale or a future port-forward VM.
   server:
-    ports: !reset []
+    ports: 
+      - "25234:25234"
 
   caddy:
     ports: !override
