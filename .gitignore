@@ -34,3 +34,11 @@ erl_crash.dump
 
 # Local, never-pushed scratch workspace.
 /private/
+
+# DOSBox client bundle artifacts - staged by apps/portal/fetch-start-bundle.sh
+# from the em-dosbox-packager and client-bundles repos. init.js and README.md
+# in that directory are tracked.
+/apps/portal/priv/static/start/dosbox.js
+/apps/portal/priv/static/start/dosbox.wasm
+/apps/portal/priv/static/start/loader.js
+/apps/portal/priv/static/start/*.data

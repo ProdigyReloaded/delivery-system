@@ -1,29 +1,29 @@
 # DOSBox client bundle
 
 This directory is where the portal's `/start` page loads the in-browser
-Prodigy client from. The bundle itself is **not committed** - it's
-produced by a separate project that builds em-dosbox under emscripten
-and packages the Prodigy RS virtual filesystem alongside it.
+Prodigy client from. Only `init.js` (hand-written glue wiring DOSBox's
+`Module` to the page's `#status` / `#progress` / `#canvas` elements) and
+this README are tracked; the bundle artifacts are gitignored and staged
+by `apps/portal/fetch-start-bundle.sh`.
 
 ## Expected files
 
-When populated, this directory should contain:
-
-- `dosbox.js` - emscripten loader (compiled)
-- `dosbox.wasm` - emscripten WASM binary
+- `dosbox.js` - emscripten loader (built)
+- `dosbox.wasm` - emscripten WASM binary (built)
 - `loader.js` - generated virtual-filesystem data loader
 - `rs-6.03.17.data` - packed Prodigy RS client image
-- `init.js` - hand-written glue that wires DOSBox's `Module` to the
-  page's `#status` / `#progress` / `#canvas` elements
+- `init.js` - hand-written glue (tracked)
 
 ## How to populate
 
-Until the build pipeline is integrated, operators drop a pre-built
-bundle in by hand. The source project lives at:
+The emulator runtime is built by the public
+`ProdigyReloaded/em-dosbox-packager` repo; the client bundle is packaged
+from the private `ProdigyReloaded/client-bundles` repo. Either:
 
-  <TODO: publish the dosbox build project + releases URL>
+    apps/portal/fetch-start-bundle.sh --from-release
 
-and the portal's Docker build will eventually `curl` a pinned release
-tarball into this directory. For local dev, copy the five files above
-into this directory from wherever you built them; they're listed in
-`.gitignore` so they won't be tracked.
+(downloads pinned artifacts from those repos' GitHub releases; the
+client-bundles download requires an authenticated `gh`), or, with local
+checkouts after running the packager:
+
+    apps/portal/fetch-start-bundle.sh --from-local ../client-bundles/6.03.17
