@@ -31,6 +31,18 @@ defmodule Prodigy.Core.Data.Service.Enroller do
   alias Prodigy.Core.Data.Repo
   alias Prodigy.Core.Data.Service.{Household, User}
 
+  # Default Personal Path entries planted at account creation. The 20-entry
+  # PATH handler (`TAOPPATH.PGM`) infinite-loops when entry 1 is empty, so
+  # every new account needs at least one valid jumpword. These three are
+  # always-on Prodigy keywords - safe defaults that the user can replace
+  # via CHANGEPATH. Keyed by JSONB TAC: 0x023F = path slot 1, 0x0240 = 2,
+  # 0x0241 = 3 (see ProfileSchema `:personal_path` group).
+  @default_path_profile %{
+    "023F" => "HEADLINES",
+    "0240" => "WEATHER MAP",
+    "0241" => "HIGHLIGHTS"
+  }
+
   @type option ::
           {:concurrency_limit, non_neg_integer()}
           | {:enroll_name, {String.t(), String.t()} | nil}
@@ -107,19 +119,22 @@ defmodule Prodigy.Core.Data.Service.Enroller do
   # With --enroll / :enroll_name, stamp date_enrolled + a minimal JSONB
   # profile so the Logon service treats the account as already enrolled.
   # The name TACs go straight into the profile map.
-  defp user_attrs(nil, _today, password), do: %{password: password}
+  defp user_attrs(nil, _today, password) do
+    %{password: password, profile: @default_path_profile}
+  end
 
   defp user_attrs({first, last}, today, password) do
     %{
       password: password,
       date_enrolled: today,
-      profile: %{
-        # 0x015F first_name, 0x015E last_name, 0x0161 title, 0x0157 gender
-        "015F" => first,
-        "015E" => last,
-        "0161" => "Mr.",
-        "0157" => "M"
-      }
+      profile:
+        Map.merge(@default_path_profile, %{
+          # 0x015F first_name, 0x015E last_name, 0x0161 title, 0x0157 gender
+          "015F" => first,
+          "015E" => last,
+          "0161" => "Mr.",
+          "0157" => "M"
+        })
     }
   end
 
