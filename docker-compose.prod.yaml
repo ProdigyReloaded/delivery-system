@@ -16,6 +16,12 @@ services:
   caddy:
     ports: !override
       - "80:80"
+    environment:
+      # See the (forwarded) snippet in Caddyfile.prod. Defaults assert
+      # https/443 (TLS terminated upstream); set http/80 in .env for a
+      # TLS-less bringup.
+      - FORWARDED_PROTO=${FORWARDED_PROTO:-https}
+      - FORWARDED_PORT=${FORWARDED_PORT:-443}
     volumes: !override
       - ./Caddyfile.prod:/etc/caddy/Caddyfile
       - caddy_data:/data

@@ -12,9 +12,16 @@
 # PHX_HOST is the same env var the app reads for its URL config, so the
 # two can't drift.
 (forwarded) {
-    header_up X-Forwarded-Proto https
+    # FORWARDED_PROTO/FORWARDED_PORT describe what is actually in front of
+    # Caddy. Unset (the default) asserts https/443 - correct wherever TLS
+    # terminates upstream (Cloudflare tunnel on alpha, ALB/CloudFront on
+    # AWS). A TLS-less bringup (e.g. localhost) sets FORWARDED_PROTO=http
+    # and FORWARDED_PORT=80 so Phoenix issues a non-Secure session cookie;
+    # otherwise Safari drops the cookie over plain http and the embedded
+    # LiveView's stale-session failsafe reloads the page in a tight loop.
+    header_up X-Forwarded-Proto {$FORWARDED_PROTO:https}
     header_up X-Forwarded-Host {$PHX_HOST}
-    header_up X-Forwarded-Port 443
+    header_up X-Forwarded-Port {$FORWARDED_PORT:443}
     # Replace X-Forwarded-For with Cloudflare's CF-Connecting-IP so the
     # upstream sees the real originating client address. Without this,
     # Caddy's default appends the docker-bridge IP and Phoenix's
