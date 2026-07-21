@@ -32,7 +32,11 @@ var statusElement = document.getElementById("status"),
 		// filename. The page is served at /start (no trailing slash), so
 		// the browser resolves those to / and 404s. Forcing locateFile to
 		// prepend /start/ fixes it.  TODO add this to em-dosbox build pipeline
-		locateFile: (path) => "/start/" + path
+		locateFile: (path) => "/start/" + path,
+		// Persistent client storage: before the emulator runs, mount IDBFS
+		// over the client's C: drive so its mutable CACHE.DAT / STAGE.DAT
+		// survive page reloads. Implementation in the block below.
+		preRun: [function () { __prodigyPersistPreRun(); }]
 	};
 Module.setStatus("Downloading..."),
 	window.onerror = e => {
@@ -42,6 +46,79 @@ Module.setStatus("Downloading..."),
 				e && console.error("[post-exception status] " + e)
 			}
 	}
+
+// ===== Persistent client storage (IDBFS overlay of mutable files) =====
+//
+// The client image loads into MEMFS, which is wiped every reload — which is
+// why nothing persisted before. DOSBox auto-mounts the FS root as C: (from
+// loader.js's ['./PRODIGY.BAT']); that launch argument is snapshotted at
+// dosbox.js load time, so preRun can't repoint it. Instead we leave C: as
+// the MEMFS root and persist ONLY the client's mutable files: on boot, mount
+// IDBFS at /persist, load it, and overlay any saved copies onto the root; on
+// a timer and on unload, copy the current files back and syncfs to IndexedDB.
+// This is also the better design — a new client bundle refreshes RS.EXE etc.
+// while the user's CACHE.DAT / STAGE.DAT carry forward. Module.FS / IDBFS are
+// exposed by the emulator's expose-runtime pre-js.
+//
+// Client-version guard: bump __PRODIGY_CLIENT_VERSION whenever the shipped
+// client image (rs-<version>.data) changes. If the persisted cache was written
+// under a different version, it is NOT overlaid — the client starts fresh from
+// the new image, avoiding stale/incompatible cache across an upgrade.
+var __PRODIGY_MUTABLE = ["CACHE.DAT", "STAGE.DAT"];
+var __PRODIGY_CLIENT_VERSION = "6.03.17";
+var __PRODIGY_VERSION_FILE = "/persist/.client_version";
+
+function __prodigyPersistPreRun() {
+	var FS = Module.FS, IDBFS = Module.IDBFS;
+	if (!FS || !IDBFS) { console.error("[persist] FS/IDBFS not exposed — skipping"); return; }
+	try { FS.mkdir("/persist"); } catch (e) {}
+	FS.mount(IDBFS, {}, "/persist");
+	// Block startup until the persisted filesystem has loaded.
+	Module.addRunDependency("prodigy-idbfs");
+	FS.syncfs(true, function (err) {
+		if (err) console.error("[persist] IDBFS load failed:", err);
+		var savedVer = null;
+		try { savedVer = new TextDecoder().decode(FS.readFile(__PRODIGY_VERSION_FILE)); } catch (e) {}
+		if (savedVer && savedVer !== __PRODIGY_CLIENT_VERSION) {
+			console.log("[persist] client version changed (" + savedVer + " -> " +
+				__PRODIGY_CLIENT_VERSION + ") — starting fresh, not overlaying old cache");
+		} else {
+			var restored = 0;
+			__PRODIGY_MUTABLE.forEach(function (f) {
+				try { FS.writeFile("/" + f, FS.readFile("/persist/" + f)); restored++; } catch (e) {}
+			});
+			console.log(restored
+				? "[persist] restored " + restored + " file(s) from IndexedDB"
+				: "[persist] first run — no saved state, using image defaults");
+		}
+		__prodigyInstallSyncTimers();
+		Module.removeRunDependency("prodigy-idbfs");
+	});
+}
+
+// Copy the client's current mutable files from C:\ (MEMFS root) into IDBFS,
+// stamp the client version, and flush to IndexedDB. Runs on a timer and on
+// unload; also exposed as window.__prodigyFlush() for manual triggering.
+function __prodigyInstallSyncTimers() {
+	var FS = Module.FS;
+	var flushing = false;
+	var flush = function () {
+		if (flushing) return;
+		flushing = true;
+		var saved = 0;
+		__PRODIGY_MUTABLE.forEach(function (f) {
+			try { FS.writeFile("/persist/" + f, FS.readFile("/" + f)); saved++; } catch (e) {}
+		});
+		try { FS.writeFile(__PRODIGY_VERSION_FILE, new TextEncoder().encode(__PRODIGY_CLIENT_VERSION)); } catch (e) {}
+		FS.syncfs(false, function () {
+			flushing = false;
+			console.log("[persist] flushed " + saved + " file(s) to IndexedDB");
+		});
+	};
+	setInterval(flush, 10000);
+	window.addEventListener("beforeunload", flush);
+	window.__prodigyFlush = flush;
+}
 
 // Handle console toggler button:
 toggleOutputElement.addEventListener('change', (e) => {

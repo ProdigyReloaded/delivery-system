@@ -27,3 +27,18 @@ client-bundles download requires an authenticated `gh`), or, with local
 checkouts after running the packager:
 
     apps/portal/fetch-start-bundle.sh --from-local ../client-bundles/6.03.17
+
+## Persistent client storage
+
+`init.js` mounts IDBFS over the client's mutable files (`CACHE.DAT`,
+`STAGE.DAT`) so they survive page reloads per browser: on boot it overlays
+any saved copies onto the emulated C:; on a 10s timer and on `beforeunload`
+it copies them back and `syncfs` to IndexedDB. This requires a runtime
+built with IDBFS and the `expose-runtime.js` pre-js (em-dosbox-packager
+v0.2.0+); with an older runtime `init.js` logs a warning and no-ops, and
+the client still runs (no persistence).
+
+When shipping a new client image (a different `rs-<version>.data`), bump
+`__PRODIGY_CLIENT_VERSION` in `init.js` to match. A version mismatch makes
+the boot skip the overlay and start fresh from the new image, avoiding
+stale/incompatible cache carried across the upgrade.
