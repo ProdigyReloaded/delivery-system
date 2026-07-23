@@ -239,30 +239,48 @@ defmodule Prodigy.Server.Protocol.Tcs do
         :receive
       )
 
+    # A single TCP read can carry more than one TCS frame (the peer may coalesce
+    # an ACK and a data frame into one segment, and TCP may merge segments into
+    # one delivery). Drain every complete frame from the buffer, not just the
+    # first -- otherwise the trailing frame sits unprocessed until the next
+    # inbound message (a WACK), which shows up as ~10s stalls.
     {new_buffer, new_tx_seq, new_rx_seq, rx_buffer} =
-      case Packet.decode(state.buffer <> data) do
-        {:ok, %Packet{} = packet, excess} ->
-          handle_packet_in({packet, excess}, packet.type, state)
-
-        {:error, :crc, _seq, excess} ->
-          # Don't trust seq from corrupted packet.
-          # Send NAKCCE for next expected sequence.
-          next_expected = state.rx_buffer.next_expected
-
-          Logger.debug(
-            "TCS: CRC error in packet, sending NAKCCE for expected seq=#{next_expected}"
-          )
-
-          transport.send(socket, Packet.nakcce(next_expected))
-          {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
-
-        {:fragment, excess} ->
-          {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
-      end
+      decode_all(state.buffer <> data, state)
 
     {:noreply,
      %{state | buffer: new_buffer, tx_seq: new_tx_seq, rx_seq: new_rx_seq, rx_buffer: rx_buffer},
      @timeout}
+  end
+
+  # Decode and handle every complete TCS frame in `buffer`, threading the TCS
+  # state (tx_seq/rx_seq/rx_buffer) across frames. Returns
+  # {leftover_buffer, tx_seq, rx_seq, rx_buffer}; the leftover is a partial frame
+  # (or empty) held for the next read.
+  defp decode_all(buffer, %State{socket: socket, transport: transport} = state) do
+    case Packet.decode(buffer) do
+      {:ok, %Packet{} = packet, excess} ->
+        {new_buffer, new_tx_seq, new_rx_seq, rx_buffer} =
+          handle_packet_in({packet, excess}, packet.type, state)
+
+        decode_all(
+          new_buffer,
+          %{state | tx_seq: new_tx_seq, rx_seq: new_rx_seq, rx_buffer: rx_buffer}
+        )
+
+      {:error, :crc, _seq, excess} ->
+        # Don't trust seq from corrupted packet; NAK the next expected sequence.
+        next_expected = state.rx_buffer.next_expected
+
+        Logger.debug(
+          "TCS: CRC error in packet, sending NAKCCE for expected seq=#{next_expected}"
+        )
+
+        transport.send(socket, Packet.nakcce(next_expected))
+        decode_all(excess, state)
+
+      {:fragment, excess} ->
+        {excess, state.tx_seq, state.rx_seq, state.rx_buffer}
+    end
   end
 
   # Shared helper for both transport-close signals.
