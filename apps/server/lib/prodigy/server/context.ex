@@ -28,6 +28,7 @@ defmodule Prodigy.Server.Context do
     :auth_timeout,
     :messaging,
     :bb,
+    :eaasy_sabre,
     # Transport + peer info set on Router init from the TCS init chain.
     # transport is "tcp" | "websocket"; source_address/source_port are
     # the client-side remote endpoint. Surfaced in the admin Source column.
