@@ -154,7 +154,7 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirMapper do
     Time.new!(hour_24, minute, 0)
   end
 
-  defp month_code_to_number(code), do: Map.get(@month_nums, code, "JAN")
+  defp month_code_to_number(code), do: Map.get(@month_nums, code, 1)
 
   @doc """
   Converts an Elixir Time struct to Sabre time format (e.g., "130P", "1030A").

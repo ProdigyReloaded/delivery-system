@@ -15,7 +15,7 @@
 
 defmodule Prodigy.Server.Service.Sabre.SabreData do
   @moduledoc """
-  Module for handling SD Airport related functionalities.
+  Compile-time loaded reference data for airport and airline code lookups.
   """
 
   @data_into_map fn file ->

@@ -27,7 +27,7 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirGqlClient do
 
       config :server, :sabre_graphql_url, "http://your-api-endpoint/api/graphql"
 
-  If not configured, defaults to `http://localhost:4000/api/graphql`.
+  If not configured, defaults to `http://localhost:4004/api/graphql`.
   """
 
   alias Prodigy.Server.Service.EaasySabre
@@ -51,7 +51,7 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirGqlClient do
     # A string will be posted to the GraphQL endpoint and a response received
     post_body = build_request(sabre_map)
 
-    Logger.info("Sending GraphQL request: #{post_body}")
+    Logger.debug("Sending GraphQL request: #{post_body}")
     url = Application.get_env(:server, :sabre_graphql_url, @url)
 
     response =
@@ -60,7 +60,7 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirGqlClient do
         headers: %{"Content-Type" => "text/plain"}
       )
 
-    Logger.info("Received GraphQL response: #{inspect(response)}")
+    Logger.debug("Received GraphQL response: #{inspect(response, limit: 50)}")
     parse_response(response)
   end
 

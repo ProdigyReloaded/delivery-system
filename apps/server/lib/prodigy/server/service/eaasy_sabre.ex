@@ -526,7 +526,7 @@ defmodule Prodigy.Server.Service.EaasySabre do
     Logger.info("retrieved flights: #{inspect(search_results)}")
 
     # each flight in search_results should have a formatted_date field
-    # If no flights returned, use the search date for display (formatted as "OCT 01 91")
+    # If no flights returned, use the search date for display (formatted as "OCT 01")
     date_display = cond do
       length(search_results) > 0 ->
         List.first(search_results).formatted_date

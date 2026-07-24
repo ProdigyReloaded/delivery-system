@@ -108,7 +108,9 @@ defmodule Prodigy.Server.Service.EaasySabre.Test do
   defp field_count(<<7, 0, 0x01, _code::16-big, count, 0, _rest::binary>>), do: count
 
   setup do
+    prev_client = Application.get_env(:server, :sabre_air_client)
     Application.put_env(:server, :sabre_air_client, MockClientNoFlights)
+    on_exit(fn -> Application.put_env(:server, :sabre_air_client, prev_client) end)
     {:ok, router_pid} = GenServer.start_link(Router, nil)
     [router_pid: router_pid]
   end
