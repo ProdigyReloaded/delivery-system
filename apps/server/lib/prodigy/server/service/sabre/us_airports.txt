@@ -1,0 +1,3376 @@
+00M;Bay Springs, MS
+00R;Livingston, TX
+00V;Colorado Springs, CO
+01G;Perry, NY
+01J;Hilliard, FL
+01M;Belmont, MS
+02A;Clanton, AL
+02C;Brookfield, WI
+02G;East Liverpool, OH
+03D;Memphis, MO
+04M;Pittsboro, MS
+04Y;Hawley, MN
+05C;Griffith, IN
+05F;Gatesville, TX
+05U;Eureka, NV
+06A;Tuskegee, AL
+06C;Chicago/Schaumburg, IL
+06D;Rolla, ND
+06M;Eupora, MS
+06N;Middletown, NY
+06U;Jackpot, NV
+07C;Auburn, IN
+07F;Gladewater, TX
+07G;Charlotte, MI
+07K;Central City, NE
+08A;Wetumpka, AL
+08D;Stanley, ND
+08K;Harvard, NE
+08M;Carthage, MS
+09A;Butler, AL
+09J;Jekyll Island, GA
+09K;Sargent, NE
+09M;Charleston, MS
+09W;Washington, DC
+0A3;Smithville, TN
+0A8;Centreville, AL
+0A9;Elizabethton, TN
+0AK;Pilot Station, AK
+0B1;Bethel, ME
+0B4;Hartington, NE
+0B5;Montague, MA
+0B7;Warren, VT
+0B8;Fishers Island, NY
+0C0;Chicago/Harvard, IL
+0C4;Pender, NE
+0D1;South Haven, MI
+0D8;Gettysburg, SD
+0E0;Moriarty, NM
+0E8;Crownpoint, NM
+0F2;Bowie, TX
+0F4;Loup City, NE
+0F7;Eufaula, OK
+0F8;Sand Springs, OK
+0F9;Tishomingo, OK
+0G0;Lockport, NY
+0G3;Tecumseh, NE
+0G6;Bryan, OH
+0G7;Seneca Falls, NY
+0H1;Wakeeney, KS
+0I8;Cynthiana, KY
+0J0;Abbeville, AL
+0J4;Florala, AL
+0J6;Headland, AL
+0K7;Humboldt, IA
+0L5;Goldfield, NV
+0L7;Jean, NV
+0L9;Overton, NV
+0M0;Dumas, AR
+0M1;Parsons, TN
+0M4;Camden, TN
+0M5;Waverly, TN
+0M6;Batesville, MS
+0M8;Lake Providence, LA
+0O3;San Andreas, CA
+0O4;Corning, CA
+0O5;Davis, CA
+0Q5;Shelter Cove, CA
+0Q6;Shingletown, CA
+0R0;Columbia, MS
+0R1;Atmore, AL
+0R3;Abbeville, LA
+0R4;Vidalia, LA
+0R5;Winnfield, LA
+0R7;Coushatta, LA
+0S7;Oroville, WA
+0S9;Port Townsend, WA
+0V2;Salida, CO
+0V3;Minden, NE
+0V4;Brookneal, VA
+0V6;Mission, SD
+0V7;Kayenta, AZ
+10C;Chicago/Greenwood/Wonderlake, IL
+10D;Winsted, MN
+10G;Millersburg, OH
+10N;Wallkill, NY
+10U;Owyhee, NV
+11A;Clayton, AL
+11D;Clarion, PA
+11IS;Chicago/Schaumburg, IL
+11J;Blakely, GA
+11R;Brenham, TX
+12C;Rochelle, IL
+12D;Tower, MN
+12J;Brewton, AL
+12K;Superior, NE
+12Y;Le Sueur, MN
+13C;Lakeview, MI
+13K;Eureka, KS
+13N;Andover, NJ
+14J;Elba, AL
+14M;Hollandale, MS
+14Y;Long Prairie, MN
+15F;Haskell, TX
+15J;Adel, GA
+15M;Luka, MS
+15Z;McCarthy, AK
+16A;Nunapitchuk, AK
+16G;Tiffin, OH
+16J;Dawson, GA
+16S;Myrtle Creek, OR
+17G;Bucyrus, OH
+17J;Donalsonville, GA
+17K;Boise City, OK
+17M;Magee, MS
+17N;Cross Keys, NJ
+17Z;Manokotak, AK
+18A;Canon, GA
+18I;Pine Knot, KY
+19A;Jefferson, GA
+19M;Lexington, MS
+19N;Berlin, NJ
+19P;Port Protection, AK
+1A3;Copperhill, TN
+1A5;Franklin, NC
+1A6;Middlesboro, KY
+1A7;Gainesboro, TN
+1A9;Prattville, AL
+1B0;Dexter, ME
+1B1;Hudson, NY
+1B3;Fair Haven, VT
+1B9;Mansfield, MA
+1C5;Chicago/Plainfield, IL
+1D1;Milbank, SD
+1D2;Plymouth, MI
+1D3;Platte, SD
+1D6;Hector, MN
+1D7;Webster, SD
+1D8;Redfield, SD
+1F0;Ardmore, OK
+1F1;Overbrook, OK
+1F4;Madill, OK
+1F9;Bridgeport, TX
+1G0;Bowling Green, OH
+1G3;Kent, OH
+1G4;Peach Springs, AZ
+1G5;Medina, OH
+1G6;Cicero, NY
+1H0;St Louis, MO
+1H2;Effingham, IL
+1H3;Linn, MO
+1H8;Casey, IL
+1I5;Freehold, NY
+1I9;Delphi, IN
+1J0;Bonifay, FL
+1K2;Lindsay, OK
+1K4;Goldsby, OK
+1K5;Waynoka, OK
+1K9;Satanta, KS
+1L0;Reserve, LA
+1L1;Panaca, NV
+1L7;Escalante, UT
+1L9;Parowan, UT
+1M1;No Lit Rock, AR
+1M2;Belzoni, MS
+1M4;Haleyville, AL
+1M5;Portland, TN
+1M7;Fulton, KY
+1MO;Mountain Grove, MO
+1N2;East Moriches, NY
+1N4;Woodbine, NJ
+1N7;Blairstown, NJ
+1N9;Allentown, PA
+1ND3;Kindred, ND
+1O1;Grandfield, OK
+1O2;Lakeport, CA
+1O3;Lodi, CA
+1O4;Thomas, OK
+1O6;Dunsmuir, CA
+1R1;Jena, LA
+1R7;Brookhaven, MS
+1R8;Bay Minette, AL
+1S0;Puyallup, WA
+1S3;Forsyth, MT
+1S5;Sunnyside, WA
+1S6;Priest River, ID
+1U7;Paris, ID
+1V0;Navajo Dam, NM
+1V2;Hyannis, NE
+1V5;Boulder, CO
+1V6;Canon City, CO
+1V9;Delta, CO
+20A;Oneonta, AL
+20M;Macon, MS
+20N;Kingston, NY
+20U;Beach, ND
+20V;Kremmling, CO
+21D;St Paul, MN
+21F;Jacksboro, TX
+22B;Burlington, CT
+22I;McArthur, OH
+22M;Pontotoc, MS
+22N;Lehighton, PA
+23J;Jacksonville, FL
+23M;Quitman, MS
+23N;Bayport, NY
+23R;Devine, TX
+24A;Sylva, NC
+24J;Live Oak, FL
+24N;Dulce, NM
+25J;Cuthbert, GA
+25M;Ripley, MS
+25R;Edinburg, TX
+26A;Ashland/Lineville, AL
+26N;Ocean City, NJ
+26R;Edna/Ganado, TX
+26U;McDermitt, OR
+27A;Elberton, GA
+27D;Canby, MN
+27J;Newberry, SC
+27K;Georgetown, KY
+28J;Palatka, FL
+29D;Grove City, PA
+29G;Ravenna, OH
+29S;Gardiner, MT
+2A0;Dayton, TN
+2A1;Jamestown, TN
+2A3;Larsen Bay, AK
+2A9;Kotlik, AK
+2AK;Lime Village, AK
+2B3;Newport, NH
+2B7;Pittsfield, ME
+2B9;Post Mills, VT
+2D1;Alliance, OH
+2D5;Oakes, ND
+2F5;Lamesa, TX
+2F6;Skiatook, OK
+2F7;Commerce, TX
+2F8;Bastrop, LA
+2G2;Steubenville, OH
+2G3;Connellsville, PA
+2G4;Oakland, MD
+2G9;Somerset, PA
+2H0;Shelbyville, IL
+2H2;Aurora, MO
+2I0;Madisonville, KY
+2I5;Rantoul, IL
+2IS;Clewiston, FL
+2J2;Hinesville, GA
+2J3;Louisville, GA
+2J5;Millen, GA
+2J9;Quincy, FL
+2K3;Johnson, KS
+2K4;Mangum, OK
+2K5;Telida, AK
+2M0;Princeton, KY
+2M2;Lawrenceburg, TN
+2M3;Sallisaw, OK
+2M4;Forest, MS
+2M8;Millington, TN
+2O1;Quincy, CA
+2O3;Angwin, CA
+2O6;Chowchilla, CA
+2O7;Independence, CA
+2O8;Hinton, OK
+2P2;Washington Island, WI
+2Q3;Davis/Woodland/Winters, CA
+2R0;Waynesboro, MS
+2R4;Milton, FL
+2R5;St Elmo, AL
+2R9;Kenedy, TX
+2S1;Vashon, WA
+2S6;Newberg, OR
+2S7;Chiloquin, OR
+2S8;Wilbur, WA
+2T1;Muleshoe, TX
+2V1;Pagosa Springs, CO
+2V2;Longmont, CO
+2V5;Wray, CO
+2V6;Yuma, CO
+2W5;Indian Head, MD
+2W6;Leonardtown, MD
+2Y3;Yakutat, AK
+2Y4;Rockwell City, IA
+31F;Seminole, TX
+32M;Norfolk, MA
+32S;Stevensville, MT
+33J;Geneva, AL
+33M;Water Valley, MS
+33N;Dover, DE
+33S;Ritzville, WA
+34A;Laurens, SC
+35A; Troy Shelton, Union
+35D;Allegan, MI
+35S;Wasco, OR
+36K;Lakin, KS
+36S;Happy Camp, CA
+36U;Heber, UT
+37T;Calico Rock, AR
+37W;Erwin, NC
+38A;Shaktoolik, AK
+38S;Deer Lodge, MT
+38U;Loa, UT
+39N;Princeton, NJ
+3A0;Grove Hill, AL
+3A1;Cullman, AL
+3A2;Tazewell, TN
+3A3;Wadesboro, NC
+3AU;Augusta, KS
+3B0;Southbridge, MA
+3B1;Greenville, ME
+3B2;Marshfield, MA
+3B9;Chester, CT
+3BS;Midland, MI
+3CK;Lake In The Hills, IL
+3CM;Bay City, MI
+3CU;Cable, WI
+3D2;Ephraim, WI
+3D4;Frankfort, MI
+3F3;Mansfield, LA
+3F4;Vivian, LA
+3F7;Bristow, OK
+3FM;Fremont, MI
+3FU;Faulkton, SD
+3G3;Wadsworth, OH
+3G4;Ashland, OH
+3G7;Williamson, NY
+3GM;Grand Haven, MI
+3I2;Point Pleasant, WV
+3I7;Phillipsburg, OH
+3J1;Ridgeland, SC
+3J7;Greensboro, GA
+3JC;Junction City, KS
+3K3;Syracuse, KS
+3K6;Troy/Marine/St. Louis, IL
+3K7;Leoti, KS
+3LC;Lincoln, IL
+3LF;Litchfield, IL
+3M7;Lafayette, TN
+3M8;Reform, AL
+3M9;Warren, AR
+3MY;Peoria, IL
+3N6;Old Bridge, NJ
+3N8;Mahnomen, MN
+3ND0;Northwood, ND
+3O1;Gustine, CA
+3O3;Purcell, OK
+3O4;Sayre, OK
+3O5;Walters, OK
+3O7;Hollister, CA
+3O9;Afton, OK
+3R0;Beeville, TX
+3R1;Bay City, TX
+3R2;Crowley, LA
+3R4;Many, LA
+3R7;Jennings, LA
+3S4;Illinois Valley (Cave Junction), OR
+3S8;Grants Pass, OR
+3S9;Condon, OR
+3SG;Saginaw - H.Browne, MI
+3SQ;St Charles, MO
+3T3;Boyceville, WI
+3T5;La Grange, TX
+3TR;Niles, MI
+3U3;Anaconda, MT
+3U7;Benchmark, MT
+3U8;Big Sandy, MT
+3V4;Fort Morgan, CO
+3WO;Shawano, WI
+3Y2;West Union, IA
+3Y3;Winterset, IA
+3Z9;Haines, AK
+40J;Perry, FL
+40N;Coatesville, PA
+40U;Manila, UT
+41U;Manti, UT
+42A;Melbourne, AR
+42C;White Cloud, MI
+42J;Keystone Heights, FL
+42S;Poplar, MT
+43A;Star, NC
+44B;Dover-Foxcroft, ME
+44N;Millbrook, NY
+45J;Rockingham, NC
+45OH;North Bass Island, OH
+45R;Kountze/Silsbee, TX
+46A;Blairsville, GA
+46D;Carrington, ND
+46N;Red Hook, NY
+47A;Canton, GA
+47J;Cheraw, SC
+47N;Manville, NJ
+47V;Curtis, NE
+48A;Cochran, GA
+48D;Clare, MI
+48I;Sutton, WV
+48K;Ness City, KS
+48S;Harlem, MT
+48V;Erie, CO
+49A;Ellijay, GA
+49T;Dallas, TX
+49X;Chemehuevi Valley, CA
+49Y;Preston, MN
+4A2;Atmautluak, AK
+4A4;Cedartown, GA
+4A5;Marshall, AR
+4A6;Scottsboro, AL
+4A7;Hampton, GA
+4A9;Fort Payne, AL
+4B0;South Bethlehem, NY
+4B1;Duanesburg, NY
+4B6;Ticonderoga, NY
+4B7;Schroon Lake, NY
+4B8;Plainville, CT
+4B9;Simsbury, CT
+4C8;Albia, IA
+4D0;Grandledge, MI
+4D9;Alma, NE
+4F2;Carthage, TX
+4F4;Gilmer, TX
+4G1;Greenville, PA
+4G2;Hamburg, NY
+4G5;Woodsfield, OH
+4G6;Hornell, NY
+4G7;Fairmont, WV
+4I0;Williamson, WV
+4I3;Mount Vernon, OH
+4I7;Greencastle, IN
+4I9;Mt. Gilead, OH
+4J1;Nahunta, GA
+4J2;Nashville, GA
+4J5;Quitman, GA
+4J6;St Marys, GA
+4K0;Pedro Bay, AK
+4K5;Ouzinkie, AK
+4K6;Bloomfield, IA
+4KA;Tununak, AK
+4M1;Berryville, AR
+4M3;Carlisle, AR
+4M4;Clinton, AR
+4M7;Russellville, KY
+4M8;Clarendon, AR
+4M9;Corning, AR
+4N1;West Milford, NJ
+4O3;Blackwell-Tonkawa, OK
+4O4;Idabel, OK
+4O5;Cherokee, OK
+4PH;Polacca, AZ
+4R1;Lumberton, MS
+4R3;Jackson, AL
+4R4;Fairhope, AL
+4R5;La Pointe, WI
+4R7;Eunice, LA
+4R9;Dauphin Island, AL
+4S1;Gold Beach, OR
+4S2;Hood River, OR
+4S3;Joseph, OR
+4S9;Mulino (Portland), OR
+4SD;Reno, NV
+4T6;Midlothian-Waxahachie, TX
+4U3;Chester, MT
+4U6;Circle, MT
+4V0;Rangely, CO
+4V1;Walsenburg, CO
+4V9;Neligh, NE
+4W1;Elizabethtown, NC
+4Z4;Holy Cross, AK
+4Z7;Hyder, AK
+50I;Kentland, IN
+50J;Moncks Corner, SC
+50K;Pawnee City, NE
+50R;Lockhart, TX
+51D;Edgeley, ND
+51Z;Minto, AK
+52A;Madison, GA
+52E;Timberon, NM
+52J;Bishopville, SC
+53A; Sr., Montezuma
+53K;Osage City, KS
+54J;Defuniak Springs, FL
+55D;Grayling, MI
+55J;Fernandina Beach, FL
+55S;Packwood, WA
+56D;Upper Sandusky, OH
+56M;Warsaw, MO
+56S;Seaside, OR
+57B;Islesboro, ME
+57C;East Troy, WI
+59B;Jackman, ME
+5A4;Okolona, MS
+5A6;Winona, MS
+5A8;Aleknagik, AK
+5A9;Warm Springs, GA
+5B2;Saratoga Springs, NY
+5B3;Danielson, CT
+5B7;Troy, NY
+5CD;Chandalar Camp, AK
+5D3;Owosso, MI
+5F1;Post, TX
+5F4;Homer, LA
+5G0;Le Roy, NY
+5G7;Bluffton, OH
+5G8;Jeanette, PA
+5G9;Lambertville, MI
+5HO;Hope, AK
+5I4;Sheridan, IN
+5J0;John Day, OR
+5J9;Loris, SC
+5K2;Tribune, KS
+5M0;Hartselle, AL
+5M1;De Witt, AR
+5M4;Fordyce, AR
+5M9;Marion, KY
+5N8;Casselton, ND
+5ND6;Hillsboro, ND
+5NI;Nikolai, AK
+5NK;Naknek, AK
+5NN;Nondalton, AK
+5R3;Lago Vista, TX
+5R4;Foley, AL
+5R5;Wharton, TX
+5R8;De Quincy, LA
+5S8;St. Michael, AK
+5T5;Hillsboro, TX
+5T6;Santa Teresa, NM
+5T9;Eagle Pass, TX
+5TE;Tetlin, AK
+5U3;Ennis, MT
+5U8;Geraldine, MT
+5V5;Shiprock, NM
+5V8;Kadoka, SD
+5W8;Siler City, NC
+5Z1;Juneau, AK
+5Z5;Kantishna, AK
+60F;Seymour, TX
+60J;Ocean Isle Beach, NC
+61A;Camden, AL
+61B;Boulder City, NV
+61C;Fort Atkinson, WI
+61J;Portland, OR
+61S;Cottage Grove, OR
+62D;Warren, OH
+62H;Giddings, TX
+62S;Christmas Valley, OR
+63A;Petersburg, AK
+63C;Adams/Friendship, WI
+63S;Colville, WA
+65J;Wrens, GA
+65S;Bonners Ferry, ID
+66D;Sturgis, SD
+67L;Mesquite, NV
+68A;Wrangell, AK
+68S;Davenport, WA
+6A1;Butler, GA
+6A2;Griffin, GA
+6A3;Andrews, NC
+6A4;Mountain City, TN
+6A8;Allakaket, AK
+6B0;Middlebury, VT
+6B4;Utica/Frankfort, NY
+6B6;Stow, MA
+6B8;Lyndonville, VT
+6B9;Skaneateles, NY
+6D6;Greenville, MI
+6D8;Valley City, ND
+6F1;Talihina, OK
+6G1;Titusville, PA
+6G5;Barnesville, OH
+6I2;Springfield, KY
+6J0;Pelion, SC
+6J2;St George, SC
+6J4;Saluda, SC
+6K3;Creighton, NE
+6K4;Fairview, OK
+6K8;Tok, AK
+6L4;Logan, WV
+6M2;Horseshoe Bend, AR
+6M6;Monticello, MO
+6M7;Marianna, AR
+6M8;Marked Tree, AR
+6N5;New York, NY
+6N7;New York, NY
+6N8;Thedford, NE
+6R3;Cleveland, TX
+6R7;Old Harbor, AK
+6R9;Llano, TX
+6S0;Big Timber, MT
+6S2;Florence, OR
+6S3;Columbus, MT
+6S5;Hamilton, MT
+6S8;Laurel, MT
+6V0;Edgemont, SD
+6V3;Richlands, VA
+6V4;Wall, SD
+6V6;Nucla, CO
+70J;Cairo, GA
+71J;Ozark, AL
+72S;Rosalia, WA
+73C;Lancaster, WI
+73J;Beaufort, SC
+74D;Moundsville, WV
+74S;Anacortes, WA
+74V;Roosevelt, UT
+75J;Ashburn, GA
+76G;Marine City, MI
+77G;Marlette, MI
+77S;Creswell, OR
+78D;Caro, MI
+79D;Philippi, WV
+79J;Andalusia, AL
+79S;Fort Benton, MT
+7A0;Greensboro, AL
+7A2;Demopolis, AL
+7A3;Lanett, AL
+7A5;Roanoke, AL
+7A8;Spruce Pine, NC
+7B2;Northampton, MA
+7D2;Troy, MI
+7F3;Caddo Mills, TX
+7F6;Clarksville, TX
+7F7;Clifton, TX
+7F9;Comanche, TX
+7G0;Brockport, NY
+7G8;Middlefield, OH
+7I7;Bellefontaine, OH
+7K0;Pikeville, KY
+7K2;Skagway, AK
+7K4;Hartford, KY
+7K8;South Sioux City, NE
+7KA;Tatitlek, AK
+7M1;McGehee, AR
+7M3;Mount Ida, AR
+7M4;Osceola, AR
+7M5;Ozark, AR
+7M7;Piggott, AR
+7N0;New Orleans, LA
+7N1;Corning, NY
+7N7;Pedrictown, NJ
+7S0;Ronan, MT
+7S1;Twin Bridges, MT
+7S5;Independence, OR
+7S6;White Sulphur Springs, MT
+7S7;Valier, MT
+7V1;Buena Vista, CO
+7V7;Red Cloud, NE
+7W6;Englehard, NC
+80F;Antlers, OK
+81B;Norway, ME
+82C;New Lisbon, WI
+82V;Pine Bluffs, WY
+83D;St Ignace, MI
+84D;Eagle Butte, SD
+84K;Meyers Chuck, AK
+84R;Smithville, TX
+85V;Ganado, AZ
+86F;Carnegie, OK
+87I;Yazoo City, MS
+87Y;Madison, WI
+88C;Palmyra, WI
+88J;Allendale, SC
+88M;Eureka, MT
+89D;Kelleys Island, OH
+8A0;Albertville, AL
+8A1;Guntersville, AL
+8A3;Livingston, TN
+8B0;Rangeley, ME
+8D1;New Holstein, WI
+8D3;Sisseton, SD
+8D4;Sparta, MI
+8D7;Clark, SD
+8D9;Howard, SD
+8F7;Decatur, TX
+8G2;Corry, PA
+8G6;Cadiz, OH
+8G7;Zelienople, PA
+8K8;Cimarron, KS
+8K9;Ketchikan, AK
+8M1;Booneville, MS
+8S1;Polson, MT
+8S2;Cashmere, WA
+8S5;Mt Pleasant, SC
+8U6;Terry, MT
+8U8;Townsend, MT
+8V2;Atkinson, NE
+8Y2;Buffalo, MN
+91C;Prairie Du Sac, WI
+91F;Canadian, OK
+93B;Stonington, ME
+93C;Richland Center, WI
+93F;Cheyenne, OK
+93Y;David City, NE
+94K;Cassville, MO
+95F;Cleveland, OK
+96D;Walhalla, ND
+96Z;North Whale Pass, AK
+97M;Ekalaka, MT
+98D;Onida, SD
+99N;Bamburg, SC
+99Y;Greeley, NE
+9A1;Covington, GA
+9A3;Chuathbaluk, AK
+9A4;Courtland, AL
+9A5;LaFayette, GA
+9A6;Chester, SC
+9A8;Ugashik, AK
+9C8;Evart, MI
+9D0;Highmore, SD
+9D1;Gregory, SD
+9D2;Buffalo, SD
+9D7;Cando, ND
+9D9;Hastings, MI
+9G0;Buffalo, NY
+9G1;Tarentum, PA
+9G3;Akron, NY
+9G5;Gasport, NY
+9G8;Ebensburg, PA
+9I0;Havana, IL
+9I3;West Liberty, KY
+9K2;Kokhanok, AK
+9K4;Warrensburg, MO
+9K7;Ellsworth, KS
+9K8;Kingman, KS
+9M4;Ackerman, MS
+9M6;Oak Grove, LA
+9M8;Sheridan, AR
+9S2;Scobey, MT
+9S4;Superior, MT
+9S5;Three Forks, MT
+9S7;Winifred, MT
+9S9;Lexington, OR
+9U0;Turner, MT
+9U3;Austin, NV
+9U4;Dixon, WY
+9V5;Rushville, NE
+9V6;Martin, SD
+9V9;Chamberlain, SD
+9W7;Currituck, NC
+A04;Centre, AL
+A14;Portage Creek, AK
+A29;Sitka, AK
+A30;Fort Jones, CA
+A32;Dorris, CA
+A61;Tuntutuliak, AK
+A63;Twin Hills, AK
+A79;Chignik Lake, AK
+A85;Kwigillingok, AK
+AAF;Apalachicola, FL
+AAO;Wichita, KS
+AAS;Cambellsville, KY
+AAT;Alturas, CA
+ABE;Allentown, PA
+ABI;Abilene, TX
+ABO;Arecibo, PR
+ABQ;Albuquerque, NM
+ABR;Aberdeen, SD
+ABY;Albany, GA
+ACB;Bellaire, MI
+ACJ;Americus, GA
+ACK;Nantucket, MA
+ACQ;Waseca, MN
+ACT;Waco, TX
+ACV;Arcata/Eureka, CA
+ACY;Atlantic City, NJ
+ACZ;Wallace, NC
+ADC;Wadena, MN
+ADG;Adrian, MI
+ADH;Ada, OK
+ADK;Adak, AK
+ADM;Ardmore, OK
+ADQ;Kodiak, AK
+ADS;Dallas/Addison, TX
+ADT;Atwood, KS
+ADU;Audubon, IA
+AEG;Albuquerque, NM
+AEL;Albert Lea, MN
+AEX;Alexandria, LA
+AFE;Kake, AK
+AFJ;Washington, PA
+AFK;Nebraska City, NE
+AFM;Ambler, AK
+AFN;Jaffrey, NH
+AFO;Afton, WY
+AFW;Fort Worth, TX
+AGC;Pittsburgh, PA
+AGN;Angoon, AK
+AGO;Magnolia, AR
+AGS;Augusta, GA
+AGZ;Wagner, SD
+AHH;Amery, WI
+AHN;Athens, GA
+AHP;Port Alexander, AK
+AHQ;Wahoo, NE
+AIA;Alliance, NE
+AID;Anderson, IN
+AIG;Antigo, WI
+AIK;Aiken, SC
+AIO;Atlantic, IA
+AIT;Aitkin, MN
+AIV;Aliceville, AL
+AIY;Atlantic City, NJ
+AIZ;Kaiser/Lake Ozark, MO
+AJC;Chignik, AK
+AJG;Mt Carmel, IL
+AJO;Corona, CA
+AJR;Cornelia, GA
+AK5;Perryville, AK
+AKA;Atka, AK
+AKH;Gastonia, NC
+AKI;Akiak, AK
+AKK;Akhiok, AK
+AKN;King Salmon, AK
+AKO;Akron, CO
+AKP;Anaktuvuk Pass, AK
+AKR;Akron, OH
+AKW;Klawock, AK
+AL08;Marion, AL
+ALB;Albany, NY
+ALI;Alice, TX
+ALM;Alamogordo, NM
+ALN;Alton/St. Louis, IL
+ALO;Waterloo, IA
+ALS;Alamosa, CO
+ALW;Walla Walla, WA
+ALX;Alexander City, AL
+AMA;Amarillo, TX
+AMG;Alma, GA
+AMN;Alma, MI
+AMT;West Union, OH
+AMW;Ames, IA
+ANB;Anniston, AL
+ANC;Anchorage, AK
+AND;Anderson, SC
+ANE;Minneapolis, MN
+ANI;Aniak, AK
+ANQ;Angola, IN
+ANV;Anvik, AK
+ANW;Ainsworth, NE
+ANY;Anthony, KS
+AOC;Arco, ID
+AOH;Lima, OH
+AOO;Altoona, PA
+APA;Denver, CO
+APC;Napa, CA
+APF;Naples, FL
+APN;Alpena, MI
+APT;Jasper, TN
+APV;Apple Valley, CA
+AQC;Klawock, AK
+AQH;Quinhagak, AK
+AQT;Nuiqsut, AK
+AQW;North Adams, MA
+AQY;Girdwood, AK
+ARA;New Iberia, LA
+ARB;Ann Arbor, MI
+ARC;Arctic Village, AK
+ARG;Walnut Ridge, AR
+ARR;Chicago/Aurora, IL
+ART;Watertown, NY
+ARV;Minocqua-Woodruff, WI
+ASD;Slidell, LA
+ASE;Aspen, CO
+ASG;Springdale, AR
+ASH;Nashua, NH
+ASJ;Ahoskie, NC
+ASL;Marshall, TX
+ASN;Talladega, AL
+AST;Astoria, OR
+ASW;Warsaw, IN
+ASX;Ashland, WI
+ATA;Atlanta, TX
+ATK;Atqasuk, AK
+ATL;Atlanta, GA
+ATS;Artesia, NM
+ATW;Appleton, WI
+ATY;Watertown, SD
+AUG;Augusta, ME
+AUH;Aurora, NE
+AUK;Alakanuk, AK
+AUM;Austin, MN
+AUN;Auburn, CA
+AUO;Auburn, AL
+AUS;Austin, TX
+AUW;Wausau, WI
+AVC;South Hill, VA
+AVK;Alva, OK
+AVL;Asheville, NC
+AVO;Avon Park, FL
+AVP;Wilkes-Barre/Scranton, PA
+AVQ;Marana, AZ
+AVX;Avalon, CA
+AWG;Washington, IA
+AWI;Wainwright, AK
+AWM;West Memphis, AR
+AWO;Arlington, WA
+AXA;Algona, IA
+AXN;Alexandria, MN
+AXS;Altus, OK
+AXV;Wapakoneta, OH
+AXX;Angel Fire, NM
+AYS;Waycross, GA
+AZC;Colorado City, AZ
+AZE;Hazelhurst, GA
+AZO;Kalamazoo, MI
+B01;Granville, NY
+B08;Silver Springs, NV
+B16;Weedsport, NY
+B19;Biddeford, ME
+B21;Carrabasset, ME
+BAF;Westfield, MA
+BAK;Columbus, IN
+BAM;Battle Mountain, NV
+BAX;Bad Axe, MI
+BAZ;New Braunfels, TX
+BBB;Benson, MN
+BBD;Brady, TX
+BBP;Bennettsville, SC
+BBW;Broken Bow, NE
+BCB;Blacksburg, VA
+BCE;Bryce Canyon, UT
+BCK;Black River Falls, WI
+BCT;Boca Raton, FL
+BCV;Birchwood, AK
+BDE;Baudette, MN
+BDG;Blanding, UT
+BDL;Windsor Locks, CT
+BDQ;Morrilton, AR
+BDR;Bridgeport, CT
+BDX;Broadus, MT
+BED;Bedford, MA
+BEH;Benton Harbor, MI
+BET;Bethel, AK
+BFD;Bradford, PA
+BFF;Scottsbluff, NE
+BFI;Seattle, WA
+BFK;Buffalo, OK
+BFL;Bakersfield, CA
+BFM;Mobile, AL
+BFR;Bedford, IN
+BFW;Silver Bay, MN
+BGD;Borger, TX
+BGE;Bainbridge, GA
+BGF;Winchester, TN
+BGM;Binghamton, NY
+BGQ;Big Lake, AK
+BGR;Bangor, ME
+BHB;Bar Harbor, ME
+BHC;Baxley, GA
+BHK;Baker City, MT
+BHM;Birmingham, AL
+BID;Block Island, RI
+BIE;Beatrice, NE
+BIG;Delta Junction, AK
+BIH;Bishop, CA
+BIL;Billings, MT
+BIS;Bismarck, ND
+BIV;Holland, MI
+BJC;Denver, CO
+BJI;Bemidji, MN
+BJJ;Wooster, OH
+BKD;Breckenridge, TX
+BKE;Baker City, OR
+BKL;Cleveland, OH
+BKV;Brooksville, FL
+BKW;Beckley, WV
+BKX;Brookings, SD
+BLF;Bluefield, WV
+BLH;Blythe, CA
+BLI;Bellingham, WA
+BLM;Belmar/Farmingdale, NJ
+BLV;Belleville/St. Louis, IL
+BMC;Brigham City, UT
+BMG;Bloomington, IN
+BMI;Bloomington, IL
+BML;Berlin, NH
+BMQ;Burnet, TX
+BMT;Beaumont, TX
+BNA;Nashville, TN
+BNF;Baranof Warm Springs, AK
+BNG;Banning, CA
+BNL;Barnwell, SC
+BNO;Burns, OR
+BNW;Boone, IA
+BOI;Boise, ID
+BOK;Brookings, OR
+BOS;Boston, MA
+BOW;Bartow, FL
+BPI;Big Piney, WY
+BPK;Mountain Home, AR
+BPT;Beaumont/Port Arthur, TX
+BQK;Brunswick, GA
+BQN;Aguadilla, PR
+BRD;Brainerd, MN
+BRL;Burlington, IA
+BRO;Brownsville, TX
+BRW;Barrow, AK
+BRY;Bardstown, KY
+BST;Belfast, ME
+BTI;Kaktovik, AK
+BTL;Battle Creek, MI
+BTM;Butte, MT
+BTN;Britton, SD
+BTP;Butler, PA
+BTR; Ryan, Baton Rouge
+BTT;Bettles, AK
+BTV;Burlington, VT
+BTY;Beatty, NV
+BUB;Burwell, NE
+BUF;Buffalo, NY
+BUM;Butler, MO
+BUR;Burbank, CA
+BUY;Burlington, NC
+BVI;Beaver Falls, PA
+BVK;Buckland, AK
+BVN;Albion, NE
+BVO;Bartlesville, OK
+BVS;Burlington/Mount Vernon, WA
+BVX;Batesville, AR
+BVY;Beverly, MA
+BWC;Brawley, CA
+BWD;Brownwood, TX
+BWG;Bowling Green, KY
+BWI;Baltimore, MD
+BWP;Wahpeton, ND
+BXA;Bogalusa, LA
+BXG;Waynesboro, GA
+BXK;Buckeye, AZ
+BYA;Boundary, AK
+BYG;Buffalo, WY
+BYI;Burley, ID
+BZN;Bozeman, MT
+C00;Aledo, IL
+C05;Chenega, AK
+C09;Morris, IL
+C15;Pekin, IL
+C17;Marion, IA
+C18;Chicago/Frankfort, IL
+C25;Waverly, IA
+C29;Middleton, WI
+C34;Gibson City, IL
+C35;Reedsburg, WI
+C47;Portage, WI
+C52;Burlington, WI
+C56;Chicago/Monee, IL
+C62;Kendallville, IN
+C65;Plymouth, IN
+C66;Monmouth, IL
+C71;Crosby, MS
+C73;Dixon, IL
+C75;Lacon, IL
+C77;Poplar Grove, IL
+C80;Coalinga, CA
+C81;Chicago/Round Lake Park, IL
+C83;Byron, CA
+C91;Dowagiac, MI
+CAD;Cadillac, MI
+CAE;Columbia, SC
+CAG;Craig, CO
+CAK;Akron, OH
+CAO;Clayton, NM
+CAR;Caribou, ME
+CAV;Clarion, IA
+CBE;Cumberland, MD
+CBF;Council Bluffs, IA
+CBG;Cambridge, MN
+CBK;Colby, KS
+CCB;Upland, CA
+CCO;Newnan, GA
+CCR;Concord, CA
+CCY;Charles City, IA
+CDB;Cold Bay, AK
+CDC;Cedar City, UT
+CDH;Camden, AR
+CDI;Cambridge, OH
+CDK;Cedar Key, FL
+CDN;Camden, SC
+CDR;Chadron, NE
+CDV;Cordova, AK
+CDW;Caldwell, NJ
+CEC;Crescent City, CA
+CEF;Chicopee, MA
+CEK;Crete, NE
+CEM;Central, AK
+CEU;Clemson, SC
+CEV;Connersville, IN
+CEW;Crestview, FL
+CEY;Murray, KY
+CEZ;Cortez, CO
+CFD;Bryan, TX
+CFJ;Crawfordsville, IN
+CFK;Chefornak, AK
+CFT;Clifton-Morenci, AZ
+CFV;Coffeyville, KS
+CGA;Craig, AK
+CGC;Crystal River, FL
+CGE;Cambridge, MD
+CGF;Cleveland, OH
+CGI;Cape Girardeau, MO
+CGS;College Park, MD
+CGX;Chicago, IL
+CGZ;Casa Grande, AZ
+CHA;Chattanooga, TN
+CHD;Chandler, AZ
+CHK;Chickasha, OK
+CHO;Charlottesville, VA
+CHP;Circle Hot Springs, AK
+CHS;Charleston, SC
+CHT;Chillicothe, MO
+CHU;Caledonia, MN
+CIC;Chico, CA
+CID;Cedar Rapids, IA
+CII;Choteau, MT
+CIK;Chalkyitsik, AK
+CIN;Carroll, IA
+CIR;Cairo, IL
+CIU;Sault Ste. Marie, MI
+CJR;Culpeper, VA
+CJX;Crooked Creek, AK
+CKB;Clarksburg, WV
+CKC;Grand Marais, MN
+CKF;Cordele, GA
+CKI;Kingstree, SC
+CKM;Clarksdale, MS
+CKN;Crookston, MN
+CKP;Cherokee, IA
+CKU;Cordova, AK
+CKV;Clarksville, TN
+CKX;Chicken, AK
+CLD;NA, NA
+CLE;Cleveland, OH
+CLI;Clintonville, WI
+CLK;Clinton, OK
+CLL;College Station, TX
+CLM;Port Angeles, WA
+CLP;Clarks Point, AK
+CLS;Chehalis, WA
+CLT;Charlotte, NC
+CLW;Clearwater, FL
+CMA;Camarillo, CA
+CMH;Columbus, OH
+CMI;Champaign/Urbana, IL
+CMX;Hancock, MI
+CMY;Sparta, WI
+CNC;Chariton, IA
+CNH;Claremont, NH
+CNK;Concordia, KS
+CNM;Carlsbad, NM
+CNO;Chino, CA
+CNP;Chappell, NE
+CNU;Chanute, KS
+CNW;Waco, TX
+CNY;Moab, UT
+COD;Cody, WY
+COE;Coeur D'Alene, ID
+COI;Merritt Island, FL
+COM;Coleman, TX
+CON;Concord, NH
+COQ;Cloquet, MN
+COS;Colorado Springs, CO
+COT;Cotulla, TX
+COU;Columbia, MO
+CPC;Whiteville, NC
+CPK;Norfolk, VA
+CPM;Compton, CA
+CPR;Casper, WY
+CPS;Cahokia/St. Louis, IL
+CPX;Isla De Culebra, PR
+CQA;Celina, OH
+CQB;Chandler, OK
+CQX;Chatham, MA
+CRC;Circle, AK
+CRE;North Myrtle Beach, SC
+CRG;Jacksonville, FL
+CRO;Corcoran, CA
+CRP;Corpus Christi, TX
+CRQ;Carlsbad, CA
+CRS;Corsicana, TX
+CRT;Crossett, AR
+CRW;Charleston, WV
+CRX;Corinth, MS
+CSB;Cambridge, NE
+CSG;Columbus, GA
+CSM;Clinton, OK
+CSQ;Creston, IA
+CSV;Crossville, TN
+CTB;Cut Bank, MT
+CTJ;Carrollton, GA
+CTK;Canton, IL
+CTY;Cross City, FL
+CTZ;Clinton, NC
+CUB;Columbia, SC
+CUH;Cushing, OK
+CUL;Carmi, IL
+CUT;Custer, SD
+CVG;Covington, KY
+CVK;Ash Flat, AR
+CVN;Clovis, NM
+CVO;Corvallis, OR
+CVX;Charlevoix, MI
+CWA;Mosinee, WI
+CWF;Lake Charles, LA
+CWI;Clinton, IA
+CWV;Claxton, GA
+CXC;Chitina, AK
+CXE;Chase City, VA
+CXF;Coldfoot, AK
+CXL;Calexico, CA
+CXO;Conroe, TX
+CXP;Carson City, NV
+CXU;Camilla, GA
+CXY;Harrisburg, PA
+CYO;Circleville, OH
+CYS;Cheyenne, WY
+CYW;Clay Center, KS
+CZD;Cozad, NE
+CZG;Endicott, NY
+CZL;Calhoun, GA
+CZN;Chisana, AK
+CZT;Carrizo Springs, TX
+D04;Bowman, ND
+D05;Garrison, ND
+D07;Faith, SD
+D09;Bottineau, ND
+D19;Luverne, MN
+D22;Angola, NY
+D25;Manitowish Waters, WI
+D38;Canandaiga, NY
+D42;Springfield, MN
+D50;Crosby, ND
+D55;Langdon, ND
+D57;Glen Ullin, ND
+D60;Tioga, ND
+D73;Monroe, GA
+D77;Lancaster, NY
+D87;Harbor Springs, MI
+D95;Lapeer, MI
+D98;Romeo, MI
+DAB;Daytona Beach, FL
+DAG;Daggett, CA
+DAL;Dallas, TX
+DAN;Danville, VA
+DAW;Rochester, NH
+DAY;Dayton, OH
+DBN;Dublin, GA
+DBQ;Dubuque, IA
+DCA;Arlington, VA
+DCK;Dahl Creek, AK
+DCU;Decatur, AL
+DCY;Washington, IN
+DDC;Dodge City, KS
+DDH;Bennington, VT
+DEC;Decatur, IL
+DED;Deland, FL
+DEE;Deering, AK
+DEH;Decorah, IA
+DEN;Denver, CO
+DEQ;De Queen, AR
+DET;Detroit, MI
+DEW;Deer Park, WA
+DFI;Defiance, OH
+DFW;Dallas-Fort Worth, TX
+DGW;Douglas, WY
+DHN;Dothan, AL
+DHT;Dalhart, TX
+DIK;Dickinson, ND
+DKB;Dekalb, IL
+DKK;Dunkirk, NY
+DKX;Knoxville, TN
+DLG;Dillingham, AK
+DLH;Duluth, MN
+DLL;Baraboo, WI
+DLN;Dillon, MT
+DLO;Delano, CA
+DLS;The Dalles, OR
+DLZ;Delaware, OH
+DM2;Diomede, AK
+DMN;Deming, NM
+DMO;Sedalia, MO
+DMW;Westminster, MD
+DNL;Augusta, GA
+DNN;Dalton, GA
+DNS;Denison, IA
+DNV;Danville, IL
+DOV;Dover, DE
+DPA;Chicago/West Chicago, IL
+DPL;Kenansville, NC
+DQH;Douglas, GA
+DRI;De Ridder, LA
+DRO;Durango, CO
+DRT;Del Rio, TX
+DSM;Des Moines, IA
+DSV;Dansville, NY
+DTA;Delta, UT
+DTL;Detroit Lakes, MN
+DTN;Shreveport, LA
+DTO;Denton, TX
+DTS;Destin, FL
+DTW;Detroit, MI
+DUA;Durant, OK
+DUC;Duncan, OK
+DUG;Douglas Bisbee, AZ
+DUJ;Du Bois, PA
+DUT;Unalaska, AK
+DUX;Dumas, TX
+DUY;Kongiganak, AK
+DVK;Danville, KY
+DVL;Devils Lake, ND
+DVN;Davenport, IA
+DVO;Novato, CA
+DVT;Phoenix, AZ
+DWH;Houston, TX
+DWU;Ashland, KY
+DXE;Dexter, MO
+DXR;Danbury, CT
+DXX;Madison, MN
+DYB;Summerville, SC
+DYL;Doylestown, PA
+DYR;Dyersburg, TN
+DYT;Duluth, MN
+E01;Monahans, TX
+E04;Eunice, NM
+E05;Hatch, NM
+E06;Lovington, NM
+E07;Tatum, NM
+E11;Andrews, TX
+E15;Graham, TX
+E19;Gruver, TX
+E24;Whiteriver, AZ
+E25;Wickenburg, AZ
+E26;Jal, NM
+E35;Fabens, TX
+E38;Alpine, TX
+E42;Spearman, TX
+E51;Bagdad, AZ
+E52;Vega, TX
+E60;Eloy, AZ
+E63;Gila Bend, AZ
+E80;Belen, NM
+E89;Conchas Dam, NM
+E91;Chinle, AZ
+E94;Glenwood, NM
+E95;Benson, AZ
+EAA;Eagle, AK
+EAN;Wheatland, WY
+EAR;Kearney, NE
+EAT;Wenatchee, WA
+EAU;Eau Claire, WI
+EBS;Webster City, IA
+ECG;Elizabeth City, NC
+ECS;Newcastle, WY
+EDE;Edenton, NC
+EDN;Enterprise, AL
+EED;Needles, CA
+EEK;Eek, AK
+EEN;Keene, NH
+EEO;Meeker, CO
+EET;Alabaster, AL
+EFC;Belle Fourche, SD
+EFD;Houston, TX
+EFK;Newport, VT
+EFT;Monroe, WI
+EFW;Jefferson, IA
+EGE;Eagle, CO
+EGQ;Emmetsburg, IA
+EGT;Wellington, KS
+EGV;Eagle River, WI
+EHA;Elkhart, KS
+EHO;Shelby, NC
+EHR;Henderson, KY
+EII;Egegik, AK
+EIW;New Madrid, MO
+EKA;Eureka, CA
+EKM;Elkhart, IN
+EKN;Elkins, WV
+EKO;Elko, NV
+EKQ;Monticello, KY
+EKX;Elizabethtown, KY
+EKY;Bessemer, AL
+ELA;Eagle Lake, TX
+ELD;El Dorado, AR
+ELI;Elim, AK
+ELK;Elk City, OK
+ELM;Elmira, NY
+ELN;Ellensburg, WA
+ELO;Ely, MN
+ELP;El Paso, TX
+ELV;Elfin Cove, AK
+ELY;Ely, NV
+ELZ;Wellsville, NY
+EMM;Kemmerer, WY
+EMP;Emporia, KS
+EMT;El Monte, CA
+EMV;Emporia, VA
+ENA;Kenai, AK
+ENL;Centralia, IL
+ENM;Emmonak, AK
+ENN;Nenana, AK
+ENV;Wendover, UT
+ENW;Kenosha, WI
+EOK;Keokuk, IA
+EOS;Neosho, MO
+EPH;Ephrata, WA
+EPM;Eastport, ME
+EQA;El Dorado, KS
+EQY;Monroe, NC
+ERI;Erie, PA
+ERV;Kerrville, TX
+ERY;Newberry, MI
+ESC;Escanaba, MI
+ESF;Alexandria, LA
+ESN;Easton, MD
+EST;Estherville, IA
+ETB;West Bend, WI
+ETC;Tarboro, NC
+ETH;Wheaton, MN
+ETN;Eastland, TX
+EUF;Eufaula, AL
+EUG;Eugene, OR
+EUL;Caldwell (Boise), ID
+EVB;New Smyrna Beach, FL
+EVM;Eveleth, MN
+EVU;Maryville, MO
+EVV;Evansville, IN
+EVW;Evanston, WY
+EVY;Middletown, DE
+EWB;New Bedford, MA
+EWK;Newton, KS
+EWN;New Bern, NC
+EWR;Newark, NJ
+EWU;Newtok, AK
+EXI;Excursion Inlet, AK
+EXX;Lexington, NC
+EYE;Indianapolis, IN
+EYW;Key West, FL
+EZI;Kewanee, IL
+EZM;Eastman, GA
+EZZ;Cameron, MO
+F00;Bonham, TX
+F01;Quanah, TX
+F05;Vernon, TX
+F06;Wellington, TX
+F08;Eufaula, OK
+F10;Henryetta, OK
+F12;Henderson, TX
+F17;Center, TX
+F18;Cleburne, TX
+F21;Memphis, TX
+F22;Perry, OK
+F24;Minden, LA
+F28;El Reno, OK
+F29;Oklahoma City, OK
+F30;Sulphur, OK
+F31;Kingston, OK
+F32;Healdton, OK
+F36;Cordell, OK
+F37;Wauchula, FL
+F39;Sherman/Denison, TX
+F41;Ennis, TX
+F44;Athens, TX
+F45;West Palm Beach, FL
+F46;Rockwall, TX
+F49;Slaton, TX
+F51;Winnsboro, TX
+F53;Mount Vernon, TX
+F55;Granbury, TX
+F56;Stamford, TX
+F70;Murieta/Temecula, CA
+F80;Atoka, OK
+F81;Okemah, OK
+F84;Stigler, OK
+F85;Morton, TX
+F87;Farmerville, LA
+F88;Jonesboro, LA
+F89;Winnsboro, LA
+F91;Weatherford, OK
+F99;Holdenville, OK
+FAI;Fairbanks, AK
+FAM;Farmington, MO
+FAQ;Fitiuta Village, AS
+FAR;Fargo, ND
+FAT;Fresno, CA
+FAY;Fayetteville, NC
+FBL;Faribault, MN
+FBR;Fort Bridger, WY
+FBY;Fairbury, NE
+FCA;Kalispell, MT
+FCH;Fresno, CA
+FCI;Richmond, VA
+FCM;Minneapolis, MN
+FCY;Forrest City, AR
+FDK;Frederick, MD
+FDR;Frederick, OK
+FDW;Winnsboro, SC
+FDY;Findlay, OH
+FEP;Freeport, IL
+FET;Fremont, NE
+FFA;Kill Devil Hills, NC
+FFC;Atlanta, GA
+FFL;Fairfield, IA
+FFM;Fergus Falls, MN
+FFT;Frankfort, KY
+FFZ;Mesa, AZ
+FGX;Flemingsburg, KY
+FHR;Friday Harbor, WA
+FHU;Fort Huachuca-Sierra Vista, AZ
+FIG;Clearfield, PA
+FIT;Fitchburg, MA
+FKL;Franklin, PA
+FKN;Franklin, VA
+FKR;Frankfort, IN
+FLD;Fond Du Lac, WI
+FLG;Flagstaff, AZ
+FLL;Ft. Lauderdale, FL
+FLO;Florence, SC
+FLP;Flippin, AR
+FLT;Flat, AK
+FLX;Fallon, NV
+FME;Odenton, MD
+FMN;Farmington, NM
+FMY;Ft. Myers, FL
+FMZ;Fairmont, NE
+FNB;Falls City, NE
+FNL;Fort Collins/Loveland, CO
+FNR;Funter Bay, AK
+FNT;Flint, MI
+FOA;Flora, IL
+FOD;Fort Dodge, IA
+FOE;Topeka, KS
+FOK;Westhampton Beach, NY
+FOT;Fortuna, CA
+FPR;Ft. Pierce, FL
+FQD;Rutherfordton, NC
+FRG;Farmingdale, NY
+FRH;French Lick, IN
+FRM;Fairmont, MN
+FRR;Front Royal, VA
+FSD;Sioux Falls, SD
+FSE;Fosston, MN
+FSK;Fort Scott, KS
+FSM;Fort Smith, AR
+FSO;Highgate, VT
+FST;Fort Stockton, TX
+FSU;Fort Sumner, NM
+FSW;Fort Madison, IA
+FTG;Denver, CO
+FTT;Fulton, MO
+FTW;Fort Worth, TX
+FTY;Atlanta, GA
+FUL;Fullerton, CA
+FVE;Frenchville, ME
+FVX;Farmville, VA
+FWA;Fort Wayne, IN
+FWC;Fairfield, IL
+FWN;Sussex, NJ
+FWS;Fort Worth, TX
+FXE;Ft. Lauderdale, FL
+FXY;Forest City, IA
+FYE;Somerville, TN
+FYM;Fayetteville, TN
+FYU;Fort Yukon, AK
+FYV;Fayetteville, AR
+FZG;Fitzgerald, GA
+FZI;Fostoria, OH
+FZY;Fulton, NY
+GAB;Gabbs, NV
+GAD;Gadsden, AL
+GAF;Grafton, ND
+GAG;Gage, OK
+GAI;Gaithersburg, MD
+GAL;Galena, AK
+GAM;Gambell, AK
+GAS;Gallipolis, OH
+GBD;Great Bend, KS
+GBG;Galesburg, IL
+GBH;Galbraith Lake, AK
+GBR;Great Barrington, MA
+GCC;Gillette, WY
+GCK;Garden City, KS
+GCM;Claremore, OK
+GCN;Grand Canyon, AZ
+GCT;Guthrie Center, IA
+GCY;Greeneville, TN
+GDM;Gardner, MA
+GDV;Glendive, MT
+GDW;Gladwin, MI
+GDY;Grundy, VA
+GED;Georgetown, DE
+GEG;Spokane, WA
+GEO;Georgetown, OH
+GEU;Glendale, AZ
+GEY;Greybull, WY
+GEZ;Shelbyville, IN
+GFK;Grand Forks, ND
+GFL;Glens Falls, NY
+GFZ;Greenfield, IA
+GGE;Georgetown, SC
+GGF;Grant, NE
+GGG;Longview, TX
+GGI;Grinnell, IA
+GGP;Logansport, IN
+GGW;Glasgow, MT
+GHM;Centerville, TN
+GHW;Glenwood, MN
+GIF;Winter Haven, FL
+GJT;Grand Junction, CO
+GKJ;Meadville, PA
+GKN;Gulkana, AK
+GKT;Sevierville, TN
+GKY;Arlington, TX
+GLD;Goodland, KS
+GLE;Gainesville, TX
+GLH;Greenville, MS
+GLR;Gaylord, MI
+GLS;Galveston, TX
+GLW;Glasgow, KY
+GLY;Clinton, MO
+GMJ;Grove, OK
+GMU;Greenville, SC
+GNB;Granby, CO
+GNF;Grenada, MS
+GNG;Gooding, ID
+GNT;Grants, NM
+GNU;Goodnews, AK
+GNV;Gainesville, FL
+GOK;Guthrie, OK
+GON;Groton, CT
+GPH;Mosby, MO
+GPM;Grand Prairie, TX
+GPT;Gulfport-Biloxi, MS
+GPZ;Grand Rapids, MN
+GQQ;Galion, OH
+GRB;Green Bay, WI
+GRD;Greenwood, SC
+GRE;Greenville, IL
+GRI;Grand Island, NE
+GRK;Killeen, TX
+GRN;Gordon, NE
+GRO;Rota Island, CQ
+GRR;Grand Rapids, MI
+GSH;Goshen, IN
+GSN;Obyan, CQ
+GSO;Greensboro, NC
+GSP;Greer, SC
+GST;Gustavus, AK
+GTF;Great Falls, MT
+GTR;Columbus-Starkville-West Point, MS
+GTU;Georgetown, TX
+GUC;Gunnison, CO
+GUM;Agana, GU
+GUP;Gallup, NM
+GUY;Guymon, OK
+GVL;Gainesville, GA
+GVQ;Batavia, NY
+GVT;Greenville, TX
+GWO;Greenwood, MS
+GWR;Gwinner, ND
+GWW;Goldsboro, NC
+GXY;Greeley, CO
+GYH;Greenville, SC
+GYR;Goodyear, AZ
+GYY;Gary, IN
+GZH;Evergreen, AL
+GZS;Pulaski, TN
+H04;Vinita, OK
+H05;Wilburton, OK
+H19;Bowling Green, MO
+H21;Camdenton, MO
+H30;Hamilton, NY
+H35;Clarksville, AR
+H41;Mexico, MO
+H45;Seminole, OK
+H66;Nowata, OK
+H71;Pryor, OK
+H79;Eldon, MO
+H88;Fredericktown, MO
+H92;Hominy, OK
+H96;Benton, IL
+H97;Pawnee, OK
+HAB;Hamilton, AL
+HAE;Hannibal, MO
+HAF;Half Moon Bay, CA
+HAI;Three Rivers, MI
+HAO;Hamilton, OH
+HAY;Haycock, AK
+HBC;Mohall, ND
+HBG;Hattiesburg, MS
+HBR;Hobart, OK
+HBV;Hebbronville, TX
+HBZ;Heber Springs, AR
+HCD;Hutchinson, MN
+HCO;Hallock, MN
+HDC;Hammond, LA
+HDE;Holdredge, NE
+HDH;Mokuleia, HI
+HDI;Cleveland, TN
+HDN;Hayden, CO
+HDO;Hondo, TX
+HEE;Helena-West Helena, AR
+HEF;Manassas, VA
+HEI;Hettinger, ND
+HEQ;Holyoke, CO
+HEZ;Natchez, MS
+HFD;Hartford, CT
+HFY;Indianapolis/Greenwood, IN
+HGR;Hagerstown, MD
+HHF;Canadian, TX
+HHG;Huntington, IN
+HHH;NA, NA
+HHR;Hawthorne, CA
+HHW;Hugo, OK
+HI01;Hanalei, HI
+HIB;Hibbing, MN
+HIE;Whitefield, NH
+HIG;Higginsville, MO
+HII;Lake Havasu City, AZ
+HIO;Hillsboro (Portland), OR
+HJH;Hebron, NE
+HJO;Hanford, CA
+HKA;Blytheville, AR
+HKS;Jackson, MS
+HKY;Hickory, NC
+HLC;Hill City, KS
+HLG;Wheeling, WV
+HLN;Helena, MT
+HLX;Galax, VA
+HMT;Hemet, CA
+HMZ;Bedford, PA
+HNB;Huntingburg, IN
+HNH;Hoonah, AK
+HNL;Honolulu, HI
+HNM;Hana, HI
+HNR;Harlan, IA
+HNS;Haines, AK
+HNZ;Oxford, NC
+HOB;Hobbs, NM
+HOC;Hillsboro, OH
+HOE;Homerville, GA
+HOM;Homer, AK
+HON;Huron, SD
+HOT;Hot Springs, AR
+HOU;Houston, TX
+HPB;Hooper Bay, AK
+HPN;White Plains, NY
+HPT;Hampton, IA
+HQG;Hugoton, KS
+HQM;Hoquiam, WA
+HQU;Thomson, GA
+HQZ;Mesquite, TX
+HRI;Hermiston, OR
+HRL;Harlingen, TX
+HRO;Harrison, AR
+HRR;Healy, AK
+HRU;Herington, KS
+HRX;Hereford, TX
+HSA;Bay St Louis, MS
+HSB;Harrisburg, IL
+HSE;Hatteras, NC
+HSI;Hastings, NE
+HSL;Huslia, AK
+HSP;Hot Springs, VA
+HSR;Hot Springs, SD
+HSV;Huntsville, AL
+HTH;Hawthorne, NV
+HTL;Houghton Lake, MI
+HTO;East Hampton, NY
+HTS;Huntington, WV
+HTW;Inc, Chesapeake
+HUF;Terre Haute, IN
+HUL;Houlton, ME
+HUM;Houma, LA
+HUS;Hughes, AK
+HUT;Hutchinson, KS
+HVC;Hopkinsville, KY
+HVE;Hanksville, UT
+HVN;New Haven, CT
+HVR;Havre, MT
+HVS;Hartsville, SC
+HWD;Hayward, CA
+HWI;Hawk Inlet, AK
+HWO;Hollywood, FL
+HWQ;Harlowton, MT
+HWV;Shirley, NY
+HXD;Hilton Head Island, SC
+HXF;Hartford, WI
+HYA;Hyannis, MA
+HYG;Hydaburg, AK
+HYI;San Marcos, TX
+HYL;Hollis, AK
+HYR;Hayward, WI
+HYS;Hays, KS
+HYW;Conway, SC
+HZD;Huntingdon, TN
+HZE;Hazen, ND
+HZL;Hazleton, PA
+HZR;New Roads, LA
+HZY;Ashtabula, OH
+I05;Sturgis, KY
+I12;Sidney, OH
+I16;Pineville, WV
+I18;Ravenswood, WV
+I19;Dayton, OH
+I22;Winchester, IN
+I23;Washington Court House, OH
+I25;Welch, WV
+I32;Morehead, KY
+I34;Greensburg, IN
+I35;Harlan, KY
+I39;Richmond, KY
+I40;Coshocton, OH
+I42;Paoli, IN
+I43;Jackson, OH
+I50;Stanton, KY
+I57;Waverly, OH
+I63;Mt. Sterling, IL
+I66;Wilmington, OH
+I67;Harrison, OH
+I68;Lebanon, OH
+I69;Batavia, OH
+I74;Urbana, OH
+I75;Osceola, IA
+I76;Peru, IN
+I78;Marysville, OH
+I83;Salem, IN
+I86;New Lexington, OH
+I88;Pontiac, IL
+I93;Hardinsburg, KY
+I95;Kenton, OH
+IAD;Chantilly, VA
+IAG;Niagara Falls, NY
+IAH;Houston, TX
+IAN;Kiana, AK
+IBM;Kimball, NE
+ICL;Clarinda, IA
+ICT;Wichita, KS
+IDA;Idaho Falls, ID
+IDI;Indiana, PA
+IDL;Indianola, MS
+IDP;Independence, KS
+IEM;Whittier, AK
+IEN;Pine Ridge, SD
+IER;Natchitoches, LA
+IFA;Iowa Falls, IA
+IFP;Bullhead City, AZ
+IGG;Igiugig, AK
+IGM;Kingman, AZ
+IGQ;Chicago/Lansing, IL
+IGT;Nightmute, AK
+IIB;Independence, IA
+IIK;Kipnuk, AK
+IIY;Washington, GA
+IJD;Willimantic, CT
+IJX;Jacksonville, IL
+IKK;Kankakee, IL
+IKV;Ankeny, IA
+ILE;Killeen, TX
+ILG;Wilmington, DE
+ILI;Iliamna, AK
+ILM;Wilmington, NC
+IML;Imperial, NE
+IMM;Immokalee, FL
+IMS;Madison, IN
+IMT;Iron Mountain/Kingsford, MI
+IN03;Indianapolis, IN
+IND;Indianapolis, IN
+INK;Wink, TX
+INL;International Falls, MN
+INT;Winston-Salem, NC
+INW;Winslow, AZ
+IOB;Mount Sterling, KY
+IOW;Iowa City, IA
+IPJ;Lincolnton, NC
+IPL;Imperial, CA
+IPT;Williamsport, PA
+IRK;Kirksville, MO
+IRS;Sturgis, MI
+ISM;Orlando, FL
+ISN;Williston, ND
+ISO;Kinston, NC
+ISP;Islip, NY
+ISQ;Manistique, MI
+ISW;Wisconsin Rapids, WI
+ISZ;Cincinnati, OH
+ITH;Ithaca, NY
+ITO;Hilo, HI
+ITR;Burlington, CO
+IWA;Phoenix, AZ
+IWD;Ironwood, MI
+IWH;Wabash, IN
+IWI;Wiscasset, ME
+IWK;Wales, AK
+IWS;Houston, TX
+IXD;Olathe, KS
+IYK;Inyokern, CA
+IYS;Wasilla, AK
+IZA;Santa Ynez, CA
+IZG;Fryeburg, ME
+JAC;Jackson, WY
+JAN;Jackson, MS
+JAS;Jasper, TX
+JAU;Jacksboro, TN
+JAX;Jacksonville, FL
+JBR;Jonesboro, AR
+JCT;Junction, TX
+JDN;Jordan, MT
+JEF;Jefferson City, MO
+JER;Jerome, ID
+JES;Jesup, GA
+JFK;New York, NY
+JFX;Jasper, AL
+JHM;Lahaina, HI
+JHW;Jamestown, NY
+JKA;Gulf Shores, AL
+JKJ;Moorhead, MN
+JKL;Jackson, KY
+JLN;Joplin, MO
+JMR;Mora, MN
+JMS;Jamestown, ND
+JNU;Juneau, AK
+JNX;Smithfield, NC
+JOT;Chicago/Joliet, IL
+JQF;Concord, NC
+JRA;New York, NY
+JRB;New York, NY
+JRF;Kapolei, HI
+JSO;Jacksonville, TX
+JST;Johnstown, PA
+JVL;Janesville, WI
+JVY;Jeffersonville, IN
+JWG;Watonga, OK
+JWN;Nashville, TN
+JXN;Jackson, MI
+JYG;St James, MN
+JYL;Sylvania, GA
+JYM;Hillsdale, MI
+JYO;Leesburg, VA
+JYR;York, NE
+JZI;Charleston, SC
+JZP;Jasper, GA
+JZZ;Koliganek, AK
+K01;Auburn, NE
+K02;Perryville, MO
+K06;Beardstown, IL
+K09;Piseco, NY
+K15;Osage Beach, MO
+K20;Hazard, KY
+K22;Prestonburg, KY
+K24;Jamestown, KY
+K29;Council, AK
+K33;Salem, MO
+K34;Gardner, KS
+K39;St Clair, MO
+K46;Blair, NE
+K54;Teller, AK
+K57;Tarkio, MO
+K59;Atchison, KS
+K61;Beloit, KS
+K62;Falmouth, KY
+K67;Oswego, KS
+K68;Garnett, KS
+K78;Abilene., KS
+K81;Paola, KS
+K82;Smith Center, KS
+K83;Sabetha, KS
+K88;Iola, KS
+K89;Macon, MO
+K96;Tuscola, IL
+KAE;Kake, AK
+KAL;Kaltag, AK
+KCC;Coffman Cove, AK
+KCL;Chignik Flats, AK
+KEB;English Bay, AK
+KEK;Ekwok, AK
+KFP;False Pass, AK
+KGX;Grayling, AK
+KIB;Ivanof Bay, AK
+KIC;King City, CA
+KKA;Koyuk, AK
+KKB;Kitoi Bay, AK
+KLG;Kalskag, AK
+KLL;Levelock, AK
+KLS;Kelso, WA
+KNB;Kanab, UT
+KNW;New Stuyahok, AK
+KOA;Kailua/Kona, HI
+KPB;Point Baker, AK
+KPH;Pauloff Harbor, AK
+KQA;Akutan, AK
+KSM;St. Mary's, AK
+KTB;Thorne Bay, AK
+KTN;Ketchikan, AK
+KTS;Brevig Mission, AK
+KVC;King Cove, AK
+KVL;Kivalina, AK
+KWT;Kwethluk, AK
+KXA;Kasaan, AK
+KYK;Karluk, AK
+KYU;Koyukuk, AK
+L04;Holtville, CA
+L05;Kernville, CA
+L06;Death Valley National Park, CA
+L08;Borrego Springs, CA
+L12;Redlands, CA
+L15;Las Vegas, NV
+L17;Taft, CA
+L18;Fallbrook, CA
+L19;Wasco, CA
+L26;Hesperia, CA
+L31;Covington, LA
+L35;Big Bear, CA
+L38;Gonzales, LA
+L39;Leesville, LA
+L42;Oakdale, LA
+L45;Bakersfield, CA
+L49;Galliano, LA
+L52;Oceano, CA
+L67;Rialto, CA
+L70;Agua Dulce, CA
+L71;California City, CA
+L72;Trona, CA
+L75;Sulphur, LA
+L83;Thibodaux, LA
+L84;Lost Hills, CA
+L92;Alamo, NV
+LAA;Lamar, CO
+LAF;Lafayette, IN
+LAL;Lakeland, FL
+LAM;Los Alamos, NM
+LAN;Lansing, MI
+LAR;Laramie, WY
+LAS;Las Vegas, NV
+LAW;Lawton, OK
+LAX;Los Angeles, CA
+LBB;Lubbock, TX
+LBE;Latrobe, PA
+LBF;North Platte, NE
+LBL;Liberal, KS
+LBO;Lebanon, MO
+LBT;Lumberton, NC
+LBX;Angleton, TX
+LCG;Wayne, NE
+LCH;Lake Charles, LA
+LCI;Laconia, NH
+LCK;Columbus, OH
+LCQ;Lake City, FL
+LDJ;Linden, NJ
+LDM;Ludington, MI
+LEB;Lebanon, NH
+LEE;Leesburg, FL
+LEM;Lemmon, SD
+LEW;Auburn-Lewiston, ME
+LEX;Lexington, KY
+LFK;Lufkin, TX
+LFT;Lafayette, LA
+LGA;New York, NY
+LGB;Long Beach, CA
+LGC;Lagrange, GA
+LGD;La Grande, OR
+LGU;Logan, UT
+LHD;Anchorage, AK
+LHM;Lincoln, CA
+LHQ;Lancaster, OH
+LHV;Lock Haven, PA
+LHX;La Junta, CO
+LHZ;Louisburg, NC
+LIC;Limon, CO
+LIH;Lihue, HI
+LIT;Little Rock, AR
+LJF;Litchfield, MN
+LKP;Lake Placid, NY
+LKR;Lancaster, SC
+LKU;Louisa, VA
+LKV;Lakeview, OR
+LLJ;Challis, ID
+LLQ;Monticello, AR
+LLU;Lamar, MO
+LMS;Louisville, MS
+LMT;Klamath Falls, OR
+LNA;Lantana, FL
+LNC;Lancaster, TX
+LND;Lander, WY
+LNK;Lincoln, NE
+LNL;Land O' Lakes, WI
+LNN;Willoughby, OH
+LNP;Wise, VA
+LNS;Lancaster, PA
+LNY;Lanai City, HI
+LOL;Lovelock, NV
+LOT;Chicago/Romeoville, IL
+LOU;Louisville, KY
+LOZ;London, KY
+LPC;Lompoc, CA
+LPR;Lorain/Elyria, OH
+LQK;Pickens, SC
+LQR;Larned, KS
+LRD;Laredo, TX
+LRG;Lincoln, ME
+LRJ;Le Mars, IA
+LRU;Las Cruces, NM
+LSB;Lordsburg, NM
+LSE;La Crosse, WI
+LSK;Lusk, WY
+LSN;Los Banos, CA
+LUG;Lewisburg, TN
+LUK;Cincinnati, OH
+LUL;Laurel, MS
+LUP;Kalaupapa, HI
+LVJ;Houston, TX
+LVK;Livermore, CA
+LVM;Livingston, MT
+LVN;Minneapolis, MN
+LVS;Las Vegas, NM
+LWB;Lewisburg, WV
+LWC;Lawrence, KS
+LWD;Lamoni, IA
+LWL;Wells, NV
+LWM;Lawrence, MA
+LWS;Lewiston, ID
+LWT;Lewistown, MT
+LWV;Lawrenceville, IL
+LXL;Little Falls, MN
+LXN;Lexington, NE
+LXT;Lee's Summit, MO
+LXV;Leadville, CO
+LXY;Mexia, TX
+LYH;Lynchburg, VA
+LYO;Lyons, KS
+LZU;Lawrenceville, GA
+M01;Memphis, TN
+M02;Dickson, TN
+M03;Conway, AR
+M04;Covington, TN
+M05;Caruthersville, MO
+M08;Bolivar, TN
+M09;Piedmont, MO
+M11;Crystal Springs, MS
+M13;Poplarville, MS
+M15;Linden, TN
+M16;Raymond, MS
+M17;Bolivar, MO
+M18;Hope, AR
+M19;Newport, AR
+M21;Greenville, KY
+M22;Russellville, AL
+M23;Newton, MS
+M24;Wiggins, MS
+M25;Mayfield, KY
+M27;Waldron, AR
+M29;Clifton, TN
+M30;Metropolis, IL
+M32;Lake Village, AR
+M33;Gallatin, TN
+M34;Gilbertsville, KY
+M36;Brinkley, AR
+M37;Drew, MS
+M39;Mena, AR
+M40;Aberdeen-Amory, MS
+M41;Holly Springs, MS
+M43;Prentiss, MS
+M44;Houston, MS
+M46;Colstrip, MT
+M48;Houston, MO
+M52;Lexington, TN
+M53;Humboldt, TN
+M54;Lebanon, TN
+M58;Monett, MO
+M59;Richton, MS
+M60;Augusta, AR
+M65;Wynne, AR
+M70;Pocahontas, AR
+M72;New Albany, MS
+M73;Almyra, AR
+M75;Malta, MT
+M76;Picayune, MS
+M77;Nashville, AR
+M78;Malvern, AR
+M79;Rayville, LA
+M82;Huntsville, AL
+M83;West Point, MS
+M89;Arkadelphia, AR
+M91;Springfield, TN
+M95;Fayette, AL
+M97;Tunica, MS
+M99;Benton, AR
+MAC;Macon, GA
+MAE;Madera, CA
+MAF;Midland, TX
+MAI;Marianna, FL
+MAL;Malone, NY
+MAO;Marion, SC
+MAW;Malden, MO
+MAZ;Mayaguez, PR
+MBG;Mobridge, SD
+MBL;Manistee, MI
+MBO;Madison, MS
+MBS;Saginaw, MI
+MBT;Murfreesboro, TN
+MBY;Moberly, MO
+MCB;McComb, MS
+MCD;Mackinac Island, MI
+MCE;Merced, CA
+MCG;McGrath, AK
+MCI;Kansas City, MO
+MCK;McCook, NE
+MCN;Macon, GA
+MCO;Orlando, FL
+MCW;Mason City, IA
+MCX;Monticello, IN
+MCZ;Williamston, NC
+MDD;Midland, TX
+MDF;Mooreland, OK
+MDH;Carbondale, IL
+MDR;Medfra, AK
+MDS;Madison, SD
+MDT;Harrisburg, PA
+MDW;Chicago, IL
+MDZ;Medford, WI
+MEB;Maxton, NC
+MEI;Meridian, MS
+MEJ;Meade, KS
+MEM;Memphis, TN
+MER;Atwater, CA
+MEV;Minden, NV
+MEY;Mapleton, IA
+MFD;Mansfield, OH
+MFE;McAllen, TX
+MFI;Marshfield, WI
+MFR;Medford, OR
+MFV;Melfa, VA
+MGC;Michigan City, IN
+MGJ;Montgomery, NY
+MGM;Montgomery, AL
+MGR;Moultrie, GA
+MGW;Morgantown, WV
+MGY;Dayton, OH
+MHE;Mitchell, SD
+MHK;Manhattan, KS
+MHL;Marshall, MO
+MHM;Minchumina, AK
+MHP;Metter, GA
+MHR;Sacramento, CA
+MHT;Manchester, NH
+MHV;Mojave, CA
+MIA;Miami, FL
+MIB;NA, NA
+MIC;Minneapolis, MN
+MIE;Muncie, IN
+MIO;Miami, OK
+MIT;Shafter, CA
+MIV;Millville, NJ
+MIW;Marshalltown, IA
+MJQ;Jackson, MN
+MJX;Toms River, NJ
+MKA;Miller, SD
+MKC;Kansas City, MO
+MKE;Milwaukee, WI
+MKG;Muskegon, MI
+MKJ;Marion, VA
+MKK;Kaunakakai, HI
+MKL;Jackson, TN
+MKO;Muskogee, OK
+MKT;Mankato, MN
+MKV;Marksville, LA
+MKY;Marco Island, FL
+MLB;Melbourne, FL
+MLC;McAlester, OK
+MLE;Omaha, NE
+MLF;Milford, UT
+MLI;Moline, IL
+MLJ;Milledgeville, GA
+MLL;Marshall, AK
+MLS;Miles City, MT
+MLT;Millinocket, ME
+MLU;Monroe, LA
+MLY;Manley Hot Springs, AK
+MMH;Mammoth Lakes, CA
+MMI;Athens, TN
+MMK;Meriden, CT
+MML;Marshall, MN
+MMU;Morristown, NJ
+MMV;McMinnville, OR
+MNF;Mountain View, MO
+MNI;Manning, SC
+MNM;Menominee, MI
+MNN;Marion, OH
+MNV;Madisonville, TN
+MNZ;Hamilton, TX
+MO6;Washington, MO
+MO85;Harrisonville, MO
+MOB;Mobile, AL
+MOD;Modesto, CA
+MOP;Mount Pleasant, MI
+MOR;Morristown, TN
+MOT;Minot, ND
+MOU;Mountain Village, AK
+MOX;Morris, MN
+MPE;Philadelphia, MS
+MPJ;Morrilton, AR
+MPO;Mount Pocono, PA
+MPR;McPherson, KS
+MPV;Barre-Montpelier, VT
+MPZ;Mount Pleasant, IA
+MQB;Macomb, IL
+MQI;Manteo, NC
+MQJ;Indianapolis, IN
+MQT;NA, NA
+MQW;McRae, GA
+MQY;Smyrna, TN
+MRB;Martinsburg, WV
+MRC;Columbia-Mt Pleasant, TN
+MRF;Marfa, TX
+MRH;Beaufort, NC
+MRI;Anchorage, AK
+MRJ;Mineral Point, WI
+MRN;Morganton, NC
+MRY;Monterey, CA
+MSA;Mount Pleasant, TX
+MSL;Muscle Shoals, AL
+MSN;Madison, WI
+MSO;Missoula, MT
+MSP;Minneapolis, MN
+MSS;Massena, NY
+MSV;Monticello, NY
+MSY;New Orleans, LA
+MTH;Marathon, FL
+MTJ;Montrose, CO
+MTM;Metlakatla, AK
+MTN;Baltimore, MD
+MTO;Mattoon-Charleston, IL
+MTP;Montauk, NY
+MTV;Martinsville, VA
+MTW;Manitowoc, WI
+MUE;Kamuela, HI
+MUT;Muscatine, IA
+MVC;Monroeville, AL
+MVE;Montevideo, MN
+MVI;Monte Vista, CO
+MVL;Morrisville, VT
+MVM;Machias, ME
+MVN;Mt. Vernon, IL
+MVY;Marthas Vineyard, MA
+MWA;Marion, IL
+MWC;Milwaukee, WI
+MWH;Moses Lake, WA
+MWK;Mount Airy, NC
+MWL;Mineral Wells, TX
+MWM;Windom, MN
+MWO;Middletown, OH
+MXA;Manila, AR
+MXO;Monticello, IA
+MYF;San Diego, CA
+MYK;May Creek, AK
+MYL;McCall, ID
+MYR;Myrtle Beach, SC
+MYU;Mekoryuk, AK
+MYV;Marysville, CA
+MYZ;Marysville, KS
+MZJ;Marana, AZ
+MZZ;Marion, IN
+N00;Lexington, NY
+N03;Cortland, NY
+N04;Madison, CT
+N07;Lincoln Park, NJ
+N10;Collegeville, PA
+N12;Lakewood, NJ
+N13;Bloomsburg, PA
+N14;Lumbrerton, NJ
+N23;Sidney, NY
+N24;Questa, NM
+N25;Westport,  NY
+N27;Towanda, PA
+N29;Magdalena, NM
+N30;Honesdale, PA
+N35;Punxsutawney, PA
+N37;Monticello, NY
+N38;Wellsboro, PA
+N40;Pittstown, NJ
+N47;Pottstown, PA
+N51;Readington, NJ
+N53;East Stroudsburg, PA
+N57;Toughkenamon, PA
+N66;Oneonta, NY
+N67;Ambler, PA
+N68;Chambersburg, PA
+N69;Stormville, NY
+N72;Warwick, NY
+N73;Vincentown, NJ
+N79;Shamokin, PA
+N81;Hammonton, NJ
+N82;Wurtsboro, NY
+N85;Pittstown, NJ
+N87;Robbinsville, NJ
+N89;Ellenville, NY
+N93;Golovin, AK
+N99;West Chester, PA
+NC14;Reidsville, NC
+NC67;West Jefferson, NC
+ND06;Cavalier, ND
+ND12;Ellendale, ND
+ND17;Harvey, ND
+ND26;Kenmare, ND
+ND28;Lakota, ND
+ND29;La Moure (New Site), ND
+ND33;Linton, ND
+ND44;Mott, ND
+ND66;Washburn, ND
+NEW;New Orleans, LA
+NH12;Plymouth, NH
+NK03;Durhamville, NY
+NQA;Millington, TN
+NRN;Norton, KS
+NUL;Nulato, AK
+NVD;Nevada, MO
+NY0;Johnstown, NY
+O02;Beckwourth, CA
+O05;Chester, CA
+O08;Colusa, CA
+O09;Covelo, CA
+O11;Stilwell, OK
+O15;Turlock, CA
+O16;Garberville, CA
+O17;Grass Valley, CA
+O19;Eureka, CA
+O21;Hoopa, CA
+O22;Columbia, CA
+O24;Lee Vining, CA
+O26;Lone Pine, CA
+O27;Oakdale, CA
+O28;Willits, CA
+O31;Healdsburg, CA
+O32;Reedley, CA
+O35;Hollis, OK
+O37;Orland, CA
+O41;Woodland, CA
+O42;Woodlake, CA
+O43;Yerington, NV
+O45;Hooker, OK
+O46;Weed, CA
+O47;Prague, OK
+O48;Little River, CA
+O52;Yuba City, CA
+O53;Medford, OK
+O54;Weaverville, CA
+O57;Bridgeport, CA
+O59;Cedarville, CA
+O60;Cloverdale, CA
+O61;Cameron Park, CA
+O65;Okeene, OK
+O68;Mariposa, CA
+O69;Petaluma, CA
+O70;Jackson, CA
+O81;Tulelake, CA
+O85;Redding, CA
+O86;Trinity Center, CA
+O88;Rio Vista, CA
+O89;Fall River Mills, CA
+OAJ;Jacksonville, NC
+OAK;Oakland, CA
+OAR;Marina, CA
+OBE;Okeechobee, FL
+OBU;Kobuk, AK
+OCF;Ocala, FL
+OCH;Nacogdoches, TX
+OCQ;Oconto, WI
+OCW;Washington, NC
+ODO;Odessa, TX
+ODX;Ord, NE
+OEB;Coldwater, MI
+OEL;Oakley, KS
+OEO;Osceola, WI
+OFK;Norfolk, NE
+OFP;Richmond, VA
+OGA;Ogallala, NE
+OGB;Orangeburg, SC
+OGD;Ogden, UT
+OGG;Kahului, HI
+OGM;Ontonagon, MI
+OGS;Ogdensburg, NY
+OH17;Napoleon, OH
+OH21;Norwalk, OH
+OH30;Put In Bay, OH
+OIC;Norwich, NY
+OIN;Oberlin, KS
+OJC;Olathe, KS
+OKB;Oceanside, CA
+OKC;Oklahoma City, OK
+OKK;Kokomo, IN
+OKM;Okmulgee, OK
+OKS;Oshkosh, NE
+OKV;Winchester, VA
+OKZ;Sandersville, GA
+OLD;Old Town, ME
+OLE;Olean, NY
+OLF;Wolf Point, MT
+OLM;Olympia, WA
+OLS;Nogales, AZ
+OLU;Columbus, NE
+OLV;Olive Branch, MS
+OLY;Olney-Noble, IL
+OLZ;Oelwein, IA
+OMA;Omaha, NE
+OME;Nome, AK
+OMH;Orange, VA
+OMK;Omak, WA
+OMN;Ormond Beach, FL
+ONA;Winona, MN
+ONL;O Neill, NE
+ONM;Socorro, NM
+ONO;Ontario, OR
+ONP;Newport, OR
+ONT;Ontario, CA
+ONY;Olney, TX
+ONZ;Detroit - Grosse Ile, MI
+OOA;Oskaloosa, IA
+OOH;Hoonah, AK
+OOK;Toksook Bay, AK
+OPF;Miami, FL
+OPL;Opelousas, LA
+OPN;Thomaston, GA
+OQU;North Kingstown, RI
+OQW;Maquoketa, IA
+OR33;Boardman, OR
+ORB;Orr, MN
+ORC;Orange City, IA
+ORD;Chicago, IL
+ORE;Orange, MA
+ORF;Norfolk, VA
+ORG;Orange, TX
+ORH;Worcester, MA
+ORI;Port Lions, AK
+ORL;Orlando, FL
+ORS;Eastsound, WA
+ORT;Northway, AK
+ORV;Noorvik, AK
+OSC;Oscoda, MI
+OSH;Oshkosh, WI
+OSU;Columbus, OH
+OSX;Kosciusko, MS
+OTG;Worthington, MN
+OTH;North Bend, OR
+OTM;Ottumwa, IA
+OTZ;Kotzebue, AK
+OUN;Norman, OK
+OVE;Oroville, CA
+OVO;North Vernon, IN
+OVS;Boscobel, WI
+OWA;Owatonna, MN
+OWB;Owensboro, KY
+OWD;Norwood, MA
+OWI;Ottawa, KS
+OWK;Norridgewock, ME
+OWX;Ottawa, OH
+OXB;Ocean City, MD
+OXC;Oxford, CT
+OXD;Oxford, OH
+OXI;Knox, IN
+OXR;Oxnard, CA
+OXV;Knoxville, IA
+OYM;St Marys, PA
+OZA;Ozona, TX
+OZW;Howell, MI
+P01;Ajo, AZ
+P04;Bisbee, AZ
+P08;Coolidge, AZ
+P13;Globe, AZ
+P14;Holbrook, AZ
+P20;Parker, AZ
+P32;Williams, AZ
+P33;Willcox, AZ
+P45;Mount Pleasant, PA
+P52;Cottonwood, AZ
+P53;Monongahela, PA
+PAE;Everett, WA
+PAH;Paducah, KY
+PAK;Hanapepe, HI
+PAN;Payson, AZ
+PAO;Palo Alto, CA
+PAQ;Palmer, AK
+PBF;Pine Bluff, AR
+PBH;Phillips, WI
+PBI;West Palm Beach, FL
+PBV;St. George, AK
+PCK;Porcupine Creek, AK
+PCM;Plant City, FL
+PCW;Port Clinton, OH
+PCZ;Waupaca, WI
+PDC;Prairie Du Chien, WI
+PDK;Atlanta, GA
+PDT;Pendleton, OR
+PDX;Portland, OR
+PEA;Pella, IA
+PEC;Pelican, AK
+PEO;Penn Yan, NY
+PEQ;Pecos City, TX
+PEZ;Pleasanton, TX
+PFN;Panama City, FL
+PGA;Page, AZ
+PGD;Punta Gorda, FL
+PGM;Port Graham, AK
+PGR;Paragould, AR
+PGV;Greenville, NC
+PHD;New Philadelphia, OH
+PHF;Newport News, VA
+PHG;Phillipsburg, KS
+PHH;Andrews, SC
+PHK;Pahokee, FL
+PHL;Philadelphia, PA
+PHN;Port Huron, MI
+PHO;Point Hope, AK
+PHP;Philip, SD
+PHT;Paris, TN
+PHX;Phoenix, AZ
+PIA;Peoria, IL
+PIB;Hattiesburg-Laurel, MS
+PIE;St. Petersburg, FL
+PIH;Pocatello, ID
+PIL;Port Isabel, TX
+PIM;Pine Mountain, GA
+PIR;Pierre, SD
+PIT;Pittsburgh, PA
+PIZ;Point Lay, AK
+PJY;Pinckneyville-Duquoin, IL
+PKA;Napaskiak, AK
+PKB;Parkersburg, WV
+PKD;Park Rapids, MN
+PKF;Park Falls, WI
+PLB;Plattsburgh, NY
+PLD;Portland, IN
+PLN;Pellston, MI
+PLR;Pell City, AL
+PMB;Pembina, ND
+PMD;Palmdale, CA
+PMH;Portsmouth, OH
+PMP;Pompano Beach, FL
+PMV;Plattsmouth, NE
+PMX;Palmer, MA
+PMZ;Plymouth, NC
+PNA;Pinedale, WY
+PNC;Ponca City, OK
+PNE;Philadelphia, PA
+PNM;Princeton, MN
+PNN;Princeton, ME
+PNP;Pilot Point, AK
+PNS;Pensacola, FL
+POC;La Verne, CA
+POF;Poplar Bluff, MO
+POH;Pocahontas, IA
+POU;Poughkeepsie, NY
+POY;Powell, WY
+PPA;Pampa, TX
+PPC;Prospect Creek, AK
+PPF;Parsons, KS
+PPG;Pago Pago, AS
+PPO;La Porte, IN
+PPQ;Pittsfield, IL
+PQI;Presque Isle, ME
+PQL;Pascagoula, MS
+PQN;Pipestone, MN
+PR03;Fajardo, PR
+PRB;Paso Robles, CA
+PRC;Prescott, AZ
+PRG;Paris, IL
+PRN;Greenville, AL
+PRO;Perry, IA
+PRX;Paris, TX
+PSB;Philipsburg, PA
+PSC;Pasco, WA
+PSE;Ponce, PR
+PSF;Pittsfield, MA
+PSG;Petersburg, AK
+PSK;Dublin, VA
+PSM;Portsmouth, NH
+PSN;Palestine, TX
+PSP;Palm Springs, CA
+PSX;Palacios, TX
+PTB;Petersburg, VA
+PTD;Potsdam, NY
+PTH;Port Heiden, AK
+PTK;Pontiac, MI
+PTN;Patterson, LA
+PTS;Pittsburg, KS
+PTT;Pratt, KS
+PTU;Platinum, AK
+PTV;Porterville, CA
+PTW;Pottstown, PA
+PUB;Pueblo, CO
+PUC;Price, UT
+PUW;Pullman/Moscow, ID
+PVB;Platteville, WI
+PVC;Provincetown, MA
+PVD;Providence, RI
+PVF;Placerville, CA
+PVG;Portsmouth, VA
+PVJ;Pauls Valley, OK
+PVU;Provo, UT
+PVW;Plainview, TX
+PWA;Oklahoma City, OK
+PWC;Pine River, MN
+PWD;Plentywood, MT
+PWG;Waco, TX
+PWK;Chicago/Wheeling/Prospect Heights, IL
+PWM;Portland, ME
+PWT;Bremerton, WA
+PXE;Perry, GA
+PYG;Pageland, SC
+PYM;Plymouth, MA
+PYX;Perryton, TX
+PZQ;Rogers City, MI
+Q00;Littlefield, TX
+Q06;Tulia, TX
+Q14;Espanola, NM
+Q16;Reserve, NM
+Q17;Boonville, CA
+Q21;Brownsville, CA
+Q24;Levelland, TX
+Q25;Dinsmore, CA
+Q26;Brownfield, TX
+Q31;Visalia, CA
+Q34;Portales, NM
+Q35;Springerville, AZ
+Q37;Carrizozo, NM
+Q41;Floydada, TX
+Q42;Springer, NM
+Q44;Beaver, OK
+Q49;Firebaugh, CA
+Q53;Franklin, CA
+Q55;Dimmitt, TX
+Q58;Santa Rosa, NM
+Q61;Georgetown, CA
+Q68;Groveland, CA
+Q72;Hayfork, CA
+Q84;Mendota, CA
+Q88;Paradise, CA
+Q94;Rio Linda, CA
+Q95;Ruth, CA
+Q99;San Martin, CA
+RAC;Racine, WI
+RAL;Riverside, CA
+RAP;Rapid City, SD
+RBD;Dallas, TX
+RBE;Bassett, NE
+RBG;Roseburg, OR
+RBL;Red Bluff, CA
+RBW;Walterboro, SC
+RBY;Ruby, AK
+RCA;NA, NA
+RCR;Rochester, IN
+RCX;Ladysmith, WI
+RDD;Redding, CA
+RDG;Gen Carl A Spaatz, Reading
+RDK;Red Oak, IA
+RDM;Redmond, OR
+RDR;NA, NA
+RDU;Raleigh, NC
+RDV;Red Devil, AK
+RED;Red Lodge, MT
+RFD;Rockford, IL
+RFG;Refugio, TX
+RGK;Red Wing, MN
+RHI;Rhinelander, WI
+RHV;San Jose, CA
+RIC;Richmond, VA
+RID;Richmond, IN
+RIF;Richfield, UT
+RIL;Rifle, CO
+RIU;Rancho Murieta, CA
+RIV;Riverside, CA
+RIW;Riverton, WY
+RKD;Rockland, ME
+RKP;Rockport, TX
+RKR;Poteau, OK
+RKS;Rock Springs, WY
+RKW;Rockwood, TN
+RLD;Richland, WA
+RME;Rome, NY
+RMG;Rome, GA
+RMP;Rampart, AK
+RMY;Marshall, MI
+RNC;McMinnville, TN
+RNH;New Richmond, WI
+RNM;Ramona, CA
+RNO;Reno, NV
+RNT;Renton, WA
+RNV;Cleveland, MS
+ROA;Roanoke, VA
+ROC;Rochester, NY
+ROG;Rogers, AR
+ROP;NA, NA
+ROR;NA, NA
+ROS;Rush City, MN
+ROW;Roswell, NM
+ROX;Roseau, MN
+RPB;Belleville, KS
+RPD;Rice Lake, WI
+RPX;Roundup, MT
+RQB;Big Rapids, MI
+RQE;Window Rock, AZ
+RRL;Merrill, WI
+RRT;Warroad, MN
+RSH;Russian Mission, AK
+RSL;Russell, KS
+RSN;Ruston, LA
+RST;Rochester, MN
+RSV;Robinson, IL
+RSW;Ft. Myers, FL
+RTN;Raton, NM
+RUE;Russellville, AR
+RUG;Rugby, ND
+RUQ;Salisbury, NC
+RUT;Rutland, VT
+RVJ;Reidsville, GA
+RVL;Reedsville, PA
+RVN;Rogersville, TN
+RVS; Jr., Tulsa
+RWF;Redwood Falls, MN
+RWI;Rocky Mount, NC
+RWL;Rawlins, WY
+RWN;Winamac, IN
+RXE;Rexburg, ID
+RYN;Tucson, AZ
+RYV;Watertown, WI
+RYY;Marietta, GA
+RZL;Rensselaer, IN
+RZN;Siren, WI
+RZT;Chillicothe, OH
+RZZ;Roanoke Rapids, NC
+S01;Conrad, MT
+S03;Ashland, OR
+S05;Bandon, OR
+S07;Bend, OR
+S10;Chelan, WA
+S12;Albany, OR
+S18;Forks, WA
+S21;Sunriver, OR
+S23;Ione, WA
+S24;Fremont, OH
+S25;Watford City, ND
+S27;Kalispell, MT
+S28;Dunseith, ND
+S30;Lebanon, OR
+S31;Lopez, WA
+S32;Cooperstown, ND
+S33;Madras, OR
+S34;Plains, MT
+S39;Prineville, OR
+S40;Prosser, WA
+S43;Snohomish, WA
+S45;Siletz Bay (Gleneden Beach), OR
+S47;Tillamook, OR
+S50;Auburn, WA
+S52;Winthrop, WA
+S59;Libby, MT
+S60;Kenmore, WA
+S64;Stanford, MT
+S66;Homedale, ID
+S67;Nampa, ID
+S68;Orofino, ID
+S69;Lincoln, MT
+S70;Othello, WA
+S71;Chinook, MT
+S72;St Maries, ID
+S73;Kamiah, ID
+S80;Grangeville, ID
+S83;Kellogg, ID
+S85;Culbertson, MT
+S87;Weiser, ID
+S89;Craigmont, ID
+S93;Cle Elum, WA
+S94;Colfax, WA
+S97;Brewster, WA
+SAA;Saratoga, WY
+SAC;Sacramento, CA
+SAD;Safford, AZ
+SAF;Santa Fe, NM
+SAN;San Diego, CA
+SAR;Sparta, IL
+SAT;San Antonio, TX
+SAV;Savannah, GA
+SAW;Gwinn, MI
+SAZ;Staples, MN
+SBA;Santa Barbara, CA
+SBD;San Bernardino, CA
+SBM;Sheboygan, WI
+SBN;South Bend, IN
+SBO;Swainsboro, GA
+SBP;San Luis Obispo, CA
+SBS;Steamboat Springs, CO
+SBU;Blue Earth, MN
+SBX;Shelby, MT
+SBY;Salisbury, MD
+SCB;Scribner, NE
+SCC;Deadhorse, AK
+SCD;Sylacauga, AL
+SCE;NA, NA
+SCH;Schenectady, NY
+SCK;Stockton, CA
+SCM;Scammon Bay, AK
+SCX;Oneida, TN
+SD07;Bison, SD
+SD10;Canton, SD
+SD12;De Smet, SD
+SD16;Eureka, SD
+SD18;Flandreau, SD
+SD22;Hoven, SD
+SD28;McLaughlin, SD
+SD32;Murdo, SD
+SD33;Parkston, SD
+SD34;Presho, SD
+SDA;Shenandoah, IA
+SDF;Louisville, KY
+SDL;Scottsdale, AZ
+SDM;San Diego, CA
+SDP;Sand Point, AK
+SDY;Sidney, MT
+SEA;Seattle, WA
+SEE;San Diego (El Cajon), CA
+SEF;Sebring, FL
+SEG;Selinsgrove, PA
+SEM;Selma, AL
+SEP;Stephenville, TX
+SER;Seymour, IN
+SET;St Charles, MO
+SEZ;Sedona, AZ
+SFB;Orlando, FL
+SFD;Winner, SD
+SFF;Spokane, WA
+SFM;Sanford, ME
+SFO;San Francisco, CA
+SFQ;Suffolk, VA
+SFY;Savanna, IL
+SFZ;Pawtucket, RI
+SGF;Springfield, MO
+SGH;Springfield, OH
+SGJ;St. Augustine, FL
+SGR;Houston, TX
+SGS;South St Paul, MN
+SGT;Stuttgart, AR
+SGU;St George, UT
+SGY;Skagway, AK
+SHD;Staunton/Harrisonburg, VA
+SHG;Shungnak, AK
+SHH;Shishmaref, AK
+SHL;Sheldon, IA
+SHN;Shelton, WA
+SHR;Sheridan, WY
+SHV;Shreveport, LA
+SHX;Shageluk, AK
+SIG;San Juan, PR
+SIK;Sikeston, MO
+SIT;Sitka, AK
+SIV;Sullivan, IN
+SIY;Montague, CA
+SJC;San Jose, CA
+SJN;St Johns, AZ
+SJT;San Angelo, TX
+SJU;San Juan, PR
+SJX;St James, MI
+SKA;NA, NA
+SKI;Sac City, IA
+SKW;Skwentna, AK
+SKX;Taos, NM
+SLB;Storm Lake, IA
+SLC;Salt Lake City, UT
+SLE;Salem, OR
+SLG;Siloam Springs, AR
+SLK;Saranac Lake, NY
+SLN;Salina, KS
+SLO;Salem, IL
+SLQ;Sleetmute, AK
+SLR;Sulphur Springs, TX
+SMD;Fort Wayne, IN
+SME;Somerset, KY
+SMF;Sacramento, CA
+SMN;Salmon, ID
+SMO;Santa Monica, CA
+SMQ;Somerville, NJ
+SMS;Sumter, SC
+SMX;Santa Maria, CA
+SNA;Santa Ana, CA
+SNH;Savannah, TN
+SNK;Snyder, TX
+SNL;Shawnee, OK
+SNP;St. Paul, AK
+SNS;Salinas, CA
+SNY;Sidney, NE
+SOP;Pinehurst/Southern Pines, NC
+SOV;Seldovia, AK
+SOW;Show Low, AZ
+SPA;Spartanburg, SC
+SPB;Scappoose, OR
+SPF;Spearfish, SD
+SPG;St. Petersburg, FL
+SPH;Springhill, LA
+SPI;Springfield, IL
+SPN;NA, NA
+SPS;Wichita Falls, TX
+SPW;Spencer, IA
+SPX;Houston, TX
+SQI;Sterling Rockfalls, IL
+SQL;San Carlos, CA
+SRB;Sparta, TN
+SRC;Searcy, AR
+SRQ;Sarasota, FL
+SRR;Ruidoso, NM
+SRV;Stony River, AK
+SSF;San Antonio, TX
+SSI;Brunswick, GA
+SSQ;Shell Lake, WI
+STC;St Cloud, MN
+STE;Stevens Point, WI
+STF;Starkville, MS
+STJ;St Joseph, MO
+STK;Sterling, CO
+STL;St Louis, MO
+STP;St Paul, MN
+STS;Santa Rosa, CA
+STT;Charlotte Amalie, VI
+STX;Christiansted, VI
+SUA;Stuart, FL
+SUD;Stroud, OK
+SUE;Sturgeon Bay, WI
+SUN;Hailey, ID
+SUS;St Louis, MO
+SUT;Southport, NC
+SUW;Superior, WI
+SUX;Sioux City, IA
+SVA;Savoonga, AK
+SVC;Silver City, NM
+SVE;Susanville, CA
+SVH;Statesville, NC
+SVS;Stevens Village, AK
+SWD;Seward, AK
+SWF;Newburgh, NY
+SWO;Stillwater, OK
+SWT;Seward, NE
+SWW;Sweetwater, TX
+SXL;Summersville, WV
+SXP;Sheldon Point, AK
+SXQ;Soldotna, AK
+SYF;St Francis, KS
+SYI;Shelbyville, TN
+SYR;Syracuse, NY
+SYV;Sylvester, GA
+SZP;Santa Paula, CA
+SZT;Sandpoint, ID
+SZY;Selmer, TN
+T00;Anahauac, TX
+T03;Tuba City, AZ
+T08;Tomahawk, WI
+T18;Falfurrias, TX
+T28;Lampasas, TX
+T35;Cameron, TX
+T36;Tylertown, MS
+T41;La Porte, TX
+T44;Kodiak, AK
+T47;Wichita Falls, TX
+T49;Big Spring, TX
+T53;Robstown, TX
+T56;Crockett, TX
+T57;Garland, TX
+T60;Aspermont, TX
+T65;Weslaco, TX
+T69;Sinton, TX
+T71;Cuero, TX
+T72;Hearne, TX
+T74;Taylor, TX
+T78;Liberty, TX
+T80;Kingsville, TX
+T82;Fredericksburg, TX
+T89;Castroville, TX
+T90;Winnie/Stowell, TX
+T97;Port Lavaca, TX
+TAD;Trinidad, CO
+TAL;Tanana, AK
+TAN;Taunton, MA
+TAZ;Taylorville, IL
+TBN;Fort Leonard Wood, MO
+TBR;Statesboro, GA
+TCC;Tucumcari, NM
+TCL;Tuscaloosa, AL
+TCS;Truth Or Consequences, NM
+TCT;Takotna, AK
+TCY;Tracy, CA
+TDF;Roxboro, NC
+TDO;Toledo, WA
+TDZ;Toledo, OH
+TEB;Teterboro, NJ
+TEL;Tell City, IN
+TEW;Mason, MI
+TEX;Telluride, CO
+TGC;Trenton, TN
+TGI;Tangier, VA
+THA;Tullahoma, TN
+THM;Thompson Falls, MT
+THP;Thermopolis, WY
+THV;York, PA
+TIW;Tacoma, WA
+TIX;Titusville, FL
+TKA;Talkeetna, AK
+TKE;Tenakee Springs, AK
+TKI;McKinney, TX
+TKX;Kennett, MO
+TLH;Tallahassee, FL
+TLR;Tulare, CA
+TLT;Tuluksak, AK
+TMA;Tifton, GA
+TMB;Miami, FL
+TNI;Peipeinimaru, CQ
+TNP;Twentynine Palms, CA
+TNT;Miami, FL
+TNU;Newton, IA
+TOA;Torrance, CA
+TOB;Dodge Center, MN
+TOC; R G Le Tourneau, Toccoa
+TOG;Togiak, AK
+TOI;Troy, AL
+TOL;Toledo, OH
+TOP;Topeka, KS
+TOR;Torrington, WY
+TPA;Tampa, FL
+TPF;Tampa, FL
+TPH;Tonopah, NV
+TPL;Temple, TX
+TPO;Port Alsworth, AK
+TQE;Tekamah, NE
+TQH;Tahlequah, OK
+TQK;Scott City, KS
+TRI;Bristol, TN
+TRK;Truckee, CA
+TRL;Terrell, TX
+TRM;Palm Springs, CA
+TRX;Trenton, MO
+TSO;Carrollton, OH
+TSP;Tehachapi, CA
+TT01;Shomu-Shon, CQ
+TTA;Sanford, NC
+TTD;Portland, OR
+TTF;Monroe, MI
+TTN;Trenton, NJ
+TUL;Tulsa, OK
+TUP;Tupelo, MS
+TUS;Tucson, AZ
+TVB;Cabool, MO
+TVC;Traverse City, MI
+TVF;Thief River Falls, MN
+TVI;Thomasville, GA
+TVK;Centerville, IA
+TVL;South Lake Tahoe, CA
+TVR;Tallulah, LA
+TVY;Tooele, UT
+TWF;Twin Falls, ID
+TWM;Two Harbors, MN
+TXK;Texarkana, AR
+TYL;Taylor, AZ
+TYQ;Indianapolis, IN
+TYR;Tyler, TX
+TYS;Knoxville, TN
+TZR;Columbus, OH
+TZT;Belle Plaine, IA
+TZV;Tompkinsville, KY
+U02;Blackfoot, ID
+U03;Buhl, ID
+U05;Philipsburg, MT
+U08;Overton, NV
+U10;Preston, ID
+U14;Nephi, UT
+U25;Dubois, WY
+U30;Temple Bar, AZ
+U34;Green River, UT
+U36;Aberdeen, ID
+U42;Salt Lake City, UT
+U43;Monticello, UT
+U52;Beaver, UT
+U55;Panguitch, UT
+U59;Driggs, ID
+U68;Cowley/Lovell/Byron, WY
+U69;Duchesne, UT
+U70;Cascade, ID
+U76;Mountain Home, ID
+U77;Spanish Fork, UT
+U82;Council, ID
+U96;Halls Crossing, UT
+UAO;Aurora, OR
+UBE;Cumberland, WI
+UBS;Columbus, MS
+UBX;Cuba, MO
+UCA;Utica, NY
+UCP;New Castle, PA
+UCY;Union City, TN
+UDD;Palm Springs, CA
+UDG;Darlington, SC
+UES;Waukesha, WI
+UGN;Chicago/Waukegan, IL
+UIL;Forks, WA
+UIN;Quincy, IL
+UIZ;Utica, MI
+UKF;North Wilkesboro, NC
+UKI;Ukiah, CA
+UKL;Burlington, KS
+UKT;Quakertown, PA
+ULM;New Ulm, MN
+ULS;Ulysses, KS
+UMP;Indianapolis, IN
+UNI;Athens/Albany, OH
+UNK;Unalakleet, AK
+UNO;West Plains, MO
+UNU;Juneau, WI
+UNV;State College, PA
+UOS;Sewanee, TN
+UOX;Oxford, MS
+UPP;Hawi, HI
+USE;Wauseon, OH
+UTS;Huntsville, TX
+UUO;Willow, AK
+UUU;Newport, RI
+UUV;Sullivan, MO
+UVA;Uvalde, TX
+UWL;New Castle, IN
+UYF;London, OH
+UZA;Rock Hill, SC
+VAK;Chevak, AK
+VAY;Mount Holly, NJ
+VBT;Bentonville, AR
+VCB;Vacaville, CA
+VCT;Victoria, TX
+VCV;Victorville, CA
+VDI;Vidalia, GA
+VDZ;Valdez, AK
+VEE;Venetie, AK
+VEL;Vernal, UT
+VER;Boonville, MO
+VES;Versailles, OH
+VGT;Las Vegas, NV
+VHN;Van Horn, TX
+VIH;Rolla/Vichy, MO
+VIQ;Neillsville, WI
+VIS;Visalia, CA
+VJI;Abingdon, VA
+VLA;Vandalia, IL
+VLD;Valdosta, GA
+VMR;Vermillion, SD
+VNC;Venice, FL
+VNW;Van Wert, OH
+VNY;Van Nuys, CA
+VPC;Cartersville, GA
+VPS;Valparaiso, FL
+VPZ;Valparaiso, IN
+VQQ;Jacksonville, FL
+VQS;Isla De Vieques, PR
+VRB;Vero Beach, FL
+VSF;Springfield, VT
+VTA;Newark, OH
+VTI;Vinton, IA
+VTN;Valentine, NE
+VUJ;Albemarle, NC
+VUO;Vancouver, WA
+VVV;Ortonville, MN
+VYS;Peru/Lasalle, IL
+W04;Ocean Shores, WA
+W05;Gettysburg, PA
+W11;Menomonie, WI
+W22;Buckhannon, WV
+W29;Stevensville, MD
+W31;Kenbridge, VA
+W33;Friday Harbor, WA
+W40;Mt Olive, NC
+W41;Crisfield, MD
+W44;Asheboro, NC
+W45;Luray, VA
+W66;Warrenton, VA
+W78;South Boston, VA
+W95;Ocracoke, NC
+W96;Quinton, VA
+W97;West Point, VA
+W99;Petersburg, WV
+WA10;Camas/Washougal, WA
+WA21;Electric City, WA
+WA31;Langley, WA
+WA43;Odessa, WA
+WAY;Waynesburg, PA
+WBB;Stebbins, AK
+WBQ;Beaver, AK
+WBW;Wilkes-Barre, PA
+WCR;Chandalar Lake, AK
+WDG;Enid, OK
+WDR;Winder, GA
+WHP;Los Angeles, CA
+WJF;Lancaster, CA
+WLD;Winfield/Arkansas City, KS
+WLK;Selawik, AK
+WLW;Willows, CA
+WMC;Winnemucca, NV
+WMO;White Mountain, AK
+WNA;Napakiak, AK
+WRG;Wrangell, AK
+WRL;Worland, WY
+WSM;Wiseman, AK
+WSN;South Naknek, AK
+WST;Westerly, RI
+WTK;Noatak, AK
+WVI;Watsonville, CA
+WVL;Waterville, ME
+WWD;Wildwood, NJ
+WWR;Woodward, OK
+WYS;West Yellowstone, MT
+X01;Everglades, FL
+X06;Arcadia, FL
+X07;Lake Wales, FL
+X10;Belle Glade, FL
+X14;Labelle, FL
+X16;Tampa, FL
+X21;Titusville, FL
+X23;Umatilla, FL
+X26;Sebastian, FL
+X35;Dunellon, FL
+X40;Inverness, FL
+X44;Miami, FL
+X46;Miami, FL
+X47;Bunnell, FL
+X51;Homestead, FL
+X59;Valkaria, FL
+X60;Williston, FL
+X63;Humacao, PR
+X66;Charlotte Amalie, VI
+X67;Christiansted, VI
+X95;Fajardo, PR
+X96;Cruz Bay, VI
+XNA;Fayetteville/Springdale/Rogers, AR
+XVG;Longville, MN
+Y03;Springfield, SD
+Y14;Tea, SD
+Y15;Cheboygan, MI
+Y19;Mandan, ND
+Y27;Fort Yates, ND
+Y31;West Branch, MI
+Y37;Park River, ND
+Y47;New Hudson, MI
+Y50;Wautoma, WI
+Y51;Viroqua, WI
+Y55;Crandon, WI
+Y63;Elbow Lake, MN
+Y66;Drummond Island, MI
+Y68;Tracy, MN
+Y70;Ionia, MI
+Y74;Parshall, ND
+Y83;Sandusky, MI
+Y93;Atlanta, MI
+YAK;Yakutat, AK
+YAP;NA, NA
+YIP;Detroit, MI
+YKM;Yakima, WA
+YKN;Yankton, SD
+YNG;Youngstown, OH
+YUM;Yuma, AZ
+Z08;Ofu Village, AS
+Z09;Kasigluk, AK
+Z13;Akiachak, AK
+Z17;Ophir, AK
+Z40;Goose Bay, AK
+Z55;Lake Louise, AK
+Z73;Nelson Lagoon, AK
+Z84;Clear A.F.B., AK
+Z91;Birch Creek, AK
+Z95;Cibecue, AZ
+ZEF;Elkin, NC
+ZER;Pottsville, PA
+ZPH;Zephyrhills, FL
+ZUN;Zuni, NM
+ZZV;Zanesville, OH

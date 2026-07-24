@@ -93,7 +93,7 @@ defmodule Prodigy.Server.Protocol.Dia.Packet do
   end
 
   @spec decode(binary(), Fm0.t()) :: {:ok, Fm0.t()}
-  def decode(<<length, 4, user_id::binary-size(7), "0", rest::binary>> = _data, fm0) do
+  def decode(<<length, 4, user_id::binary-size(7), 0, rest::binary>> = _data, fm0) do
     correlation_id_length = length - 10
     <<correlation_id::binary-size(correlation_id_length), payload::binary>> = rest
 
