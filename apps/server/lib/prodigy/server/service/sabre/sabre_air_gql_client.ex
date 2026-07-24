@@ -72,16 +72,16 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirGqlClient do
           body |> Map.get("data") |> Map.get("flights") |> es_map()
         rescue
           e ->
-            IO.puts("Failed to parse GraphQL response body: #{inspect(e)}")
+            Logger.warning("Failed to parse GraphQL response body: #{inspect(e)}")
             []
         end
 
       {:ok, %Req.Response{status: status}} ->
-        IO.puts("GraphQL request failed with status: #{status}")
+        Logger.warning("GraphQL request failed with status: #{status}")
         []
 
       {:error, reason} ->
-        IO.puts("GraphQL request error: #{inspect(reason)}")
+        Logger.error("GraphQL request error: #{inspect(reason)}")
         []
     end
   end
