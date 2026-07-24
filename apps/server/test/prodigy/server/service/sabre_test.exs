@@ -366,51 +366,6 @@ defmodule Prodigy.Server.Service.Sabre.Test do
     end
   end
 
-  describe "SabreAirMapper.to_binary/1" do
-    test "empty list produces the no-flights-found response" do
-      assert SabreAirMapper.to_binary([]) == <<7, 0, 0x01, 0xFF, 0xFF, 0, 0>>
-    end
-
-    test "non-empty list produces a response with page code 0x0900" do
-      flights = [
-        %{
-          "carrier" => "AA",
-          "flightNumber" => "1261",
-          "origin" => "JFK",
-          "dest" => "LAX",
-          "departureTime" => "18:00:00",
-          "arrivalTime" => "23:03:00",
-          "date" => "2013-10-01"
-        }
-      ]
-
-      <<7, 0, 0x01, page_code::16-big, _rest::binary>> = SabreAirMapper.to_binary(flights)
-      assert page_code == 0x0900
-    end
-
-    test "num_rows in header equals 7 plus the number of flights" do
-      one_flight = [%{
-        "carrier" => "AA", "flightNumber" => "1261",
-        "origin" => "JFK", "dest" => "LAX",
-        "departureTime" => "18:00:00", "arrivalTime" => "23:03:00",
-        "date" => "2013-10-01"
-      }]
-
-      two_flights = one_flight ++ [%{
-        "carrier" => "UA", "flightNumber" => "456",
-        "origin" => "JFK", "dest" => "LAX",
-        "departureTime" => "21:00:00", "arrivalTime" => "01:00:00",
-        "date" => "2013-10-01"
-      }]
-
-      <<7, 0, 0x01, _::16, rows_1, 0, _::binary>> = SabreAirMapper.to_binary(one_flight)
-      <<7, 0, 0x01, _::16, rows_2, 0, _::binary>> = SabreAirMapper.to_binary(two_flights)
-
-      assert rows_1 == 8
-      assert rows_2 == 9
-    end
-  end
-
   # ===========================================================================
   # SabreAirGqlClient
   # ===========================================================================
@@ -429,9 +384,10 @@ defmodule Prodigy.Server.Service.Sabre.Test do
 
   describe "SabreAirGqlClient.handle_request/1" do
     test "returns a list of flight maps on a 200 response" do
-      with_mock Req, [post: fn _url, _opts ->
-        {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight]}}}}
-      end] do
+      with_mock Req,
+        post: fn _url, _opts ->
+          {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight]}}}}
+        end do
         request = %{type: :airline, departure: "JFK", arrival: "LAX", date: "2026-10-01"}
         result = SabreAirGqlClient.handle_request(request)
         assert length(result) == 1
@@ -439,9 +395,10 @@ defmodule Prodigy.Server.Service.Sabre.Test do
     end
 
     test "maps carrier and flight number into the :flight field" do
-      with_mock Req, [post: fn _url, _opts ->
-        {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight]}}}}
-      end] do
+      with_mock Req,
+        post: fn _url, _opts ->
+          {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight]}}}}
+        end do
         request = %{type: :airline, departure: "JFK", arrival: "LAX", date: "2026-10-01"}
         [flight | _] = SabreAirGqlClient.handle_request(request)
         assert flight.flight == "AA 1261"
@@ -449,9 +406,10 @@ defmodule Prodigy.Server.Service.Sabre.Test do
     end
 
     test "converts departure and arrival times to Sabre format" do
-      with_mock Req, [post: fn _url, _opts ->
-        {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight]}}}}
-      end] do
+      with_mock Req,
+        post: fn _url, _opts ->
+          {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight]}}}}
+        end do
         request = %{type: :airline, departure: "JFK", arrival: "LAX", date: "2026-10-01"}
         [flight | _] = SabreAirGqlClient.handle_request(request)
         assert flight.depart == " 600P"
@@ -460,9 +418,10 @@ defmodule Prodigy.Server.Service.Sabre.Test do
     end
 
     test "maps origin and destination airport codes" do
-      with_mock Req, [post: fn _url, _opts ->
-        {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight]}}}}
-      end] do
+      with_mock Req,
+        post: fn _url, _opts ->
+          {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight]}}}}
+        end do
         request = %{type: :airline, departure: "JFK", arrival: "LAX", date: "2026-10-01"}
         [flight | _] = SabreAirGqlClient.handle_request(request)
         assert flight.origin == "JFK"
@@ -471,9 +430,10 @@ defmodule Prodigy.Server.Service.Sabre.Test do
     end
 
     test "formats the flight date for terminal display" do
-      with_mock Req, [post: fn _url, _opts ->
-        {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight]}}}}
-      end] do
+      with_mock Req,
+        post: fn _url, _opts ->
+          {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight]}}}}
+        end do
         request = %{type: :airline, departure: "JFK", arrival: "LAX", date: "2026-10-01"}
         [flight | _] = SabreAirGqlClient.handle_request(request)
         assert flight.formatted_date == "OCT 01 13"
@@ -483,9 +443,14 @@ defmodule Prodigy.Server.Service.Sabre.Test do
     test "assigns an index to each returned flight" do
       second_flight = Map.merge(@gql_flight, %{"flightNumber" => "456", "carrier" => "UA"})
 
-      with_mock Req, [post: fn _url, _opts ->
-        {:ok, %Req.Response{status: 200, body: %{"data" => %{"flights" => [@gql_flight, second_flight]}}}}
-      end] do
+      with_mock Req,
+        post: fn _url, _opts ->
+          {:ok,
+           %Req.Response{
+             status: 200,
+             body: %{"data" => %{"flights" => [@gql_flight, second_flight]}}
+           }}
+        end do
         request = %{type: :airline, departure: "JFK", arrival: "LAX", date: "2026-10-01"}
         [first, second] = SabreAirGqlClient.handle_request(request)
         assert first.index == 0
@@ -494,27 +459,30 @@ defmodule Prodigy.Server.Service.Sabre.Test do
     end
 
     test "returns an empty list on a non-200 HTTP status" do
-      with_mock Req, [post: fn _url, _opts ->
-        {:ok, %Req.Response{status: 404, body: ""}}
-      end] do
+      with_mock Req,
+        post: fn _url, _opts ->
+          {:ok, %Req.Response{status: 404, body: ""}}
+        end do
         request = %{type: :airline, departure: "JFK", arrival: "LAX", date: "2026-10-01"}
         assert SabreAirGqlClient.handle_request(request) == []
       end
     end
 
     test "returns an empty list on a network error" do
-      with_mock Req, [post: fn _url, _opts ->
-        {:error, %Mint.TransportError{reason: :econnrefused}}
-      end] do
+      with_mock Req,
+        post: fn _url, _opts ->
+          {:error, %Mint.TransportError{reason: :econnrefused}}
+        end do
         request = %{type: :airline, departure: "JFK", arrival: "LAX", date: "2026-10-01"}
         assert SabreAirGqlClient.handle_request(request) == []
       end
     end
 
     test "returns an empty list when the response body is malformed" do
-      with_mock Req, [post: fn _url, _opts ->
-        {:ok, %Req.Response{status: 200, body: %{"unexpected" => "structure"}}}
-      end] do
+      with_mock Req,
+        post: fn _url, _opts ->
+          {:ok, %Req.Response{status: 200, body: %{"unexpected" => "structure"}}}
+        end do
         request = %{type: :airline, departure: "JFK", arrival: "LAX", date: "2026-10-01"}
         assert SabreAirGqlClient.handle_request(request) == []
       end

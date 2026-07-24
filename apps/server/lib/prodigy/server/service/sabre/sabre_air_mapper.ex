@@ -245,6 +245,7 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirMapper do
   """
   def is_flight_time(str) do
     len = String.length(str)
+
     (len == 4 or len == 5) and
     String.slice(str, 0, len - 1) |> String.to_charlist() |> Enum.all?(fn ch -> is_digit(ch) end) and
     (String.slice(str, -1, 1) == "A" or String.slice(str, -1, 1) == "P")
@@ -267,12 +268,15 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirMapper do
 
     date = date_convert(raw_date) |> Date.to_string()
 
-    list_to_map(%{
-      type: :airline,
-      departure: departure,
-      arrival: arrival,
-      date: date
-    }, rest)
+    list_to_map(
+      %{
+        type: :airline,
+        departure: departure,
+        arrival: arrival,
+        date: date
+      },
+      rest
+    )
   end
 
   @doc """
@@ -298,8 +302,11 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirMapper do
         list_to_map(Map.put(map, :booking_class, head), tail)
 
       is_flight_number(head) ->
-        list_to_map((Map.put(map, :carrier, String.slice(head, 0, 2))
-        |> Map.put(:flight_number, String.slice(head, 2..-1//1))), tail)
+        list_to_map(
+          Map.put(map, :carrier, String.slice(head, 0, 2))
+          |> Map.put(:flight_number, String.slice(head, 2..-1//1)),
+          tail
+        )
 
       is_carrier(head) ->
         list_to_map(Map.put(map, :carrier, head), tail)
@@ -326,113 +333,5 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirMapper do
 
     "#{Map.get(flight, "carrier")} #{padded_flight_number} #{Map.get(flight, "origin")} #{departure_text} " <>
       "#{Map.get(flight, "dest")} #{arrival_text} R  0 D10  8"
-  end
-
-  @doc """
-  Converts a list of flight maps into Sabre binary protocol format.
-
-  This produces the binary response that gets sent to legacy Sabre terminals.
-  Includes a header with the date, flight rows, and a footer with additional
-  display data.
-
-  Returns a special "no flights found" binary response if the list is empty.
-  """
-  def to_binary(client_maps) do
-    case client_maps do
-      [] ->
-        # No flights found response
-        Logger.info("no flights found")
-
-        <<
-          # header len
-          7,
-          # unused?
-          0,
-          # map
-          0x01,
-          # no flights found code
-          0xFFFF::16-big,
-          0,
-          0
-        >>
-
-      flights when is_list(flights) ->
-        # all the dates will be the same, so get from first flight
-        first_flight = List.first(flights)
-        header_date = Date.from_iso8601!(Map.get(first_flight, "date"))
-        header_date_text = Calendar.strftime(header_date, "%3b %02d %02y") |> String.upcase()
-        flight_binaries = Enum.map(flights, fn flight -> encode_one_flight(flight) end)
-
-        num_rows = 7 + length(flights)
-
-        header =
-          <<
-            7,
-            0,
-            0x01,
-            # what page renders this data
-            0x0900::16-big,
-            # number of rows
-            num_rows,
-            0,
-            0x24,
-            0x27,
-            0,
-            byte_size(header_date_text),
-            header_date_text::binary
-          >>
-
-        indices = Enum.zip(16..100, flight_binaries)
-
-        flight_rows =
-          Enum.reduce(indices, <<>>, fn {index, flight_binary}, acc ->
-            acc <>
-              <<
-                index,
-                0x27,
-                0,
-                byte_size(flight_binary),
-                flight_binary::binary
-              >>
-          end)
-
-        footer =
-          <<
-            # -> selector in field 16
-            0x75,
-            0x27,
-            0x00,
-            7,
-            "AA 1261"::binary,
-            # -> selector in field 17
-            0xD9,
-            0x27,
-            0x00,
-            7,
-            "UA  456"::binary,
-            0xE2,
-            0x27,
-            0,
-            7,
-            "AA 1261"::binary,
-            0x38,
-            0x27,
-            0,
-            7,
-            "UA  456"::binary,
-            0x6A,
-            0x27,
-            0,
-            22,
-            "F  Y  B  M  H  Q  V  K"::binary,
-            0x6B,
-            0x27,
-            0,
-            13,
-            "Y  B  M  H  Q"::binary
-          >>
-
-          header <> flight_rows <> footer
-    end
   end
 end
