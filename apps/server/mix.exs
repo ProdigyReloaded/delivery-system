@@ -59,7 +59,8 @@ defmodule Server.MixProject do
       # websock_adapter can upgrade browser sockets onto TCS.
       {:websock, "~> 0.5"},
       {:mock, "~> 0.3.0", only: :test},
-      {:ex_doc, "~> 0.21", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
+      {:req, "~> 0.5.17"}
     ]
   end
 end

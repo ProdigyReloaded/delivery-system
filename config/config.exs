@@ -30,7 +30,9 @@ config :portal, :scopes,
 
 config :server,
   ecto_repos: [Prodigy.Core.Data.Repo],
-  auth_timeout: 60 * 1000
+  auth_timeout: 60 * 1000,
+  sabre_graphql_url: "http://localhost:4004/api/graphql",
+  sabre_air_client: Prodigy.Server.Service.Sabre.SabreAirGqlClient
 
 config :server, Prodigy.Server.Scheduler,
   jobs: [

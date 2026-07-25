@@ -1,4 +1,4 @@
-# Copyright 2022-2026, Phillip Heller
+# Copyright 2022-2026, Phillip Heller and Ralph Richard Cook
 #
 # This file is part of Prodigy Reloaded.
 #
@@ -69,6 +69,11 @@ defmodule Prodigy.Server.Service.Profile do
           <<byte_size(s), s::binary>>
       end
   end
+
+  # "hardcoded" TACs for Eaasy Sabre - these are not in the registry
+  def get_value(0x183, _user, _household), do: "0ABC123" # this is the AA freq flier number
+
+  def get_value(0x18A, _user, _household), do: "     " # this, I think, is the travel agent id; blank for none
 
   @doc """
   Read the current value for a TAC. Household member slots B..F are
