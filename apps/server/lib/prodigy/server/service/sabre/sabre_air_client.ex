@@ -36,9 +36,9 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirClient do
 
   ## Returns
 
-  A list of maps, where each map represents a flight with fields like
-  `"flightNumber"`, `"origin"`, `"dest"`, `"departureTime"`, `"arrivalTime"`, etc.
-  Returns an empty list if no flights are found or an error occurs.
+  A list of maps, where each map represents a flight with atom keys such as
+ `:flight`, `:origin`, `:dest`, `:depart`, `:arrive`, `:formatted_date`, `:stops`, `:equip`, `:meal`, and `:booking_classes`.
+ Returns an empty list if no flights are found or an error occurs.
   """
   @callback handle_request(map()) :: list(map())
 
