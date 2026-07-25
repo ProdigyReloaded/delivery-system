@@ -105,7 +105,7 @@ defmodule Prodigy.Server.Service.Sabre.SabreAirMapper do
     Date.new!(year, month, day)
   end
 
-  # Takes a date string made with date_convert and formats is as "MonDD" (e.g., "Jan15") for display in Sabre terminal.
+  # Takes a date string made with date_convert and formats it as "Mon DD" (e.g., "Jan 15") for display in Sabre terminal.
   def mapper_date_format(date_string) do
     [_year, month, day] = String.split(date_string, "-")
     @num_months[month] <> " " <> day
