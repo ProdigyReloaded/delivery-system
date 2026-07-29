@@ -1,0 +1,31 @@
+# Image overlay - run the app from prebuilt GHCR images instead of building on
+# the box. For DEPLOYERS (staging/production), not for local dev (dev keeps the
+# build-from-source override).
+#
+# Compose it AFTER the prod overlay and set IMAGE_TAG to the git SHA tag to run
+# (e.g. sha-abc1234); it defaults to `main` (the latest main build):
+#
+#   IMAGE_TAG=sha-abc1234 \
+#     docker compose -f docker-compose.yaml -f docker-compose.prod.yaml \
+#                    -f docker-compose.images.yaml pull
+#   IMAGE_TAG=sha-abc1234 \
+#     docker compose -f docker-compose.yaml -f docker-compose.prod.yaml \
+#                    -f docker-compose.images.yaml up -d --no-build
+#
+# `build: !reset null` drops the base build stanza so the service is pull-only.
+services:
+  server:
+    build: !reset null
+    image: ghcr.io/prodigyreloaded/prodigy-server:${IMAGE_TAG:-main}
+
+  db-migrate:
+    build: !reset null
+    image: ghcr.io/prodigyreloaded/prodigy-server:${IMAGE_TAG:-main}
+
+  db-seed:
+    build: !reset null
+    image: ghcr.io/prodigyreloaded/prodigy-server:${IMAGE_TAG:-main}
+
+  dowjones-sidecar:
+    build: !reset null
+    image: ghcr.io/prodigyreloaded/prodigy-dowjones-sidecar:${IMAGE_TAG:-main}
