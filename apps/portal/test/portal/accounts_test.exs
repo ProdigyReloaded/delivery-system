@@ -649,4 +649,103 @@ defmodule Prodigy.Portal.AccountsTest do
       refute Repo.get_by(UserToken, sent_to: email)
     end
   end
+
+  describe "invitation-only gate on the email path" do
+    alias Prodigy.Core.Data.Portal.Invite
+    alias Prodigy.Portal.{Invites, Settings}
+
+    setup do
+      Prodigy.Portal.Accounts.RateLimit.reset()
+      Settings.put(nil, "invitation_only", true)
+      inviter = user_fixture() |> Ecto.Changeset.change(invite_quota: 5) |> Repo.update!()
+      {:ok, invite} = Invites.mint(inviter)
+      %{invite: invite}
+    end
+
+    defp url_fns2 do
+      [
+        login: &"https://test/users/login/#{&1}",
+        confirm: &"https://test/users/confirm/#{&1}",
+        dismiss: &"https://test/users/dismiss/#{&1}"
+      ]
+    end
+
+    test "new email, no invite -> :invite_required, nothing created" do
+      email = "gate-#{System.unique_integer([:positive])}@example.com"
+      assert {:error, :invite_required} = Accounts.request_access(email, url_fns2())
+      refute Repo.get_by(UserToken, sent_to: email, context: "signup_invitation")
+      refute Accounts.get_user_by_email(email)
+    end
+
+    test "new email + valid invite -> :ok, token carries code, invite still pending", %{
+      invite: invite
+    } do
+      email = "gate-#{System.unique_integer([:positive])}@example.com"
+      assert :ok = Accounts.request_access(email, url_fns2(), invite_code: invite.code)
+
+      token = Repo.get_by(UserToken, sent_to: email, context: "signup_invitation")
+      assert token.data["invite_code"] == invite.code
+      # NOT redeemed at send time - a lost email must not burn the code.
+      assert Repo.get(Invite, invite.id).redeemed_at == nil
+    end
+
+    test "existing user bypasses the gate (no invite needed)" do
+      user = user_fixture()
+      assert :ok = Accounts.request_access(user.email, url_fns2())
+      assert Repo.get_by(UserToken, user_id: user.id, context: "login")
+    end
+
+    test "consume with a carried invite creates the user and redeems atomically", %{
+      invite: invite
+    } do
+      email = "gate-#{System.unique_integer([:positive])}@example.com"
+
+      {encoded, token} =
+        UserToken.build_signup_invitation_token(email, %{"invite_code" => invite.code})
+
+      Repo.insert!(token)
+
+      assert {:ok, %User{id: uid}} = Accounts.consume_signup_invitation(encoded)
+      redeemed = Repo.get(Invite, invite.id)
+      assert redeemed.redeemed_at != nil
+      assert redeemed.redeemer_id == uid
+    end
+
+    test "consume when the carried invite was already redeemed -> :invite_taken, no user", %{
+      invite: invite
+    } do
+      # Someone else redeemed it first.
+      other = user_fixture()
+      assert :ok = Invites.redeem(invite, other)
+
+      email = "gate-#{System.unique_integer([:positive])}@example.com"
+
+      {encoded, token} =
+        UserToken.build_signup_invitation_token(email, %{"invite_code" => invite.code})
+
+      Repo.insert!(token)
+
+      assert {:error, :invite_taken} = Accounts.consume_signup_invitation(encoded)
+      refute Accounts.get_user_by_email(email)
+    end
+
+    test "consume with no carried invite while invite mode is on -> :invite_required" do
+      # Token minted while open; invite mode toggled on before the click.
+      email = "gate-#{System.unique_integer([:positive])}@example.com"
+      {encoded, token} = UserToken.build_signup_invitation_token(email)
+      Repo.insert!(token)
+
+      assert {:error, :invite_required} = Accounts.consume_signup_invitation(encoded)
+      refute Accounts.get_user_by_email(email)
+    end
+
+    test "Invites.redeem is single-use: second attempt loses", %{invite: invite} do
+      u1 = user_fixture()
+      u2 = user_fixture()
+      assert :ok = Invites.redeem(invite, u1)
+      assert {:error, :not_redeemable} = Invites.redeem(invite, u2)
+      # The first redeemer stands; the loser did not overwrite it.
+      assert Repo.get(Invite, invite.id).redeemer_id == u1.id
+    end
+  end
 end

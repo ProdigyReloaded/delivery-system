@@ -24,7 +24,9 @@ defmodule Prodigy.Portal.Accounts do
   import Ecto.Query, warn: false
   alias Prodigy.Core.Data.Repo
 
-  alias Prodigy.Core.Data.Portal.{User, UserToken, Identity}
+  alias Prodigy.Core.Data.Portal.{User, UserToken, Identity, Invite}
+  alias Prodigy.Portal.Invites
+  alias Prodigy.Portal.Settings
   alias Prodigy.Portal.Accounts.Blacklist
   alias Prodigy.Portal.Accounts.RateLimit
   alias Prodigy.Portal.Accounts.UserNotifier
@@ -288,17 +290,20 @@ defmodule Prodigy.Portal.Accounts do
 
     case result do
       {:ok, user} -> {:logged_in, user}
+      # Invite lost the redeem race (shared single-use code / concurrent
+      # winner): the whole registration rolled back. Distinct from :blocked
+      # so the caller can offer a fresh code + re-auth.
+      {:error, :not_redeemable} -> :invite_taken
       _ -> :blocked
     end
   end
 
   defp maybe_redeem_invite(nil, _user), do: :ok
 
-  defp maybe_redeem_invite(invite, %User{} = redeemer) do
-    case invite |> Prodigy.Portal.Invites.redeem_changeset(redeemer) |> Repo.update() do
-      {:ok, _} -> :ok
-      {:error, _} = err -> err
-    end
+  # Atomic compare-and-set inside the caller's transaction; a loser
+  # (`:not_redeemable`) fails the `with` and rolls back the whole sign-up.
+  defp maybe_redeem_invite(%Invite{} = invite, %User{} = redeemer) do
+    Invites.redeem(invite, redeemer)
   end
 
   ## Settings
@@ -471,7 +476,7 @@ defmodule Prodigy.Portal.Accounts do
     * `:confirm` - arity-1, confirm-signup URL for a new email
     * `:dismiss` - arity-1, dismiss URL for the same token
   """
-  def request_access(email, url_fns)
+  def request_access(email, url_fns, opts \\ [])
       when is_binary(email) and is_list(url_fns) do
     email = email |> String.trim() |> String.downcase()
 
@@ -479,13 +484,14 @@ defmodule Prodigy.Portal.Accounts do
       not valid_email_format?(email) -> :ok
       Blacklist.blacklisted?(email) -> :ok
       RateLimit.check_invitation(email) == :blocked -> :ok
-      true -> dispatch_access_request(email, url_fns)
+      true -> dispatch_access_request(email, url_fns, Keyword.get(opts, :invite_code))
     end
   end
 
-  def request_access(_email, _url_fns), do: :ok
-
-  defp dispatch_access_request(email, url_fns) do
+  # Existing user: send a login link, no invite needed (mirrors the OAuth
+  # "existing identity: gate doesn't apply" rule). Brand-new email: the
+  # invitation gate applies, exactly as it does for OAuth signup.
+  defp dispatch_access_request(email, url_fns, invite_code) do
     case get_user_by_email(email) do
       %User{} = user ->
         case RateLimit.check_login(email) do
@@ -493,15 +499,34 @@ defmodule Prodigy.Portal.Accounts do
           :ok -> deliver_login_instructions(user, Keyword.fetch!(url_fns, :login))
         end
 
-      nil ->
-        deliver_signup_invitation(email, url_fns)
-    end
+        :ok
 
-    :ok
+      nil ->
+        if Settings.invitation_only?() do
+          case load_pending_invite(invite_code) do
+            {:ok, invite} ->
+              deliver_signup_invitation(email, url_fns, invite)
+              :ok
+
+            :missing ->
+              # No portal user was created and no email sent. Caller surfaces
+              # the invite-required prompt (backstop for a UI-bypassed submit).
+              {:error, :invite_required}
+          end
+        else
+          deliver_signup_invitation(email, url_fns, nil)
+          :ok
+        end
+    end
   end
 
-  defp deliver_signup_invitation(email, url_fns) do
-    {encoded, token} = UserToken.build_signup_invitation_token(email)
+  # Carry the redeemable invite's CODE (not a redemption) in the token so the
+  # actual single-use redeem happens atomically at click time, inside the
+  # user-creation transaction - never at send time, so a lost email can't burn
+  # the code.
+  defp deliver_signup_invitation(email, url_fns, invite) do
+    data = if invite, do: %{"invite_code" => invite.code}, else: nil
+    {encoded, token} = UserToken.build_signup_invitation_token(email, data)
     Repo.insert!(token)
 
     UserNotifier.deliver_signup_invitation(
@@ -521,23 +546,56 @@ defmodule Prodigy.Portal.Accounts do
   def consume_signup_invitation(encoded_token) when is_binary(encoded_token) do
     with {:ok, query} <- UserToken.verify_invitation_token(encoded_token, "signup_invitation"),
          %UserToken{sent_to: email, data: data} = token <- Repo.one(query) do
+      carried_code = if is_map(data), do: data["invite_code"], else: nil
+      invite_mode = Settings.invitation_only?()
+
       cond do
         Blacklist.blacklisted?(email) ->
           Repo.delete!(token)
           {:error, :invalid}
 
+        # Authoritative gate: invite mode is on at click time but the token
+        # carried no invite (minted while open, mode toggled on since). Distinct
+        # from a carried-but-taken invite, handled atomically in the txn below.
+        invite_mode and is_nil(carried_code) ->
+          {:error, :invite_required}
+
         true ->
           Repo.transact(fn ->
             with {:ok, user} <- register_user(%{email: email}),
                  {:ok, confirmed} <- user |> User.confirm_changeset() |> Repo.update(),
-                 :ok <- maybe_attach_provider_identity(confirmed, data) do
+                 :ok <- maybe_attach_provider_identity(confirmed, data),
+                 :ok <- redeem_if_required(invite_mode, carried_code, confirmed) do
               Repo.delete!(token)
               {:ok, confirmed}
+            else
+              # Carried invite was redeemed/revoked (or vanished) between click
+              # and now - a shared single-use code, a concurrent winner. Surface
+              # a distinct "already used" so the caller offers a fresh code.
+              {:error, :invite_taken} -> {:error, :invite_taken}
+              other -> other
             end
           end)
       end
     else
       _ -> {:error, :invalid}
+    end
+  end
+
+  # Open mode: no redemption, no gate. Invite mode: the carried code MUST resolve
+  # to a currently-redeemable invite and win the atomic redeem, else :invite_taken.
+  defp redeem_if_required(false, _code, _user), do: :ok
+
+  defp redeem_if_required(true, code, %User{} = user) do
+    case Invites.get_by_code(code) do
+      %Invite{} = invite ->
+        case Invites.redeem(invite, user) do
+          :ok -> :ok
+          {:error, :not_redeemable} -> {:error, :invite_taken}
+        end
+
+      nil ->
+        {:error, :invite_taken}
     end
   end
 
@@ -590,14 +648,18 @@ defmodule Prodigy.Portal.Accounts do
   defp maybe_attach_provider_identity(_user, data) when map_size(data) == 0, do: :ok
 
   defp maybe_attach_provider_identity(%User{} = user, %{} = data) do
-    attrs = %{
-      provider: data["provider"] || data[:provider],
-      provider_uid: data["uid"] || data[:uid]
-    }
+    provider = data["provider"] || data[:provider]
+    uid = data["uid"] || data[:uid]
 
-    case attach_identity(user, attrs) do
-      {:ok, _} -> :ok
-      {:error, _} = err -> err
+    # A token may carry only an invite_code (pure email signup) with no
+    # provider identity to attach - that's a no-op, not a bogus identity.
+    if is_nil(provider) or is_nil(uid) do
+      :ok
+    else
+      case attach_identity(user, %{provider: provider, provider_uid: uid}) do
+        {:ok, _} -> :ok
+        {:error, _} = err -> err
+      end
     end
   end
 

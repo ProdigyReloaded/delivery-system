@@ -105,6 +105,17 @@ defmodule Prodigy.Portal.AuthController do
         )
         |> redirect(to: ~p"/users/invite/required")
 
+      :invite_taken ->
+        # The invite was single-use and got redeemed first (a shared code /
+        # concurrent winner). Nothing was created; offer a fresh code + re-auth.
+        conn
+        |> Plug.Conn.delete_session(:pending_invite_code)
+        |> put_flash(
+          :error,
+          "That invitation has already been redeemed. Enter a new invitation code to continue."
+        )
+        |> redirect(to: ~p"/users/invite/required")
+
       :blocked ->
         conn
         |> put_flash(:error, "Authentication failed.")
