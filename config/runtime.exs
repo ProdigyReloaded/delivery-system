@@ -63,17 +63,38 @@ if System.get_env("RELEASE_MODE") do
   # Mail backend. Default (unset MAIL_BACKEND) leaves the
   # compile-time default adapter alone - `Swoosh.Adapters.Local` in
   # config/config.exs, which dumps messages into the /dev/mailbox
-  # preview page. Set MAIL_BACKEND=aws plus the four MAIL_* vars to
-  # route through Amazon SES.
+  # preview page.
+  #
+  # MAIL_BACKEND=smtp is the deployed mechanism: provider-neutral, so
+  # pointing at one SMTP endpoint today and another provider's tomorrow
+  # is an env change, not code. MAIL_BACKEND=aws (SES HTTP API) remains
+  # as an alternative.
   case System.get_env("MAIL_BACKEND") do
+    "smtp" ->
+      config :portal, Prodigy.Portal.Mailer,
+        adapter: Swoosh.Adapters.SMTP,
+        relay: System.fetch_env!("MAIL_SMTP_HOST"),
+        port: String.to_integer(System.get_env("MAIL_SMTP_PORT", "587")),
+        username: System.fetch_env!("MAIL_USERNAME"),
+        password: System.fetch_env!("MAIL_PASSWORD"),
+        tls: :always,
+        auth: :always
+
+      # Name shown to recipients + sender address (must be under the
+      # provider's verified identity).
+      config :portal, :mail_from, {"Prodigy Reloaded", System.fetch_env!("MAIL_FROM")}
+
     "aws" ->
+      # The API adapter needs an HTTP client; config.exs disables it
+      # globally for the Local/Test adapters, so re-enable here.
+      config :swoosh, api_client: Swoosh.ApiClient.Req
+
       config :portal, Prodigy.Portal.Mailer,
         adapter: Swoosh.Adapters.AmazonSES,
         region: System.fetch_env!("MAIL_REGION"),
         access_key: System.fetch_env!("MAIL_KEY"),
         secret: System.fetch_env!("MAIL_PRIVATE_KEY")
 
-      # Name shown to recipients + verified SES sender address.
       config :portal, :mail_from, {"Prodigy Reloaded", System.fetch_env!("MAIL_FROM")}
 
     _ ->

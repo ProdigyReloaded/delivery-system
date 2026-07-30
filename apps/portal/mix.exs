@@ -40,6 +40,9 @@ defmodule Prodigy.Portal.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},
       {:swoosh, "~> 1.17"},
+      # SMTP delivery (Swoosh.Adapters.SMTP) and MIME encoding for the
+      # AmazonSES adapter; both mail backends need it.
+      {:gen_smtp, "~> 1.2"},
       {:lazy_html, ">= 0.1.0", only: :test},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_google, "~> 0.12"},
