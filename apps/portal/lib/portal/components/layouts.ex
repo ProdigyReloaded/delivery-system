@@ -17,4 +17,13 @@ defmodule Prodigy.Portal.Layouts do
   use Prodigy.Portal, :html
 
   embed_templates "layouts/*"
+
+  @doc """
+  Short git revision this build came from, shown in the footer. Baked into the
+  image via the GIT_SHA build arg (apps/server/Dockerfile); "dev" for source
+  builds.
+  """
+  def revision do
+    System.get_env("GIT_SHA", "dev") |> String.slice(0, 7)
+  end
 end
