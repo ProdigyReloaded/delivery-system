@@ -71,14 +71,26 @@ if System.get_env("RELEASE_MODE") do
   # as an alternative.
   case System.get_env("MAIL_BACKEND") do
     "smtp" ->
+      smtp_host = System.fetch_env!("MAIL_SMTP_HOST")
+
       config :portal, Prodigy.Portal.Mailer,
         adapter: Swoosh.Adapters.SMTP,
-        relay: System.fetch_env!("MAIL_SMTP_HOST"),
+        relay: smtp_host,
         port: String.to_integer(System.get_env("MAIL_SMTP_PORT", "587")),
         username: System.fetch_env!("MAIL_USERNAME"),
         password: System.fetch_env!("MAIL_PASSWORD"),
         tls: :always,
-        auth: :always
+        auth: :always,
+        # gen_smtp hands these straight to :ssl. Modern OTP aborts the
+        # STARTTLS handshake without explicit CA verification options
+        # (symptom: {:temporary_failure, _, :tls_failed} on every send).
+        tls_options: [
+          versions: [:"tlsv1.2", :"tlsv1.3"],
+          verify: :verify_peer,
+          cacerts: :public_key.cacerts_get(),
+          server_name_indication: String.to_charlist(smtp_host),
+          depth: 3
+        ]
 
       # Name shown to recipients + sender address (must be under the
       # provider's verified identity).
