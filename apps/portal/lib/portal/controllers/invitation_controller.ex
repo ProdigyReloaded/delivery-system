@@ -46,6 +46,23 @@ defmodule Prodigy.Portal.InvitationController do
         |> put_flash(:info, "Welcome! Your account is ready.")
         |> UserAuth.log_in_user(user, %{})
 
+      # Invite mode on but the token carried no still-valid invite (mode was
+      # toggled on after the link was sent).
+      {:error, :invite_required} ->
+        conn
+        |> put_flash(:error, "Sign-up is invite-only. Enter your invitation code to continue.")
+        |> redirect(to: ~p"/users/invite/required")
+
+      # Single-use invite already redeemed (shared code / concurrent winner):
+      # offer a fresh code, then re-authenticate.
+      {:error, :invite_taken} ->
+        conn
+        |> put_flash(
+          :error,
+          "That invitation has already been redeemed. Enter a new invitation code and sign in again."
+        )
+        |> redirect(to: ~p"/users/invite/required")
+
       {:error, :invalid} ->
         case Accounts.consume_provider_link_invitation(token) do
           {:ok, user} ->

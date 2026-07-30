@@ -180,19 +180,28 @@ defmodule Prodigy.Portal.Invites do
   end
 
   @doc """
-  Convenience: applies `redeem_changeset/2` against the Repo. Use
-  this for iex / one-off scripts; the sign-in flow should run the
-  changeset inside its own transaction alongside user creation.
+  Atomically redeem `invite` for `redeemer` as a single compare-and-set:
+  a guarded `UPDATE ... WHERE id = ? AND redeemed_at IS NULL AND revoked_at
+  IS NULL`. Returns `:ok` only if THIS call is the one that flipped it
+  (affected exactly one row); `{:error, :not_redeemable}` if it was already
+  redeemed or revoked (a concurrent winner, a shared single-use code, or a
+  stale in-memory struct).
+
+  This is race-safe by construction - the row lock the UPDATE takes serializes
+  concurrent redemptions and the WHERE makes it succeed at most once - so it is
+  safe to run inside the user-creation transaction: a loser (`:not_redeemable`)
+  rolls the whole sign-up back. Do NOT reintroduce a read-then-write here.
   """
-  def redeem(%Invite{} = invite, %User{} = redeemer) do
-    cond do
-      not is_nil(invite.redeemed_at) -> {:error, :already_redeemed}
-      not is_nil(invite.revoked_at) -> {:error, :revoked}
-      true ->
-        invite
-        |> redeem_changeset(redeemer)
-        |> Repo.update()
-    end
+  def redeem(%Invite{id: id}, %User{id: redeemer_id}) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    {count, _} =
+      from(i in Invite,
+        where: i.id == ^id and is_nil(i.redeemed_at) and is_nil(i.revoked_at)
+      )
+      |> Repo.update_all(set: [redeemed_at: now, redeemer_id: redeemer_id])
+
+    if count == 1, do: :ok, else: {:error, :not_redeemable}
   end
 
   @doc """

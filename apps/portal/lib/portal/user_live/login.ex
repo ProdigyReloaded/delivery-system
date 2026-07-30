@@ -199,11 +199,13 @@ defmodule Prodigy.Portal.UserLive.Login do
     form = to_form(%{"email" => email}, as: "user")
     sent_to = Phoenix.Flash.get(socket.assigns.flash, :login_sent_to)
 
-    pending_invite =
+    pending_invite_code =
       case session["pending_invite_code"] do
-        code when is_binary(code) -> Invites.get_by_code(code)
+        code when is_binary(code) -> code
         _ -> nil
       end
+
+    pending_invite = pending_invite_code && Invites.get_by_code(pending_invite_code)
 
     {:ok,
      assign(socket,
@@ -214,7 +216,8 @@ defmodule Prodigy.Portal.UserLive.Login do
        oauth_providers: Prodigy.Portal.available_oauth_providers(),
        dev_mock?: Application.get_env(:portal, :dev_routes) == true,
        invitation_only?: Settings.invitation_only?(),
-       pending_invite: pending_invite
+       pending_invite: pending_invite,
+       pending_invite_code: pending_invite_code
      )}
   end
 
@@ -250,14 +253,26 @@ defmodule Prodigy.Portal.UserLive.Login do
       %{"user" => %{"email" => email}} = params
       normalized = email |> to_string() |> String.trim()
 
-      :ok =
-        Accounts.request_access(normalized,
-          login: &url(~p"/users/login/#{&1}"),
-          confirm: &url(~p"/users/confirm/#{&1}"),
-          dismiss: &url(~p"/users/dismiss/#{&1}")
-        )
+      case Accounts.request_access(normalized,
+             [
+               login: &url(~p"/users/login/#{&1}"),
+               confirm: &url(~p"/users/confirm/#{&1}"),
+               dismiss: &url(~p"/users/dismiss/#{&1}")
+             ],
+             invite_code: socket.assigns.pending_invite_code
+           ) do
+        :ok ->
+          {:noreply, assign(socket, sent_to: display_email(normalized))}
 
-      {:noreply, assign(socket, sent_to: display_email(normalized))}
+        # New email in invite-only mode with no valid invite: no link sent.
+        # Send them to enter a code (the "First time here?" prompt is also on
+        # this page). Backstop for a form submit that bypassed that prompt.
+        {:error, :invite_required} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Sign-up is invite-only. Enter your invitation code to continue.")
+           |> push_navigate(to: ~p"/users/invite/required")}
+      end
     end
   end
 
