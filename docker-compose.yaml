@@ -62,6 +62,13 @@ services:
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
       - SECRET_KEY_BASE=${SECRET_KEY_BASE:?Set SECRET_KEY_BASE}
+      # Outbound mail; unset MAIL_BACKEND = Local adapter (dev mailbox).
+      - MAIL_BACKEND=${MAIL_BACKEND:-}
+      - MAIL_SMTP_HOST=${MAIL_SMTP_HOST:-}
+      - MAIL_SMTP_PORT=${MAIL_SMTP_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-}
     depends_on:
       db-migrate:
         condition: service_completed_successfully
