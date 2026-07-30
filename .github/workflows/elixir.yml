@@ -74,6 +74,10 @@ jobs:
     env:
       REGISTRY: ghcr.io
       OWNER: prodigyreloaded
+      # Pinned client bundle baked into the prodigy-server image. Bump these to
+      # ship a new web client (em-dosbox-packager runtime + client-bundles data).
+      RUNTIME_TAG: v0.2.0
+      BUNDLE_TAG: "6.03.17"
     strategy:
       fail-fast: false
       matrix:
@@ -86,6 +90,15 @@ jobs:
             file: dowjones_sidecar/Dockerfile
     steps:
       - uses: actions/checkout@v4
+
+      # Populate apps/portal/priv/static/start with the DOSBox client bundle so
+      # it's baked into the server release. em-dosbox-packager is public; the
+      # client-bundles data is private (CLIENT_BUNDLES_TOKEN = read-only PAT).
+      - name: Fetch DOSBox client bundle
+        if: matrix.image == 'prodigy-server'
+        env:
+          GH_TOKEN: ${{ secrets.CLIENT_BUNDLES_TOKEN }}
+        run: ./apps/portal/fetch-start-bundle.sh --from-release --runtime-tag "$RUNTIME_TAG" --bundle-tag "$BUNDLE_TAG"
 
       - uses: docker/setup-buildx-action@v3
 
