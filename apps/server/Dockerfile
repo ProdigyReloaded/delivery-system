@@ -33,6 +33,11 @@ RUN cd apps/podbutil && mix escript.build
 
 FROM elixir:1.17.3-otp-27-slim AS run_stage
 
+# Git revision this image was built from; CI passes the commit sha, source
+# builds default to "dev". Surfaced in the portal footer.
+ARG GIT_SHA=dev
+ENV GIT_SHA=$GIT_SHA
+
 # Install git for cloning the objects repository
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
