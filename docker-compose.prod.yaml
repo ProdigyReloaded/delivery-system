@@ -40,8 +40,9 @@ services:
       - PHX_HOST=${PHX_HOST:?Set PHX_HOST}
       - PHX_PORT=${PHX_PORT:-4000}
       - SECRET_KEY_BASE=${SECRET_KEY_BASE:?Set SECRET_KEY_BASE}
-      - INIT_USER=${INIT_USER:-AAAA11}
-      - INIT_PASS=${INIT_PASS:-SECRET}
+      # No INIT_USER/INIT_PASS here: deployed environments seed only the demo
+      # account (seed.sh skips the init user when these are unset). The dev
+      # overlay sets them for a deterministic local account.
     volumes:
       - objects_data:/objects
       - init_state:/init_state
