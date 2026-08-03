@@ -35,13 +35,17 @@ defmodule Prodigy.Server.Service.Enrollment do
     Logger.debug("received enrollment packet: #{inspect(request, base: :hex, limit: :infinity)}")
     user_id = user.id
 
-    # The RS enrollment flow tells the subscriber that any additional
-    # household members they register here will use the *same initial
-    # password that was issued to the subscriber* - i.e., the welcome-kit
-    # credential they logged in with, NOT a new password they may choose
-    # during this enrollment (TAC 0x014F). Capture it now, before the
-    # changeset pipeline can stage the new password.
-    subscriber_initial_password = user.password
+    # Additional household members register with the household TEMPORARY
+    # password (PRF_HOUSEHOLD_PASSWORD #275 / key "0113") - the welcome-kit
+    # credential issued at account creation, NOT any new password the
+    # subscriber later chooses. Sourcing it from the household profile (rather
+    # than user.password) keeps it correct even after the subscriber changes
+    # their own password. Falls back to user.password for pre-#275 households.
+    subscriber_initial_password =
+      case user.household do
+        %{profile: %{"0113" => pw}} when is_binary(pw) -> pw
+        _ -> user.password
+      end
 
     <<0x2, type, 0x1, ^user_id::binary-size(7), _::40, _count::16-big, rest::binary>> = payload
 

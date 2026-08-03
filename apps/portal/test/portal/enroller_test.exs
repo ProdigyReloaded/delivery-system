@@ -65,6 +65,20 @@ defmodule Prodigy.Core.Data.Service.EnrollerTest do
     end
   end
 
+  describe "create_subscriber/3 — household temporary password (#275 / 0113)" do
+    test "stores the creation password as the household temp password" do
+      {:ok, {household, _user}} = Enroller.create_subscriber("TEMP01", "WELCOME1")
+      assert household.profile["0113"] == "WELCOME1"
+    end
+
+    test "stores it for a named subscriber too" do
+      {:ok, {household, _user}} =
+        Enroller.create_subscriber("TEMP02", "WELCOME2", enroll_name: {"Ada", "Lovelace"})
+
+      assert household.profile["0113"] == "WELCOME2"
+    end
+  end
+
   defp tac_key(tac),
     do: tac |> Integer.to_string(16) |> String.pad_leading(4, "0") |> String.upcase()
 end

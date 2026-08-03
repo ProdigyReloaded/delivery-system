@@ -271,11 +271,15 @@ defmodule Prodigy.Server.Service.Profile do
               {user_changeset, household_changeset, member_patches} =
                 build_changesets(real_entries, user, user.household)
 
-              # New member rows get this user's password as loaded - before
-              # any password change in this update is applied - mirroring the
-              # enrollment "members share the subscriber's initial password"
-              # rule.
-              member_initial_password = user.password
+              # New member rows get the household TEMPORARY password
+              # (PRF_HOUSEHOLD_PASSWORD #275 / key "0113"), not the subscriber's
+              # current password - which diverges once the subscriber changes
+              # it. Falls back to user.password for pre-#275 households.
+              member_initial_password =
+                case user.household do
+                  %{profile: %{"0113" => pw}} when is_binary(pw) -> pw
+                  _ -> user.password
+                end
 
               Repo.transaction(fn ->
                 if household_changeset, do: Repo.update!(household_changeset)

@@ -137,7 +137,7 @@ defmodule Prodigy.Portal.SignupIds do
   def normalize(_), do: ""
 
   @doc """
-  Generate an 8-char password using the same A-Z / 2-9 alphabet as the
+  Generate a 6-char password using the same A-Z / 2-9 alphabet as the
   admin Users tab's reset-password flow - skips visually-ambiguous
   characters (I, O, 0, 1) so the generated value reads cleanly over
   the phone and satisfies the DOS RS client's uppercase-and-digits wire
@@ -146,7 +146,7 @@ defmodule Prodigy.Portal.SignupIds do
   def generate_password do
     alphabet = ~c"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
     len = length(alphabet)
-    for _ <- 1..8, into: "", do: <<Enum.at(alphabet, :rand.uniform(len) - 1)>>
+    for _ <- 1..6, into: "", do: <<Enum.at(alphabet, :rand.uniform(len) - 1)>>
   end
 
   # ------------------------------------------------------------------
