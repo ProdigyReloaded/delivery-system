@@ -587,7 +587,13 @@ defmodule Prodigy.Core.Data.Service.ProfileSchema do
         label: "Password Change Try Count",
         entity: :user,
         type: :binary,
-        length: 1
+        length: 1,
+        # Server-authoritative counter: the client may RETRIEVE it (to show
+        # remaining tries) but must never WRITE it. update: [] means no
+        # requester scope authorizes a client write, so any profile-write
+        # packet including 0x0154 is rejected wholesale. Server-side
+        # increments/resets go through User.changeset and bypass this check.
+        security: %{retrieve: [:user], update: []}
       }),
     0x0155 =>
       Map.merge(@default_entry, %{

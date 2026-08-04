@@ -34,6 +34,7 @@ defmodule Prodigy.Server.Service.ProfilePasswordRetryTest do
 
   @verify_old_pw_tac 0x015D
   @password_tac 0x014F
+  @try_count_tac 0x0154
   @try_count_key "0154"
 
   @old_password "OLDPASS"
@@ -45,6 +46,33 @@ defmodule Prodigy.Server.Service.ProfilePasswordRetryTest do
     entries = [
       {@verify_old_pw_tac, old_pw},
       {@password_tac, new_pw}
+    ]
+
+    body =
+      Enum.reduce(entries, <<>>, fn {tac, value}, buf ->
+        buf <> <<tac::16-big, byte_size(value), value::binary>>
+      end)
+
+    payload =
+      <<0x13, 0x04, 0x1, user_id::binary-size(7), 0::40, length(entries)::16-big, body::binary>>
+
+    %Fm0{
+      src: 0x0,
+      dest: 0x2201,
+      logon_seq: 0,
+      message_id: 0,
+      function: Fm0.Function.APPL_0,
+      payload: payload
+    }
+  end
+
+  # Build a change-password 0x04 write that ALSO tries to write #340 (0x0154)
+  # directly - the hole Change B closes.
+  defp change_password_with_counter_packet(user_id, old_pw, new_pw, counter) do
+    entries = [
+      {@verify_old_pw_tac, old_pw},
+      {@password_tac, new_pw},
+      {@try_count_tac, counter}
     ]
 
     body =
@@ -206,5 +234,37 @@ defmodule Prodigy.Server.Service.ProfilePasswordRetryTest do
       |> Repo.update()
 
     assert try_count(updated) == 2
+  end
+
+  test "client write of #340 (0x0154) alongside a change-password is rejected; counter unchanged" do
+    user = fixture(1)
+    original_hash = user.password
+
+    # Correct old password, but the packet also tries to reset #340 to "0"
+    # itself. 0x0154 update scope is [] so write_authorized? rejects the
+    # whole packet - password unchanged, counter unchanged.
+    status =
+      handle_status(
+        user,
+        change_password_with_counter_packet(user.id, @old_password, @new_password, "0")
+      )
+
+    assert status == 0x05
+
+    reloaded = reload(user.id)
+    assert reloaded.password == original_hash
+    assert try_count(reloaded) == 1
+  end
+
+  test "a normal change-password (no 0x0154) succeeds and resets #340 to \"0\"" do
+    user = fixture(2)
+
+    status = handle_status(user, change_password_packet(user.id, @old_password, @new_password))
+    assert status == 0x13
+
+    reloaded = reload(user.id)
+    assert Pbkdf2.verify_pass(@new_password, reloaded.password)
+    assert reloaded.profile[@try_count_key] == "0"
+    assert try_count(reloaded) == 0
   end
 end
