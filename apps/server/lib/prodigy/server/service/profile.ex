@@ -243,7 +243,14 @@ defmodule Prodigy.Server.Service.Profile do
   # [:user], so they pass.
   defp write_authorized?(entries, %User{} = user) do
     scope = requester_scope(user)
-    Enum.all?(entries, fn {tac, _val} -> scope in update_scopes(tac) end)
+
+    Enum.all?(entries, fn {tac, _val} ->
+      allowed = update_scopes(tac)
+      # A subscriber is also a :user for their own fields (e.g. their own
+      # password, 0x014F, update [:user]), so :subscriber satisfies a :user
+      # requirement in addition to :subscriber-only fields.
+      scope in allowed or (scope == :subscriber and :user in allowed)
+    end)
   end
 
   defp requester_scope(%User{id: id}) do

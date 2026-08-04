@@ -173,6 +173,30 @@ defmodule Prodigy.Server.Service.ProfilePasswordRetryTest do
     assert Pbkdf2.verify_pass("ADMINSET", updated.password)
   end
 
+  test "subscriber (slot A) can change their own password (subscriber scope satisfies :user)" do
+    today = Date.utc_today()
+
+    {:ok, household} =
+      %Household{id: "AAAA21", enabled_date: today}
+      |> Household.changeset(%{})
+      |> Repo.insert()
+
+    {:ok, sub} =
+      %User{id: "AAAA21A", household_id: household.id}
+      |> User.changeset(%{password: @old_password, date_enrolled: today})
+      |> Repo.insert()
+
+    sub = Repo.preload(sub, :household)
+
+    # Not scope-denied: a subscriber's own password (0x014F, update [:user]) is
+    # writable because :subscriber satisfies the :user requirement.
+    status = handle_status(sub, change_password_packet("AAAA21A", @old_password, @new_password))
+    assert status == 0x13
+
+    reloaded = reload("AAAA21A")
+    assert Pbkdf2.verify_pass(@new_password, reloaded.password)
+  end
+
   test "a :profile-only change does NOT reset #340" do
     user = fixture(2)
 
