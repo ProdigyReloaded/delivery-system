@@ -35,6 +35,14 @@ defmodule Prodigy.Server.Service.Profile do
   # write means "verify this old password before applying the rest".
   @verify_old_pw_tac 0x015D
 
+  # PRF_COUNT_PASSWORD_CHANGE_TRYS (#340 / 0x0154, per-user, 1 char): the
+  # server-authoritative failed-old-password counter for the service change-
+  # password flow. Incremented here on a rejected verify, reset to 0 on a
+  # successful password change, and enforced here - a modified client cannot
+  # bypass it (the old client-side counter in TOOT111E/H is gone).
+  @try_count_key "0154"
+  @max_password_change_trys 3
+
   @doc """
   Decode wire bytes back into the list of `{tac, value}` tuples the
   client sent.
@@ -225,6 +233,34 @@ defmodule Prodigy.Server.Service.Profile do
   defp cast_fields(User), do: ~w(password date_enrolled concurrency_limit profile)a
   defp cast_fields(Household), do: ~w(enabled_date disabled_date disabled_reason profile)a
 
+  # Scope enforcement: the requesting user must be permitted to UPDATE every
+  # tac in a write. The subscriber is the household's A-suffixed user id;
+  # everyone else is :user. Household / subscriber-only GEVs (the ADDRESS &
+  # MEMBER INFO / option-5 section: billing address, member add/suspend,
+  # household temp password) list only [:subscriber] in their ProfileSchema
+  # update scope, so a non-A member's packet touching one is rejected
+  # wholesale. Member self-service GEVs (own name/DOB/gender/password) list
+  # [:user], so they pass.
+  defp write_authorized?(entries, %User{} = user) do
+    scope = requester_scope(user)
+    Enum.all?(entries, fn {tac, _val} -> scope in update_scopes(tac) end)
+  end
+
+  defp requester_scope(%User{id: id}) do
+    case String.upcase(String.last(id || "") || "") do
+      "A" -> :subscriber
+      _ -> :user
+    end
+  end
+
+  defp update_scopes(tac) do
+    case ProfileSchema.get(tac) do
+      %{security: %{update: scopes}} -> scopes
+      # Unknown tac falls back to the schema default (subscriber/oms only).
+      _ -> [:subscriber, :oms]
+    end
+  end
+
   def handle(%Fm0{payload: payload} = request, %Context{user: user} = context) do
     Logger.debug("[profile] request packet: #{inspect(request, base: :hex, limit: :infinity)}")
 
@@ -240,6 +276,17 @@ defmodule Prodigy.Server.Service.Profile do
 
     entries = parse_request_values(rest)
     Logger.debug("#{inspect(entries, base: :hex, limit: :infinity)}")
+
+    # Re-read the user so server-owned mutable fields (notably the change-
+    # password try counter #340, which the client both drives and reads back)
+    # are current for BOTH reads and writes - context.user is cached at logon
+    # and would otherwise be stale. Fall back to the passed struct if the row
+    # is not persisted (in-memory test users).
+    user =
+      case user && Repo.get(User, user.id) do
+        nil -> user
+        fresh -> Repo.preload(fresh, :household)
+      end
 
     result =
       case action do
@@ -260,14 +307,32 @@ defmodule Prodigy.Server.Service.Profile do
           {verify_entries, real_entries} =
             Enum.split_with(entries, fn {tac, _} -> tac == @verify_old_pw_tac end)
 
+          # A service change-password write is one carrying the verify-old TAC.
+          password_change = verify_entries != []
+
           cond do
-            verify_entries != [] and not old_password_ok?(user, verify_entries) ->
+            password_change and password_locked_out?(user) ->
+              Logger.info("Password change for #{user.id} rejected: too many prior tries")
+              :locked_out
+
+            password_change and not old_password_ok?(user, verify_entries) ->
               Logger.info("Password change for #{user.id} rejected: old password mismatch")
+              bump_password_try_count(user)
               :verify_failed
+
+            not write_authorized?(real_entries, user) ->
+              Logger.info(
+                "Profile update for #{user.id} rejected: subscriber-only write by non-subscriber"
+              )
+
+              :scope_denied
 
             true ->
               Logger.info("Profile update received for user #{user.id}")
 
+              # A successful password change resets the try counter (#340) via
+              # User.changeset, which clears "0154" whenever :password changes -
+              # so no explicit reset entry is needed here.
               {user_changeset, household_changeset, member_patches} =
                 build_changesets(real_entries, user, user.household)
 
@@ -298,8 +363,19 @@ defmodule Prodigy.Server.Service.Profile do
       end
 
     case result do
+      :locked_out ->
+        # Too many failed old-password tries. Same coarse error as a mismatch -
+        # xxopprof conveys only success/error, so the client shows a single
+        # "Incorrect password or too many tries." message either way.
+        {:ok, context, DiaPacket.encode(Fm0.make_response(<<0x05>>, request))}
+
       :verify_failed ->
         # 1-byte non-'0' status: xxopprof reads this as an error return.
+        {:ok, context, DiaPacket.encode(Fm0.make_response(<<0x05>>, request))}
+
+      :scope_denied ->
+        # Non-subscriber attempted a subscriber-only (household) write; reject
+        # the whole packet the same way, changing nothing.
         {:ok, context, DiaPacket.encode(Fm0.make_response(<<0x05>>, request))}
 
       {:reply, values} ->
@@ -328,6 +404,31 @@ defmodule Prodigy.Server.Service.Profile do
         else: Pbkdf2.hash_pwd_salt(user.password)
 
     Pbkdf2.verify_pass(old, hash)
+  end
+
+  # -- server-authoritative change-password try counter (#340) ---------
+
+  # The counter is stored as a 1-char ASCII decimal string ("0".."3") so the
+  # reception client can retrieve #340 and compare it numerically (>= '3').
+  # nil / empty / non-digit is treated as 0.
+  defp password_try_count(%User{profile: profile}) when is_map(profile) do
+    case profile do
+      %{@try_count_key => <<d>>} when d in ?0..?9 -> d - ?0
+      _ -> 0
+    end
+  end
+
+  defp password_try_count(_), do: 0
+
+  defp password_locked_out?(user), do: password_try_count(user) >= @max_password_change_trys
+
+  # Persist an incremented try count after a rejected old-password verify.
+  # Stored as a single decimal digit; the count never exceeds 3 (a locked-out
+  # write is rejected before any increment), so one digit always suffices.
+  defp bump_password_try_count(%User{} = user) do
+    n = password_try_count(user) + 1
+    profile = Map.put(user.profile || %{}, @try_count_key, Integer.to_string(n))
+    user |> User.changeset(%{profile: profile}) |> Repo.update!()
   end
 
   # -- compat shims --------------------------------------------------
