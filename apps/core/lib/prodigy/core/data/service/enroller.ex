@@ -29,7 +29,7 @@ defmodule Prodigy.Core.Data.Service.Enroller do
   import Ecto.Changeset
 
   alias Prodigy.Core.Data.Repo
-  alias Prodigy.Core.Data.Service.{Household, User}
+  alias Prodigy.Core.Data.Service.{Household, MemberStatus, User}
 
   # Default Personal Path entries planted at account creation. The 20-entry
   # PATH handler (`TAOPPATH.PGM`) infinite-loops when entry 1 is empty, so
@@ -141,7 +141,14 @@ defmodule Prodigy.Core.Data.Service.Enroller do
   # Mirror name/title into the household's "A" slot JSONB - the
   # denormalized copy the original RS client reads by TAC. Keeps
   # parity with the admin Users-tab edit flow.
-  defp household_profile(nil), do: %{}
+  # The A subscriber is always allocated (suffix-in-use bit) and active.
+  # The ENROLLED bit tracks date_enrolled: the CLI/no-name path leaves the
+  # A user un-enrolled (first logon enrolls), the named path enrolls now.
+  defp household_profile(nil) do
+    %{}
+    |> MemberStatus.put_suffix_in_use("A")
+    |> MemberStatus.put_indicators("A", true, false)
+  end
 
   defp household_profile({first, last}) do
     %{
@@ -150,5 +157,7 @@ defmodule Prodigy.Core.Data.Service.Enroller do
       "011A" => last,
       "011D" => "Mr."   # TODO add an argument for this.
     }
+    |> MemberStatus.put_suffix_in_use("A")
+    |> MemberStatus.put_indicators("A", true, true)
   end
 end

@@ -26,6 +26,7 @@ defmodule Prodigy.Server.Service.Logon do
   import Prodigy.Core.Util
 
   alias Prodigy.Core.Data.Repo
+  alias Prodigy.Core.Data.Service.MemberStatus
   alias Prodigy.Core.Data.Service.User
   alias Prodigy.Server.Protocol.Dia.Packet
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
@@ -234,6 +235,21 @@ defmodule Prodigy.Server.Service.Logon do
     end
   end
 
+  # A household member whose ACTIVE bit is clear in the household-level
+  # PRF_INDICATORS_<suffix> byte has been suspended (TOOLS Add/Suspend).
+  # A missing indicator (legacy household) is treated as active.
+  defp member_active(user) do
+    suffix = MemberStatus.suffix_of(user.id)
+    profile = (user.household && user.household.profile) || %{}
+
+    if MemberStatus.active?(profile, suffix) do
+      true
+    else
+      Logger.info("User #{user.id} attempted logon, but the member is suspended")
+      :suspended
+    end
+  end
+
   defp deleted(user) do
     # TODO check that date_deleted is nil or after today
     if user.date_deleted == nil do
@@ -269,6 +285,7 @@ defmodule Prodigy.Server.Service.Logon do
            {:ok, user} <- get_user(user_id, password),
            false <- deleted(user),
            true <- household_active(user),
+           true <- member_active(user),
            enrollment_status <- enrolled(user) do
 
         # create context based on enrollment status
@@ -301,6 +318,7 @@ defmodule Prodigy.Server.Service.Logon do
 #        {:enroll_subscriber, user} -> {Status.ENROLL_SUBSCRIBER, user}
 #        {:enroll_other, user} -> {Status.ENROLL_OTHER, user}
         :id_in_use -> {Status.ID_IN_USE, nil, nil}
+        :suspended -> {Status.ACCOUNT_PROBLEM, nil, nil}
         _ -> {Status.ACCOUNT_PROBLEM, nil, nil}
       end
 

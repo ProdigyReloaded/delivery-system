@@ -31,6 +31,10 @@ defmodule Prodigy.Server.Service.Profile do
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Context
 
+  # Transient companion TAC (never stored): its presence in a profile
+  # write means "verify this old password before applying the rest".
+  @verify_old_pw_tac 0x015D
+
   @doc """
   Decode wire bytes back into the list of `{tac, value}` tuples the
   client sent.
@@ -237,52 +241,89 @@ defmodule Prodigy.Server.Service.Profile do
     entries = parse_request_values(rest)
     Logger.debug("#{inspect(entries, base: :hex, limit: :infinity)}")
 
-    values =
+    result =
       case action do
         0x03 ->
           # Retrieve: encode each requested TAC.
-          Enum.reduce(entries, <<>>, fn {tac, _val}, buf ->
-            buf <> get_tac(tac, user, user.household)
-          end)
+          {:reply,
+           Enum.reduce(entries, <<>>, fn {tac, _val}, buf ->
+             buf <> get_tac(tac, user, user.household)
+           end)}
 
         0x04 ->
-          Logger.info("Profile update received for user #{user.id}")
+          # A change-password write carries the transient verify-old TAC
+          # (0x015D) alongside the new password (0x014F). Verify the old
+          # against the stored hash; on mismatch reject the WHOLE write
+          # (change nothing) and return a short error status. The verify
+          # TAC is never persisted. A plain write (no verify TAC) applies
+          # as before - this is how enrollment sets the initial password.
+          {verify_entries, real_entries} =
+            Enum.split_with(entries, fn {tac, _} -> tac == @verify_old_pw_tac end)
 
-          {user_changeset, household_changeset, member_patches} =
-            build_changesets(entries, user, user.household)
+          cond do
+            verify_entries != [] and not old_password_ok?(user, verify_entries) ->
+              Logger.info("Password change for #{user.id} rejected: old password mismatch")
+              :verify_failed
 
-          # New member rows get this user's password as loaded - before
-          # any password change in this update is applied - mirroring the
-          # enrollment "members share the subscriber's initial password"
-          # rule.
-          member_initial_password = user.password
+            true ->
+              Logger.info("Profile update received for user #{user.id}")
 
-          Repo.transaction(fn ->
-            if household_changeset, do: Repo.update!(household_changeset)
+              {user_changeset, household_changeset, member_patches} =
+                build_changesets(real_entries, user, user.household)
 
-            if user.household && map_size(member_patches) > 0 do
-              persist_members(member_patches, user.household, member_initial_password)
-            end
+              # New member rows get this user's password as loaded - before
+              # any password change in this update is applied - mirroring the
+              # enrollment "members share the subscriber's initial password"
+              # rule.
+              member_initial_password = user.password
 
-            Repo.update!(user_changeset |> Ecto.Changeset.change(date_enrolled: Timex.today()))
-          end)
+              Repo.transaction(fn ->
+                if household_changeset, do: Repo.update!(household_changeset)
 
-          Prodigy.Server.SessionManager.broadcast_profile_updated(user.id)
+                if user.household && map_size(member_patches) > 0 do
+                  persist_members(member_patches, user.household, member_initial_password)
+                end
 
-          payload
+                Repo.update!(user_changeset |> Ecto.Changeset.change(date_enrolled: Timex.today()))
+              end)
+
+              Prodigy.Server.SessionManager.broadcast_profile_updated(user.id)
+
+              {:reply, payload}
+          end
       end
 
-    response_payload = <<
-      0x13,
-      action,
-      which_user,
-      other_user_id::binary-size(7),
-      filler::binary-size(5),
-      0x0::16-big,
-      values::binary
-    >>
+    case result do
+      :verify_failed ->
+        # 1-byte non-'0' status: xxopprof reads this as an error return.
+        {:ok, context, DiaPacket.encode(Fm0.make_response(<<0x05>>, request))}
 
-    {:ok, context, DiaPacket.encode(Fm0.make_response(response_payload, request))}
+      {:reply, values} ->
+        response_payload = <<
+          0x13,
+          action,
+          which_user,
+          other_user_id::binary-size(7),
+          filler::binary-size(5),
+          0x0::16-big,
+          values::binary
+        >>
+
+        {:ok, context, DiaPacket.encode(Fm0.make_response(response_payload, request))}
+    end
+  end
+
+  # Verify a submitted old password against the user's stored credential,
+  # tolerating legacy rows that were stored un-hashed (mirrors Logon).
+  defp old_password_ok?(user, verify_entries) do
+    {_tac, old} = List.last(verify_entries)
+
+    hash =
+      if String.starts_with?(user.password, "$pbkdf2-sha512$"),
+        do: user.password,
+        else: Pbkdf2.hash_pwd_salt(user.password)
+
+    Pbkdf2.verify_pass(old, hash)
   end
 
   # -- compat shims --------------------------------------------------

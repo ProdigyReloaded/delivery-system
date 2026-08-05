@@ -512,6 +512,12 @@ defmodule Prodigy.Portal.Authz do
   @doc """
   Like `grant_role/3` but takes an email instead of a user_id. Useful
   from release-eval rpc during bootstrap.
+
+  Bootstrap the first platform admin with `actor_id = nil`, e.g. under
+  compose (see DEVELOPERS.md "Promote a user to admin"):
+
+      docker exec prodigy-server-1 /prod/rel/server/bin/server rpc \\
+        'Prodigy.Portal.Authz.grant_role_by_email(nil, "user@example.com", "platform-admin")'
   """
   def grant_role_by_email(actor_id, email, role) when is_binary(email) do
     with_user_by_email(email, &grant_role(actor_id, &1, role))
