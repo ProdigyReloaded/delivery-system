@@ -232,6 +232,55 @@ defmodule Prodigy.Portal.Admin.UsersTest do
       refute Map.has_key?(reloaded_user.profile, "0102")
     end
 
+    test "clears the password-change try counter (#340) on password reset" do
+      # An admin password reset must unlock a change-password-locked user:
+      # User.changeset resets #340 whenever :password changes.
+      {_hh, user} = subscriber!()
+
+      {:ok, locked} =
+        user
+        |> Ecto.Changeset.change(%{profile: Map.put(user.profile || %{}, "0154", "3")})
+        |> Repo.update()
+
+      assert Users.password_change_inhibited?(locked)
+
+      {:ok, reset} = Users.reset_password(locked, "FRESH99")
+      refute Users.password_change_inhibited?(reset)
+    end
+  end
+
+  describe "password_change_inhibited?/1 and clear_password_change_trys/1" do
+    test "inhibited? is true only at or above the 3-try cap" do
+      # #340 is a 1-char ASCII decimal string.
+      assert Users.password_change_inhibited?(%User{profile: %{"0154" => "3"}})
+      assert Users.password_change_inhibited?(%User{profile: %{"0154" => "9"}})
+      refute Users.password_change_inhibited?(%User{profile: %{"0154" => "2"}})
+      refute Users.password_change_inhibited?(%User{profile: %{"0154" => "0"}})
+      refute Users.password_change_inhibited?(%User{profile: %{"0154" => ""}})
+      refute Users.password_change_inhibited?(%User{profile: %{}})
+      refute Users.password_change_inhibited?(%User{profile: nil})
+    end
+
+    test "clear resets #340 without touching the reception password" do
+      {_hh, user} = subscriber!()
+      original_hash = user.password
+
+      {:ok, locked} =
+        user
+        |> Ecto.Changeset.change(%{profile: Map.put(user.profile || %{}, "0154", "3")})
+        |> Repo.update()
+
+      assert Users.password_change_inhibited?(locked)
+
+      {:ok, cleared} = Users.clear_password_change_trys(locked)
+
+      refute Users.password_change_inhibited?(cleared)
+      # Password column is untouched (this is a :profile-only write).
+      assert Repo.get(User, cleared.id).password == original_hash
+    end
+  end
+
+  describe "update/2 more" do
     test "admin edit preserves JSONB keys written by a prior TCS-only path" do
       # TCS writes go to JSONB. When an admin later edits gender,
       # the JSONB keys written by TCS (here: last_name) must survive.

@@ -153,6 +153,51 @@ defmodule Prodigy.Portal.Admin.Users do
     for _ <- 1..8, into: "", do: <<Enum.at(alphabet, :rand.uniform(len) - 1)>>
   end
 
+  # PRF_COUNT_PASSWORD_CHANGE_TRYS (#340 / 0x0154): the failed-old-password
+  # counter for the service change-password flow, stored as a 1-char ASCII
+  # decimal string ("0".."3") in the JSONB profile under "0154". The server
+  # locks out change-password at 3 (@max_password_change_trys in
+  # Prodigy.Server.Service.Profile).
+  @try_count_key "0154"
+  @max_password_change_trys 3
+
+  @doc """
+  `true` when the user has hit the failed-attempt cap (#340 >= 3) and can no
+  longer change their own password over TCS until an admin (or a successful
+  password reset) clears the counter.
+  """
+  def password_change_inhibited?(%User{profile: profile}) do
+    count =
+      case profile && Map.get(profile, @try_count_key) do
+        <<d>> when d in ?0..?9 -> d - ?0
+        _ -> 0
+      end
+
+    count >= @max_password_change_trys
+  end
+
+  @doc """
+  Admin-assisted unlock: reset the change-password try counter (#340) to 0 so
+  the user can retry password changes without a forced reset. Writes the
+  profile directly (a :profile-only change), so it does NOT touch the
+  reception password. Returns `{:ok, %User{}}` or `{:error, changeset}`.
+  """
+  def clear_password_change_trys(%User{} = user) do
+    # The ASCII digit "0" is the "zero tries" value (JSONB-safe, unlike a
+    # literal <<0>> NUL byte); every reader also treats missing/empty as 0.
+    new_profile = Map.put(user.profile || %{}, @try_count_key, "0")
+
+    result =
+      user
+      |> User.changeset(%{profile: new_profile})
+      |> Repo.update()
+
+    with {:ok, updated} <- result do
+      SessionManager.broadcast_profile_updated(updated.id)
+      {:ok, updated}
+    end
+  end
+
   @doc """
   Soft-delete a service user by stamping `date_deleted` with today. If the
   user is currently online, their session is force-disconnected first so

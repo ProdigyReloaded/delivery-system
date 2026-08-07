@@ -54,7 +54,8 @@ defmodule Prodigy.Portal.AdminLive.Users.EditModal do
         assign(socket,
           form: to_form(Admin.edit_changeset(user), as: :user),
           tab: default_tab(),
-          policy: PolicyAdmin.get(user.id)
+          policy: PolicyAdmin.get(user.id),
+          password_change_inhibited: Admin.password_change_inhibited?(user)
         )
       else
         socket
@@ -91,6 +92,24 @@ defmodule Prodigy.Portal.AdminLive.Users.EditModal do
 
       {:error, reason} ->
         send(self(), {:modal_flash, :error, "Couldn't save: #{inspect(reason)}"})
+        {:noreply, socket}
+    end
+  end
+
+  # Admin-assisted unlock. The checkbox is only interactive while checked
+  # (disabled once cleared), so a click here always means "unlock": clear
+  # #340 immediately and reflect the new state. The counter can only be
+  # re-set by the server on failed retries, never from this UI.
+  def handle_event("toggle_password_inhibited", _params, socket) do
+    case Admin.clear_password_change_trys(socket.assigns.user) do
+      {:ok, user} ->
+        {:noreply,
+         socket
+         |> assign(:user, user)
+         |> assign(:password_change_inhibited, false)}
+
+      {:error, reason} ->
+        send(self(), {:modal_flash, :error, "Couldn't unlock: #{inspect(reason)}"})
         {:noreply, socket}
     end
   end
@@ -169,6 +188,35 @@ defmodule Prodigy.Portal.AdminLive.Users.EditModal do
                 </div>
                 <div :if={!group[:columns]}>
                   <.edit_field :for={spec <- group.fields} f={f} spec={spec} user={@user} />
+                </div>
+
+                <%!-- Security control lives under the Personal info tab's
+                      Status group. The "Password change inhibited" flag is
+                      derived state (#340 >= 3), not a form field; unchecking it
+                      clears the counter immediately (admin-assisted unlock)
+                      outside the form save. --%>
+                <div :if={tab.id == :info and group.title == "Status"} class="row mb-2">
+                  <label class="col-sm-4 col-form-label col-form-label-sm text-sm-end">
+                    Password change inhibited
+                    <span
+                      class="text-muted small"
+                      style="cursor: help;"
+                      title="Checked when the user has exceeded the change-password retry limit. Uncheck to unlock; a successful password reset also clears it."
+                    >(?)</span>
+                  </label>
+                  <div class="col-sm-8">
+                    <div class="form-check form-switch">
+                      <input
+                        type="checkbox"
+                        id="password-change-inhibited"
+                        class="form-check-input"
+                        checked={@password_change_inhibited}
+                        disabled={not @password_change_inhibited}
+                        phx-click="toggle_password_inhibited"
+                        phx-target={@myself}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

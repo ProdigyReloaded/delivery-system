@@ -158,6 +158,28 @@ defmodule Prodigy.Portal.AdminLive.UsersTest do
       view |> element("button[phx-click='close_modal']", "Cancel") |> render_click()
       refute has_element?(view, "#edit-user-form")
     end
+
+    test "password-change-inhibited checkbox renders in the Personal info tab's Status group and unchecking unlocks the user",
+         %{conn: conn, user: user} do
+      # Lock the user by pushing #340 (profile key "0154") to the cap.
+      locked =
+        user
+        |> Ecto.Changeset.change(%{profile: Map.put(user.profile || %{}, "0154", "3")})
+        |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/admin/service/users")
+      view |> element("button[phx-click='edit'][phx-value-id=#{locked.id}]") |> render_click()
+
+      # The control lives on the default (Personal info) tab and is checked
+      # while locked.
+      assert has_element?(view, "#password-change-inhibited[checked]")
+
+      # Unchecking clears the counter (admin-assisted unlock).
+      view |> element("#password-change-inhibited") |> render_click()
+
+      refute Prodigy.Portal.Admin.Users.password_change_inhibited?(Repo.get(User, locked.id))
+      refute has_element?(view, "#password-change-inhibited[checked]")
+    end
   end
 
   describe "reset password modal" do

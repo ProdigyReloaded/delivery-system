@@ -25,7 +25,7 @@ defmodule Prodigy.Server.Service.Enrollment do
   import Ecto.Changeset
 
   alias Prodigy.Core.Data.Repo
-  alias Prodigy.Core.Data.Service.{Household, User}
+  alias Prodigy.Core.Data.Service.{Household, MemberStatus, User}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Service.{Logon, Messaging, Profile}
@@ -35,13 +35,17 @@ defmodule Prodigy.Server.Service.Enrollment do
     Logger.debug("received enrollment packet: #{inspect(request, base: :hex, limit: :infinity)}")
     user_id = user.id
 
-    # The RS enrollment flow tells the subscriber that any additional
-    # household members they register here will use the *same initial
-    # password that was issued to the subscriber* - i.e., the welcome-kit
-    # credential they logged in with, NOT a new password they may choose
-    # during this enrollment (TAC 0x014F). Capture it now, before the
-    # changeset pipeline can stage the new password.
-    subscriber_initial_password = user.password
+    # Additional household members register with the household TEMPORARY
+    # password (PRF_HOUSEHOLD_PASSWORD #275 / key "0113") - the welcome-kit
+    # credential issued at account creation, NOT any new password the
+    # subscriber later chooses. Sourcing it from the household profile (rather
+    # than user.password) keeps it correct even after the subscriber changes
+    # their own password. Falls back to user.password for pre-#275 households.
+    subscriber_initial_password =
+      case user.household do
+        %{profile: %{"0113" => pw}} when is_binary(pw) -> pw
+        _ -> user.password
+      end
 
     <<0x2, type, 0x1, ^user_id::binary-size(7), _::40, _count::16-big, rest::binary>> = payload
 
@@ -69,6 +73,11 @@ defmodule Prodigy.Server.Service.Enrollment do
       end
 
     user_cs = user_cs |> change(date_enrolled: Timex.today())
+
+    # Mark this member ENROLLED in the household's PRF_INDICATORS_<suffix>
+    # byte (denormalized status the TOOLS Add/Suspend screen reads), so
+    # the "not yet enrolled" asterisk clears once they enrol.
+    household_cs = mark_member_enrolled(household_cs, user)
 
     Repo.transaction(fn ->
       if household_cs, do: Repo.update!(household_cs)
@@ -116,6 +125,23 @@ defmodule Prodigy.Server.Service.Enrollment do
   # slot-A name keys, and merge their values under the user's own name
   # TACs into the user changeset's :profile change. Returns the user
   # changeset unchanged when there's nothing to mirror.
+  # Set the enrolling member's ENROLLED bit in the household's
+  # PRF_INDICATORS_<suffix> byte, preserving the active bit.  Builds a
+  # household changeset if the entries didn't already produce one.
+  defp mark_member_enrolled(household_cs, %User{household: nil}), do: household_cs
+
+  defp mark_member_enrolled(household_cs, %User{household: household} = user) do
+    suffix = MemberStatus.suffix_of(user.id)
+
+    base =
+      if household_cs,
+        do: get_field(household_cs, :profile) || %{},
+        else: household.profile || %{}
+
+    (household_cs || change(household))
+    |> change(profile: MemberStatus.set_enrolled(base, suffix))
+  end
+
   defp apply_slot_a_mirror(user_cs, nil), do: user_cs
 
   defp apply_slot_a_mirror(user_cs, household_cs) do

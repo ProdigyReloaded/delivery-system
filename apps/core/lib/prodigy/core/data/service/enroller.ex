@@ -29,7 +29,7 @@ defmodule Prodigy.Core.Data.Service.Enroller do
   import Ecto.Changeset
 
   alias Prodigy.Core.Data.Repo
-  alias Prodigy.Core.Data.Service.{Household, User}
+  alias Prodigy.Core.Data.Service.{Household, MemberStatus, User}
 
   # Default Personal Path entries planted at account creation. The 20-entry
   # PATH handler (`TAOPPATH.PGM`) infinite-loops when entry 1 is empty, so
@@ -97,7 +97,7 @@ defmodule Prodigy.Core.Data.Service.Enroller do
 
     household_changeset =
       %Household{id: household_id, enabled_date: today}
-      |> change(%{profile: household_profile(enroll_name)})
+      |> change(%{profile: household_profile(enroll_name, password)})
       |> put_assoc(:users, [
         %User{
           id: user_id,
@@ -141,14 +141,29 @@ defmodule Prodigy.Core.Data.Service.Enroller do
   # Mirror name/title into the household's "A" slot JSONB - the
   # denormalized copy the original RS client reads by TAC. Keeps
   # parity with the admin Users-tab edit flow.
-  defp household_profile(nil), do: %{}
+  # The A subscriber is always allocated (suffix-in-use bit) and active.
+  # The ENROLLED bit tracks date_enrolled: the CLI/no-name path leaves the
+  # A user un-enrolled (first logon enrolls), the named path enrolls now.
+  # 0x0113 = PRF_HOUSEHOLD_PASSWORD (#275): the creation password doubles as the
+  # household temporary password - shown on the Member Information page and used
+  # as every newly-added member's initial password. Stored plaintext (it must be
+  # displayable + reapplied); the A user's own #335 password is hashed separately
+  # and diverges once the subscriber changes it.
+  defp household_profile(nil, password) do
+    %{"0113" => password}
+    |> MemberStatus.put_suffix_in_use("A")
+    |> MemberStatus.put_indicators("A", true, false)
+  end
 
-  defp household_profile({first, last}) do
+  defp household_profile({first, last}, password) do
     %{
+      "0113" => password,
       # 0x011B user_a_first, 0x011A user_a_last, 0x011D user_a_title
       "011B" => first,
       "011A" => last,
       "011D" => "Mr."   # TODO add an argument for this.
     }
+    |> MemberStatus.put_suffix_in_use("A")
+    |> MemberStatus.put_indicators("A", true, true)
   end
 end

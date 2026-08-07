@@ -45,6 +45,12 @@ defmodule Prodigy.Core.Data.Service.User do
     field(:profile, :map, default: %{})
   end
 
+  # PRF_COUNT_PASSWORD_CHANGE_TRYS (#340 / 0x0154): the per-user,
+  # server-authoritative failed-old-password counter for the service
+  # change-password flow. Stored as a 1-char ASCII decimal string in the
+  # JSONB profile under key "0154" ("0".."3").
+  @try_count_key "0154"
+
   def changeset(user, params \\ %{}) do
     # Castable fields are housekeeping (password, date_enrolled,
     # concurrency_limit) plus the JSONB `:profile` map. Everything
@@ -52,8 +58,34 @@ defmodule Prodigy.Core.Data.Service.User do
     # inside that map via TAC keys.
     user
     |> cast(params, [:password, :date_enrolled, :concurrency_limit, :profile])
+    |> reset_password_change_trys()
     |> put_password_hash()
   end
+
+  # Whenever a changeset introduces a :password change - a successful
+  # service change-password write OR an admin password reset - clear the
+  # failed-attempt counter (#340) so the account is no longer locked out.
+  # Reset ONLY on password change: a :profile-only change (e.g. the
+  # server-side increment) must not clear the counter. Merges into the
+  # JSONB :profile: if this changeset also changes :profile, patch that
+  # map; otherwise base it on the existing user.profile.
+  #
+  # The "zero tries" value is the ASCII digit "0" (0x30), which is JSONB-safe
+  # (it was only the NUL byte <<0>> that Postgres rejects in JSONB text). The
+  # client retrieves #340 and compares it as a numeric string, so the counter
+  # is kept as a 1-char decimal. Every reader also treats a missing/empty
+  # value as 0, so a never-set counter is semantically identical to "0".
+  defp reset_password_change_trys(%Ecto.Changeset{valid?: true, changes: %{password: _}} = changeset) do
+    base =
+      case fetch_change(changeset, :profile) do
+        {:ok, profile} when is_map(profile) -> profile
+        _ -> changeset.data.profile || %{}
+      end
+
+    put_change(changeset, :profile, Map.put(base, @try_count_key, "0"))
+  end
+
+  defp reset_password_change_trys(changeset), do: changeset
 
   # -- JSONB-backed profile accessors -----------------------------
   #
