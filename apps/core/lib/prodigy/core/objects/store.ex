@@ -31,9 +31,10 @@ defmodule Prodigy.Core.Objects.Store do
   * If no prior row exists, the upload lands at its declared version.
   * If content matches, nothing is written and the row is returned as
     `:unchanged`.
-  * If content differs, a new row is inserted at `latest.version + 1`,
-    wrapping on the 13-bit ceiling (8191 -> 0). TODO: the server's wire
-    protocol should recognize the wrap.
+  * If content differs, a new row is inserted at `latest.version + 1`.
+    This database revision never wraps at the 13-bit wire ceiling, so
+    history remains ordered and primary keys are not reused. The blob's
+    header carries the assigned revision modulo 8192 (8191 -> 0).
   * Inside the same transaction we maintain the `keyword` index -
     any keyword previously pointing at the object's triple is deleted
     and the new one (from the 0x71 segment) is inserted. A collision
@@ -233,7 +234,11 @@ defmodule Prodigy.Core.Objects.Store do
         {:ok, {:unchanged, row_summary(%{attrs | version: v}, attrs.keyword), [], false}}
 
       %{version: v} ->
-        %{attrs | version: wrap_version(v + 1)}
+        %{
+          attrs
+          | version: v + 1,
+            contents: Codec.with_version(attrs.contents, Codec.wire_version(v + 1))
+        }
         |> insert_with_keyword(mode, :bumped, previous_version: v)
     end
   end
@@ -255,8 +260,8 @@ defmodule Prodigy.Core.Objects.Store do
           # Row recorded with keyword: nil - the caller knows the
           # object landed but the keyword claim was refused.
           {:ok,
-           {disposition, row_summary(obj, nil) |> Map.merge(Map.new(summary_extras)),
-            [collision], kw_changed?}}
+           {disposition, row_summary(obj, nil) |> Map.merge(Map.new(summary_extras)), [collision],
+            kw_changed?}}
 
         {:error, _} = err ->
           err
@@ -313,8 +318,7 @@ defmodule Prodigy.Core.Objects.Store do
 
         case mode do
           :error ->
-            {:error,
-             {:keyword_collision, keyword, collision.owner_obj_id, collision.new_obj_id}}
+            {:error, {:keyword_collision, keyword, collision.owner_obj_id, collision.new_obj_id}}
 
           :skip ->
             # Object lost its keyword to a squatter. Effectively moves
@@ -358,9 +362,6 @@ defmodule Prodigy.Core.Objects.Store do
   defp changeset_errors(%Ecto.Changeset{} = cs) do
     Ecto.Changeset.traverse_errors(cs, fn {msg, _opts} -> msg end)
   end
-
-  defp wrap_version(n) when n <= 0x1FFF, do: n
-  defp wrap_version(_), do: 0
 
   defp latest_version_row(name, sequence, type) do
     from(o in Object,
@@ -610,6 +611,7 @@ defmodule Prodigy.Core.Objects.Store do
 
       true ->
         delete_keyword_for(name, sequence, type)
+
         case reclaim_keyword(desired, name, sequence, type) do
           :ok -> true
           # Another object owns the desired keyword. We've already

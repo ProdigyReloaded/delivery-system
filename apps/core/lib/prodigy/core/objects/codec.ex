@@ -106,13 +106,36 @@ defmodule Prodigy.Core.Objects.Codec do
     0x71 => :keyword_navigation
   }
 
-  # Max 13-bit version value (0..8191). Exposed for callers that need
-  # to handle the wrap: Prodigy's DOS client tracks versions as 13-bit
-  # unsigned; on overflow the server returns 0 and the client sees a
-  # "lower" version than its cached copy. Server-side wrap recognition
-  # is TODO
+  # Object headers carry a 13-bit serial number. Database revisions
+  # keep increasing so old rows remain addressable across wire wraps.
   @max_version_value 0x1FFF
   def max_version, do: @max_version_value
+
+  @doc "The 13-bit wire serial for a non-negative database revision."
+  def wire_version(revision) when is_integer(revision) and revision >= 0,
+    do: rem(revision, @max_version_value + 1)
+
+  @doc """
+  Compare 13-bit serials using RFC 1982 serial-number arithmetic.
+  A forward distance of 1..4095 is newer, including across zero.
+  Equal serials and the ambiguous half-range distance are not newer.
+  A client reporting zero is handled separately by TOCS as an unconditional request.
+  """
+  def newer_version?(candidate, current)
+      when candidate in 0..@max_version_value and current in 0..@max_version_value do
+    distance = wire_version(candidate - current + @max_version_value + 1)
+    distance > 0 and distance < div(@max_version_value + 1, 2)
+  end
+
+  @doc "Replace only the 13 version bits in an object header."
+  def with_version(
+        <<prefix::binary-size(15), candidacy::3, _old_high::5, set_size, _old_low, body::binary>>,
+        version
+      )
+      when version in 0..@max_version_value do
+    <<high, low>> = <<candidacy::3, version::13>>
+    <<prefix::binary, high, set_size, low, body::binary>>
+  end
 
   # --- Structs -------------------------------------------------------
 
@@ -267,7 +290,8 @@ defmodule Prodigy.Core.Objects.Codec do
         ext_padded <>
         <<sequence, type, total_len::16-little, cv_high, set_size, cv_low>>
 
-    segment = <<@segment_program_data, segment_frame_len::16-little, @program_data_subtype>> <> data
+    segment =
+      <<@segment_program_data, segment_frame_len::16-little, @program_data_subtype>> <> data
 
     header <> segment
   end
