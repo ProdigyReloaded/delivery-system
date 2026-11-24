@@ -118,6 +118,11 @@ defmodule Prodigy.OdbUtil.CLI do
 
           Without --url, podbutil connects directly to Postgres as before.
 
+        gcu list <recipe.rcp>
+        gcu fill <recipe.rcp> --output <new.rcp> --set "List:1=Text"
+          Inspect or fill GCU template text runs without a database.
+          Repeat --set for multiple replacements; output must be a new file.
+
         list-object-types
           Lists all object types
     """)
@@ -138,6 +143,8 @@ defmodule Prodigy.OdbUtil.CLI do
 
     exit(:shutdown)
   end
+
+  def main(["gcu" | args]), do: System.halt(Prodigy.OdbUtil.GcuCLI.run(args))
 
   def main(args) do
     #    Supervisor.start_link([{Prodigy.Database.Repo, []}], strategy: :one_for_one)

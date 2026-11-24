@@ -129,3 +129,9 @@ If the server is run behind anything with aggressive TCP timeouts, such as a loa
 experience `CM 4` errors in the Reception System.  Similarly, modern browsers suspend activity in idle tabs after
 some time, so even though the web-based connections do use a keepalive, the Server may consider the carrier lost if
 the client browser stops responding to these keepalives, whether the connection is healthy or not.
+
+## Create content from GCU templates
+
+The file-only GCU utility lists and replaces named text runs in existing recipes.
+See [GCU text templates](docs/gcu-templates.md) for CLI examples, supported formats
+and the separate compilation/viewing workflow.
