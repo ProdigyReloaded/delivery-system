@@ -270,6 +270,12 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
     end
 
     send_receive_packet(context, 515, Type.UD1ACK)
+
+    # Include responses queued by the final packets in the final queue assertion.
+    %{tx_pid: tx_pid} = :sys.get_state(context.tcsp)
+    send(tx_pid, :run_checks)
+    :sys.get_state(tx_pid)
+
     assert_received_rollover(context)
   end
 
