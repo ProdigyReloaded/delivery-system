@@ -556,7 +556,7 @@ defmodule Prodigy.Server.Service.DowJones do
     # The body length is a 2-byte binary (big-endian), same as the row content
     # lengths the client reads via MOVE ABS - e.g. "QUOTE TRACK 1" load-one is
     # <<0x00, 0x1A>> (26 = "022315" + uid(7) + name(13)).
-    <<_bodylen::16, op::binary-size(2), rest::binary>> = body
+    <<bodylen::16, op::binary-size(2), rest::binary>> = body
     user_id = context.user.id
 
     payload =
@@ -578,9 +578,9 @@ defmodule Prodigy.Server.Service.DowJones do
           # deterministic (bodylen - 9). After it: 2-byte flag (0x0000) then a
           # 2-byte symbol-blob length, then N*6-byte symbols (type + ticker(5)).
           # All lengths are 2-byte binary, same MOVE ABS convention as the load.
-          Logger.info("dow_jones HI500010 '03' RAW bodylen=#{_bodylen} " <>
+          Logger.info("dow_jones HI500010 '03' RAW bodylen=#{bodylen} " <>
             "rest=#{inspect(rest, base: :hex, limit: :infinity)}")
-          nlen = max(_bodylen - 9, 0)
+          nlen = max(bodylen - 9, 0)
           <<_uid::binary-size(7), listname::binary-size(nlen), _flag::16, len2::16,
             symblob::binary-size(len2)>> = rest
           syms = parse_symbols(symblob)

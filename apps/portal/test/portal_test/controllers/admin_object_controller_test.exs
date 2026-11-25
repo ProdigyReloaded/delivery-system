@@ -25,7 +25,7 @@ defmodule Prodigy.Portal.AdminObjectControllerTest do
 
   defp name_bytes(s), do: s <> String.duplicate(" ", 11 - byte_size(s))
 
-  defp build_blob(name, version \\ 1) do
+  defp build_blob(name, version) do
     # Wrap the 4-byte DEADBEEF filler in a valid segment frame so the
     # codec's segment walker succeeds - an empty body would also work,
     # but keeping the "download returns these exact bytes" shape is
@@ -38,7 +38,7 @@ defmodule Prodigy.Portal.AdminObjectControllerTest do
       cv_low>> <> segment
   end
 
-  defp insert_object!(name, version \\ 1) do
+  defp insert_object!(name, version) do
     blob = build_blob(name, version)
     {:ok, parsed} = Objects.parse_import_blob(blob)
     {:ok, %{inserted: [_]}} = Objects.insert_many([parsed])
