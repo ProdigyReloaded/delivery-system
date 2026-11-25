@@ -62,11 +62,13 @@ jobs:
         run: mix test
 
   # Build + push container images to GHCR, but ONLY after `build` (test) passes
-  # and ONLY on a push to main - never on PRs, never from a red commit.
+  # and ONLY on a push to main - never on PRs, never from a red commit. Forks
+  # run the tests and skip this job: they cannot push to the organisation's
+  # registry and do not have the client bundle token.
   build-images:
     name: Build and push ${{ matrix.image }}
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'ProdigyReloaded'
     runs-on: ubuntu-22.04
     permissions:
       contents: read
