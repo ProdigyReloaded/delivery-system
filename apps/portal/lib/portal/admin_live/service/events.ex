@@ -196,7 +196,7 @@ defmodule Prodigy.Portal.AdminLive.Service.Events do
         <span :if={not @subscribed?} class="badge text-bg-light border">snapshot</span>
       </div>
 
-      <form phx-change="filter" class="mb-3">
+      <form id="events-filter-form" phx-change="filter" class="mb-3">
         <div class="row g-2 align-items-end">
           <div class="col-md-3">
             <label class="form-label small">Service user id</label>

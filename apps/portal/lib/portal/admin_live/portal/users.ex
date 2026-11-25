@@ -429,7 +429,9 @@ defmodule Prodigy.Portal.AdminLive.Portal.Users do
             <td class="text-end">
               <%= if Authz.can?(@current_scope, :grants, :assign) do %>
                 <form
+                  id={"quota-form-" <> Integer.to_string(row.user.id)}
                   phx-change="set_quota"
+                  phx-auto-recover="ignore"
                   class="d-inline-flex align-items-center gap-1 mb-0 justify-content-end"
                 >
                   <input type="hidden" name="user_id" value={row.user.id} />
@@ -455,7 +457,9 @@ defmodule Prodigy.Portal.AdminLive.Portal.Users do
             <td :if={@invitation_only?} class="text-end">
               <%= if Authz.can?(@current_scope, :grants, :assign) do %>
                 <form
+                  id={"invite-quota-form-" <> Integer.to_string(row.user.id)}
                   phx-change="set_invite_quota"
+                  phx-auto-recover="ignore"
                   class="d-inline-flex align-items-center gap-1 mb-0 justify-content-end"
                 >
                   <input type="hidden" name="user_id" value={row.user.id} />
@@ -614,7 +618,9 @@ defmodule Prodigy.Portal.AdminLive.Portal.Users do
           <div class="d-flex align-items-center gap-2 mb-3">
             <span class="text-muted small">Invite quota:</span>
             <form
+              id={"invite-quota-modal-form-" <> Integer.to_string(@editing_user.user.id)}
               phx-change="set_invite_quota"
+              phx-auto-recover="ignore"
               class="d-inline-flex align-items-center gap-1 mb-0"
             >
               <input type="hidden" name="user_id" value={@editing_user.user.id} />

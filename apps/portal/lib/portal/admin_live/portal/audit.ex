@@ -160,7 +160,7 @@ defmodule Prodigy.Portal.AdminLive.Portal.Audit do
         transaction as the action it describes, so the log doesn't drift.
       </p>
 
-      <form phx-change="filter" class="mb-3">
+      <form id="audit-filter-form" phx-change="filter" class="mb-3">
         <div class="row g-2">
           <div class="col-md-3">
             <label class="form-label small">Actor email</label>

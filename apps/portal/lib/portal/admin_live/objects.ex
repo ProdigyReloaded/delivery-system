@@ -349,7 +349,7 @@ defmodule Prodigy.Portal.AdminLive.Objects do
         </button>
       </div>
 
-      <form phx-change="filter" class="mb-0">
+      <form id="objects-filter-form" phx-change="filter" class="mb-0">
         <div class="mb-2 d-flex flex-wrap gap-3 align-items-center">
           <span class="text-muted small">{@total} objects</span>
 

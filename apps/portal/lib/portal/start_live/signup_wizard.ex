@@ -310,7 +310,7 @@ defmodule Prodigy.Portal.StartLive.SignupWizard do
       digits. We'll add the trailing <code>A</code>.
     </p>
 
-    <form phx-change="validate_typed" phx-submit="commit" autocomplete="off">
+    <form id="signup-typed-form" phx-change="validate_typed" phx-submit="commit" autocomplete="off">
       <div class="mb-2">
         <div class="input-group">
           <input

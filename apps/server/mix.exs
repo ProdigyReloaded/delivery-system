@@ -50,7 +50,7 @@ defmodule Server.MixProject do
       # Explicit HTTP + JSON deps for the in-repo DowJones.Api client
       # module (the previous quote-fetch dep had been pulling both
       # transitively).
-      {:httpoison, "~> 1.0"},
+      {:httpoison, "~> 2.3"},
       {:poison, "~> 5.0"},
       {:number, "~> 1.0.3"},
       {:quantum, "~> 3.0"},
