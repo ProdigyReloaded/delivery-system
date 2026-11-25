@@ -34,20 +34,20 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
           elixir-version: '1.17.3' # Define the elixir version [required]
           otp-version: '27.1.2' # Define the OTP version [required]
       - name: Restore dependencies cache
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: deps
           key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
           restore-keys: ${{ runner.os }}-mix-
       - name: Restore build cache
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: _build
           key: ${{ runner.os }}-build-${{ hashFiles('**/mix.lock') }}
@@ -62,11 +62,13 @@ jobs:
         run: mix test
 
   # Build + push container images to GHCR, but ONLY after `build` (test) passes
-  # and ONLY on a push to main - never on PRs, never from a red commit.
+  # and ONLY on a push to main - never on PRs, never from a red commit. Forks
+  # run the tests and skip this job: they cannot push to the organisation's
+  # registry and do not have the client bundle token.
   build-images:
     name: Build and push ${{ matrix.image }}
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'ProdigyReloaded'
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -89,7 +91,7 @@ jobs:
             context: dowjones_sidecar
             file: dowjones_sidecar/Dockerfile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Populate apps/portal/priv/static/start with the DOSBox client bundle so
       # it's baked into the server release. em-dosbox-packager is public; the

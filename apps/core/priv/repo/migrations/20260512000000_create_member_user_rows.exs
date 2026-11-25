@@ -15,7 +15,6 @@
 
 defmodule Prodigy.Core.Data.Repo.Migrations.CreateMemberUserRows do
   use Ecto.Migration
-  import Ecto.Query
 
   alias Prodigy.Core.Data.Repo
   alias Prodigy.Core.Data.Service.{Household, ProfileBackfill, ProfileSchema, User}

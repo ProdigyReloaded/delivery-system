@@ -15,7 +15,6 @@
 
 defmodule Prodigy.Core.Data.Repo.Migrations.StripHouseholdSlotMemberKeys do
   use Ecto.Migration
-  import Ecto.Query
 
   alias Prodigy.Core.Data.Repo
   alias Prodigy.Core.Data.Service.{Household, ProfileSchema, User}

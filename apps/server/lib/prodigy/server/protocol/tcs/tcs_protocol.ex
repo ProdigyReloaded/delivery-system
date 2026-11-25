@@ -231,7 +231,7 @@ defmodule Prodigy.Server.Protocol.Tcs do
   end
 
   # Shared helper used by both the TCP and WebSocket ingress paths.
-  defp process_incoming_bytes(data, %State{socket: socket, transport: transport} = state) do
+  defp process_incoming_bytes(data, %State{} = state) do
     _corrupted_data =
       ErrorInjector.maybe_corrupt(
         data,
