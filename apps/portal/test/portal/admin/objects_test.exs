@@ -171,7 +171,7 @@ defmodule Prodigy.Portal.Admin.ObjectsTest do
       assert Objects.list() |> Enum.map(& &1.version) |> Enum.sort() == [3, 4]
     end
 
-    test "version wraps from 8191 to 0 on auto-bump" do
+    test "auto-bump preserves a monotonic storage revision at wire rollover" do
       {:ok, v1} =
         Objects.parse_import_blob(build_blob(name: "WRAP", version: 8191, body: <<0xAA>>))
 
@@ -181,7 +181,7 @@ defmodule Prodigy.Portal.Admin.ObjectsTest do
         Objects.parse_import_blob(build_blob(name: "WRAP", version: 0, body: <<0xBB>>))
 
       assert {:ok, result} = Objects.insert_many([v2])
-      assert [%{version: 0, previous_version: 8191}] = result.bumped
+      assert [%{version: 8192, previous_version: 8191}] = result.bumped
     end
 
     test "broadcasts :objects_upserted after a successful commit" do
@@ -208,9 +208,7 @@ defmodule Prodigy.Portal.Admin.ObjectsTest do
       {:ok, _} = Objects.insert_many([v1])
 
       {:ok, v2} =
-        Objects.parse_import_blob(
-          build_blob(name: "RK", body: keyword_segment_body("NEW"))
-        )
+        Objects.parse_import_blob(build_blob(name: "RK", body: keyword_segment_body("NEW")))
 
       assert {:ok, _} = Objects.insert_many([v2])
 

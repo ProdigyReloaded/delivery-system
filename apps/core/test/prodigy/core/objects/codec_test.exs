@@ -33,7 +33,8 @@ defmodule Prodigy.Core.Objects.CodecTest do
     <<cv_high, cv_low>> = <<candidacy::3, version::13>>
     length = 18 + byte_size(body)
 
-    <<name::binary-size(11), sequence, type, length::16-little, cv_high, set_size, cv_low>> <> body
+    <<name::binary-size(11), sequence, type, length::16-little, cv_high, set_size, cv_low>> <>
+      body
   end
 
   # Build a segment frame: 1-byte type, 2-byte LE length (inclusive),
@@ -156,6 +157,7 @@ defmodule Prodigy.Core.Objects.CodecTest do
           frame(0x51, <<0xAB>>)
 
       assert {:ok, %Codec{segments: segs}} = Codec.parse(build(body: body))
+
       assert Enum.map(segs, & &1.type_name) == [
                :program_call,
                :header_extension,
@@ -176,7 +178,9 @@ defmodule Prodigy.Core.Objects.CodecTest do
 
     test "unknown segment type is preserved with nil type_name" do
       body = frame(0x7F, <<0xDE, 0xAD>>)
-      assert {:ok, %Codec{segments: [%Segment{type: 0x7F, type_name: nil, payload: <<0xDE, 0xAD>>}]}} =
+
+      assert {:ok,
+              %Codec{segments: [%Segment{type: 0x7F, type_name: nil, payload: <<0xDE, 0xAD>>}]}} =
                Codec.parse(build(body: body))
     end
 
@@ -291,6 +295,41 @@ defmodule Prodigy.Core.Objects.CodecTest do
       assert :binary.at(canon, 17) == 0
       # Body bytes unchanged.
       assert binary_part(blob, 18, 2) == binary_part(canon, 18, 2)
+    end
+  end
+
+  describe "wire versions" do
+    test "changing a header version preserves candidacy, set size, content and hash" do
+      for candidacy <- 0..7, version <- [0, 1, 8191] do
+        blob = build(version: 42, candidacy: candidacy, body: <<0xAA, 0xBB>>)
+        updated = Codec.with_version(blob, version)
+
+        assert {:ok, %{version: ^version, candidacy: ^candidacy}} =
+                 Codec.parse_header(updated)
+
+        assert Codec.canonicalize(updated) == Codec.canonicalize(blob)
+        assert Codec.content_hash(updated) == Codec.content_hash(blob)
+      end
+    end
+
+    test "storage revisions map to the wire serial across multiple cycles" do
+      assert Enum.map([0, 1, 8191, 8192, 8193, 16383, 16384], &Codec.wire_version/1) ==
+               [0, 1, 8191, 0, 1, 8191, 0]
+    end
+
+    test "serial comparisons keep forward and reverse rollover distinct" do
+      for current <- 0..8191 do
+        for distance <- [1, 4095] do
+          next = Codec.wire_version(current + distance)
+          assert Codec.newer_version?(next, current)
+          refute Codec.newer_version?(current, next)
+        end
+
+        refute Codec.newer_version?(current, current)
+        opposite = Codec.wire_version(current + 4096)
+        refute Codec.newer_version?(opposite, current)
+        refute Codec.newer_version?(current, opposite)
+      end
     end
   end
 

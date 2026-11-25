@@ -71,6 +71,7 @@ defmodule Prodigy.Core.Objects.StoreTest do
   describe "insert_or_bump/1" do
     test "inserts fresh rows at their declared version" do
       {:ok, a} = Store.parse_import_blob(build_blob(name: "A", version: 7))
+
       assert {:ok, %{inserted: [%{version: 7}], bumped: [], unchanged: []}} =
                Store.insert_or_bump([a])
     end
@@ -80,11 +81,12 @@ defmodule Prodigy.Core.Objects.StoreTest do
       assert {:ok, _} = Store.insert_or_bump([p])
 
       {:ok, p_again} = Store.parse_import_blob(build_blob(name: "SAME", version: 42))
+
       assert {:ok, %{unchanged: [_], inserted: [], bumped: []}} =
                Store.insert_or_bump([p_again])
     end
 
-    test "different content bumps to max+1, wrapping at 8191" do
+    test "storage revisions keep increasing when the wire version wraps" do
       {:ok, first} =
         Store.parse_import_blob(build_blob(name: "WRAP", version: 8191, body: <<0xAA>>))
 
@@ -93,8 +95,58 @@ defmodule Prodigy.Core.Objects.StoreTest do
       {:ok, second} =
         Store.parse_import_blob(build_blob(name: "WRAP", version: 0, body: <<0xBB>>))
 
-      assert {:ok, %{bumped: [%{version: 0, previous_version: 8191}]}} =
+      assert {:ok, %{bumped: [%{version: 8192, previous_version: 8191}]}} =
                Store.insert_or_bump([second])
+    end
+
+    test "rollover preserves old version zero and advances through subsequent uploads" do
+      {:ok, old} = Store.parse_import_blob(build_blob(name: "HISTORY", version: 0, body: <<1>>))
+      assert {:ok, _} = Store.insert_or_bump([old])
+
+      {:ok, last} =
+        Store.parse_import_blob(build_blob(name: "HISTORY", version: 8191, body: <<2>>))
+
+      Repo.insert!(struct(Prodigy.Core.Data.Service.Object, Map.delete(last, :keyword)))
+
+      for {body, revision, wire_version} <- [{3, 8192, 0}, {4, 8193, 1}] do
+        # The uploaded header is deliberately unrelated to the assigned revision.
+        {:ok, upload} =
+          Store.parse_import_blob(build_blob(name: "HISTORY", version: 42, body: <<body>>))
+
+        assert {:ok, %{bumped: [%{version: ^revision}]}} = Store.insert_or_bump([upload])
+        row = Store.get_blob(old.name, old.sequence, old.type, revision)
+
+        assert {:ok, %{version: ^wire_version}} =
+                 Prodigy.Core.Objects.Codec.parse_header(row.contents)
+
+        assert row.content_hash == upload.content_hash
+
+        assert {:ok, %{unchanged: [%{version: ^revision}], bumped: []}} =
+                 Store.insert_or_bump([upload])
+      end
+
+      assert Store.get_blob(old.name, old.sequence, old.type, 0).contents == old.contents
+      assert Store.get_blob(old.name, old.sequence, old.type, 8191).contents == last.contents
+    end
+
+    test "a second wire rollover does not reuse database primary keys" do
+      {:ok, parsed} =
+        Store.parse_import_blob(build_blob(name: "TWICE", version: 8191, body: <<1>>))
+
+      Repo.insert!(
+        struct(
+          Prodigy.Core.Data.Service.Object,
+          parsed |> Map.delete(:keyword) |> Map.put(:version, 16383)
+        )
+      )
+
+      {:ok, upload} = Store.parse_import_blob(build_blob(name: "TWICE", version: 17, body: <<2>>))
+
+      assert {:ok, %{bumped: [%{version: 16384, previous_version: 16383}]}} =
+               Store.insert_or_bump([upload])
+
+      row = Store.get_blob(parsed.name, parsed.sequence, parsed.type, 16384)
+      assert {:ok, %{version: 0}} = Prodigy.Core.Objects.Codec.parse_header(row.contents)
     end
 
     test "keyword extraction populates the keyword table and rollbacks on collision" do
@@ -382,11 +434,11 @@ defmodule Prodigy.Core.Objects.StoreTest do
       assert {:ok, %{upserted: 2, deleted: 3}} = Store.reconcile_prefix(["3B"], run2)
       assert count_with_prefix("3B%") == 2
 
-      leaf1 = Repo.one!(from o in Object, where: o.name == "3B000012S  ")
+      leaf1 = Repo.one!(from(o in Object, where: o.name == "3B000012S  "))
       assert leaf1.version == 2
       assert :binary.match(leaf1.contents, "leaf1-new") != :nomatch
 
-      refute Repo.exists?(from o in Object, where: o.name == "3B000022S  ")
+      refute Repo.exists?(from(o in Object, where: o.name == "3B000022S  "))
     end
 
     test "does NOT touch rows outside the prefix namespace" do

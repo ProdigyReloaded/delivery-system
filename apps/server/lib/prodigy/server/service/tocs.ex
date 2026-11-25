@@ -26,6 +26,7 @@ defmodule Prodigy.Server.Service.Tocs do
 
   alias Prodigy.Core.Data.Repo
   alias Prodigy.Core.Data.Service.MissingObject
+  alias Prodigy.Core.Objects.Codec
   alias Prodigy.Core.Data.Service.Object
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
@@ -117,7 +118,8 @@ defmodule Prodigy.Server.Service.Tocs do
           record_deficit(name, sequence, type, context)
           TocsPacket.encode(%TocsPacket{seq: message_id})
 
-        client_version < object.version or client_version == 0 ->
+        client_version == 0 or
+            Codec.newer_version?(Codec.wire_version(object.version), client_version) ->
           Logger.debug(
             "User requested #{user_request}, sending database version #{inspect(object.version, base: :hex)}"
           )
@@ -125,19 +127,10 @@ defmodule Prodigy.Server.Service.Tocs do
           tocs_response = %TocsPacket{seq: message_id, payload: object.contents}
           TocsPacket.encode(tocs_response)
 
-        client_version > object.version ->
-          Logger.notice(
-            "User requested #{user_request}, but it is newer than the database version (#{inspect(object.version, base: :hex)})"
-          )
-
-          TocsPacket.encode(%TocsPacket{seq: message_id})
-
-        client_version == object.version ->
-          TocsPacket.encode(%TocsPacket{seq: message_id})
-
         true ->
-          Logger.error("Unhandled condition #{client_version}, #{inspect(object)}")
-          <<>>
+          # Equal, newer-client and ambiguous half-range serials all retain
+          # the client's cached copy. Revision zero requests were handled above.
+          TocsPacket.encode(%TocsPacket{seq: message_id})
       end
 
     {:ok, context, response}

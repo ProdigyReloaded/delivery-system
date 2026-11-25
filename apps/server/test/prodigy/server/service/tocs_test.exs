@@ -22,7 +22,7 @@ defmodule Prodigy.Server.Service.Tocs.Test do
   require Logger
 
   alias Prodigy.Core.Data.Service.Object
-  alias Prodigy.Core.Objects.Codec
+  alias Prodigy.Core.Objects.{Codec, Store}
   alias Prodigy.Server.Protocol.Dia.Packet, as: DiaPacket
   alias Prodigy.Server.Protocol.Dia.Packet.{Fm0, Fm64}
   alias Prodigy.Server.Router
@@ -77,7 +77,7 @@ defmodule Prodigy.Server.Service.Tocs.Test do
   end
 
   test "RS has most recent version of requested object", context do
-    {random_id, {:ok, response}} = get_object(context.router_pid, "ITRC0001D  ", 0x1, 0xC, 0x1234)
+    {random_id, {:ok, response}} = get_object(context.router_pid, "ITRC0001D  ", 0x1, 0xC, 0x124)
     <<0x0, ^random_id, 0, 0, 0::16-big>> = response
   end
 
@@ -144,5 +144,66 @@ defmodule Prodigy.Server.Service.Tocs.Test do
 
     {random_id, {:ok, response}} = get_object(context.router_pid, "FM00000APG ", 0x0, 0x4, 0x22)
     <<0x0, ^random_id, 0, 0, 6::16-big, "bazqux"::binary>> = response
+  end
+
+  test "TOCS serves the new blob across rollover and acknowledges its cached wire version",
+       context do
+    first = Codec.build(%{name: "ROLLOVER", ext: "D", sequence: 1, version: 8191, data: "old"})
+    {:ok, parsed} = Store.parse_import_blob(first)
+    assert {:ok, _} = Store.insert_or_bump([parsed])
+
+    for {data, revision, wire_version} <- [{"wrapped", 8192, 0}, {"next", 8193, 1}] do
+      upload = Codec.build(%{name: "ROLLOVER", ext: "D", sequence: 1, version: 42, data: data})
+      {:ok, parsed} = Store.parse_import_blob(upload)
+      assert {:ok, %{bumped: [%{version: ^revision}]}} = Store.insert_or_bump([parsed])
+
+      {id, {:ok, response}} = get_object(context.router_pid, "ROLLOVERD  ", 1, 0xC, 8191)
+
+      expected =
+        Codec.build(%{name: "ROLLOVER", ext: "D", sequence: 1, version: wire_version, data: data})
+
+      size = byte_size(expected)
+      assert <<0, ^id, 0, 0, ^size::16-big, ^expected::binary>> = response
+
+      {id, {:ok, response}} = get_object(context.router_pid, "ROLLOVERD  ", 1, 0xC, wire_version)
+
+      if wire_version == 0 do
+        # Zero remains the protocol's unconditional/no-cached-copy request.
+        assert <<0, ^id, 0, 0, ^size::16-big, ^expected::binary>> = response
+      else
+        assert <<0, ^id, 0, 0, 0::16-big>> = response
+      end
+    end
+  end
+
+  for {label, server, client, sends?} <- [
+        {"server just wrapped", 1, 8191, true},
+        {"client just wrapped", 8191, 1, false},
+        {"equal nonzero wire versions", 8193, 1, false},
+        {"last defined forward distance", 4096, 1, true},
+        {"ambiguous half-range distance", 4097, 1, false},
+        {"zero requests the object unconditionally", 8192, 0, true},
+        {"request candidacy bits are masked", 8193, 0xE001, false}
+      ] do
+    test "TOCS serial comparison: #{label}", context do
+      Repo.insert!(
+        object_fixture(%{
+          name: "SERIAL  D  ",
+          sequence: 1,
+          type: 0xC,
+          version: unquote(server),
+          contents: "serial"
+        })
+      )
+
+      {id, {:ok, response}} =
+        get_object(context.router_pid, "SERIAL  D  ", 1, 0xC, unquote(client))
+
+      if unquote(sends?) do
+        assert <<0, ^id, 0, 0, 6::16-big, "serial">> = response
+      else
+        assert <<0, ^id, 0, 0, 0::16-big>> = response
+      end
+    end
   end
 end

@@ -25,6 +25,7 @@ defmodule Prodigy.Core.Data.Service.Object do
     field(:name, :string, primary_key: true)
     field(:sequence, :integer, primary_key: true)
     field(:type, :integer, primary_key: true)
+    # Monotonic storage revision; the blob header carries version modulo 8192.
     field(:version, :integer, primary_key: true)
     field(:contents, :binary)
     # SHA-256 of the canonicalized blob (version bits zeroed). Drives
