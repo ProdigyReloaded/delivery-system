@@ -32,33 +32,27 @@ defmodule Prodigy.Server.Service.Messaging do
   alias Prodigy.Server.Protocol.Dia.Packet.Fm0
   alias Prodigy.Server.Context
 
-  def expunge do
+  @doc """
+  Delete every message whose `retain_date` has passed.
+
+  `retain_date` is the delete date the client shows the member, and it is the
+  only thing consulted here: it is set to sent + 14 days when a message is
+  stored and moved to sent + 28 days when the member retains it, read or not.
+
+  `now` is the instant the cutoff is measured from. The scheduler calls
+  `expunge/0`; tests pass the same instant they built their fixtures from.
+  """
+  def expunge(now \\ DateTime.utc_now()) do
     Logger.debug("Expunging messages ...")
 
-    Repo.transaction(fn ->
-      now = DateTime.utc_now()
+    now = DateTime.truncate(now, :second)
 
-      {count_read, _} =
-        Message
-        |> Ecto.Query.where([message], message.read == true)
-        |> Ecto.Query.where([message], message.retain_date < ^now)
-        |> Repo.delete_all()
+    {count, _} =
+      Message
+      |> Ecto.Query.where([message], message.retain_date < ^now)
+      |> Repo.delete_all()
 
-      # 3 days old
-      oldest_unread_date = DateTime.add(now, 3 * 24 * 60 * 60, :second)
-
-      {count_unread, _} =
-        Message
-        |> Ecto.Query.where([message], message.read == false)
-        |> Ecto.Query.where([message], message.sent_date <= ^oldest_unread_date)
-        |> Repo.delete_all()
-
-      total = count_read + count_unread
-
-      Logger.info(
-        "Expunged #{count_read} read and #{count_unread} unread messages (#{total} total)"
-      )
-    end)
+    Logger.info("Expunged #{count} messages")
   end
 
   def send_message(from_id, from_name, to_ids, _other_ids, subject, body) do
@@ -279,8 +273,15 @@ defmodule Prodigy.Server.Service.Messaging do
           else
             length = byte_size(message.contents)
 
+            # MSZB016X copies bytes 9..13 (1-indexed) of this response over
+            # the delete date in its cached mailbox row, so they carry the
+            # same MM/DD the mailbox listing sent. The 2-byte body length
+            # follows at byte 14.
+            retain_date = Timex.format!(message.retain_date, "{0M}/{0D}")
+
             <<
-              0::104,
+              0::64,
+              retain_date::binary-size(5),
               length::16-big,
               message.contents::binary
             >>

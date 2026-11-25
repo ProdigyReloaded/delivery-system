@@ -94,7 +94,16 @@ defmodule Prodigy.Server.Service.Messaging.Test do
   end
 
   defp get_message(context, index) do
-    {:ok, <<_::binary-size(16), 0::104, length::16-big, content::binary-size(length)>>} =
+    {_delete_date, content} = get_message_with_delete_date(context, index)
+    content
+  end
+
+  # The read response is 8 zero bytes, the 5 byte MM/DD delete date the client
+  # copies into its cached mailbox row, then the 2 byte length and the body.
+  defp get_message_with_delete_date(context, index) do
+    {:ok,
+     <<_::binary-size(16), 0::64, delete_date::binary-size(5), length::16-big,
+       content::binary-size(length)>>} =
       Router.handle_packet(context.router_pid, %Fm0{
         src: 0x0,
         dest: 0x00D200,
@@ -104,7 +113,7 @@ defmodule Prodigy.Server.Service.Messaging.Test do
         payload: <<0x01, 0x03, 0x03, index::16-big, 0x01, 0xF4>>
       })
 
-    content
+    {delete_date, content}
   end
 
   test "send message", context do
@@ -207,6 +216,23 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     <<4::16-big, "ZZZZ00A", 0, 0, sent_date::binary-size(5), retain_date::binary-size(5), 9,
       "Test User", 6, "Test 2", 5::16-big, "ZZZZ00A", 0, 0, sent_date::binary-size(5),
       retain_date::binary-size(5), 9, "Test User", 6, "Test 1">> = rest
+
+    logoff(context.router_pid)
+  end
+
+  test "reading a message returns the delete date the mailbox listing showed", context do
+    logon(context.router_pid, "AAAA12A", "foobaz", "06.03.17")
+
+    Messaging.send_message("ZZZZ00A", "Test User", ["AAAA12A"], [], "Test 1", "Test 1")
+
+    {1, 1,
+     <<index::16-big, "ZZZZ00A", 0::16, _sent_date::binary-size(5), listed_date::binary-size(5),
+       9, "Test User", 6, "Test 1">>} = get_mailbox_page(context, 1)
+
+    {delete_date, "Test 1"} = get_message_with_delete_date(context, index)
+
+    assert delete_date == listed_date
+    assert delete_date =~ ~r/^\d\d\/\d\d$/
 
     logoff(context.router_pid)
   end
@@ -439,11 +465,316 @@ defmodule Prodigy.Server.Service.Messaging.Test do
     logoff(context.router_pid)
   end
 
-  #  test "expunge unread messages" do
-  #    flunk("not yet implemented")
-  #  end
-  #
-  #  test "expunge read messages" do
-  #    flunk("not yet implemented")
-  #  end
+  test "expunge unread messages after 14 days" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    # Recent unread message (should NOT be deleted)
+    recent_unread = %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Recent Unread",
+      contents: "Should not be deleted",
+      sent_date: DateTime.add(now, -5, :day),  # 5 days old
+      read: false,
+      retain: false,
+      retain_date: DateTime.add(now, -5 + 14, :day)  # expires in 9 days
+    } |> Repo.insert!()
+
+    # Old unread message (should be deleted)
+    old_unread = %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Old Unread",
+      contents: "Should be deleted",
+      sent_date: DateTime.add(now, -15, :day),  # 15 days old
+      read: false,
+      retain: false,
+      retain_date: DateTime.add(now, -15 + 14, :day)  # already expired
+    } |> Repo.insert!()
+
+    # retain_date exactly now (should NOT be deleted - the comparison is a strict <)
+    edge_unread = %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Edge Unread",
+      contents: "Should not be deleted",
+      sent_date: DateTime.add(now, -14, :day),  # exactly 14 days old
+      read: false,
+      retain: false,
+      retain_date: DateTime.add(now, 0, :day)  # expires today
+    } |> Repo.insert!()
+
+    assert 3 == Message |> Repo.aggregate(:count)
+
+    Messaging.expunge(now)
+
+    # Verify only the old unread message was deleted
+    assert 2 == Message |> Repo.aggregate(:count)
+
+    remaining = Message |> Repo.all()
+    remaining_ids = Enum.map(remaining, & &1.id)
+
+    assert recent_unread.id in remaining_ids
+    assert edge_unread.id in remaining_ids
+    refute old_unread.id in remaining_ids
+  end
+
+  test "expunge read messages based on retain_date" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    # Read message with expired retain_date (should be deleted)
+    expired_read = %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Expired Read",
+      contents: "Should be deleted",
+      sent_date: DateTime.add(now, -10, :day),
+      read: true,
+      retain: false,
+      retain_date: DateTime.add(now, -1, :day)  # expired yesterday
+    } |> Repo.insert!()
+
+    # Read message with future retain_date (should NOT be deleted)
+    future_read = %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Future Read",
+      contents: "Should not be deleted",
+      sent_date: DateTime.add(now, -5, :day),
+      read: true,
+      retain: false,
+      retain_date: DateTime.add(now, 2, :day)  # expires in 2 days
+    } |> Repo.insert!()
+
+    # Read message with retain flag and future retain_date (should NOT be deleted)
+    retained_read = %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Retained Read",
+      contents: "Should not be deleted",
+      sent_date: DateTime.add(now, -7, :day),
+      read: true,
+      retain: true,
+      retain_date: DateTime.add(now, 21, :day)  # expires in 21 days (28 days from sent)
+    } |> Repo.insert!()
+
+    assert 3 == Message |> Repo.aggregate(:count)
+
+    # Run expunge
+    Messaging.expunge(now)
+
+    # Verify only the expired read message was deleted
+    assert 2 == Message |> Repo.aggregate(:count)
+
+    remaining = Message |> Repo.all()
+    remaining_ids = Enum.map(remaining, & &1.id)
+
+    refute expired_read.id in remaining_ids
+    assert future_read.id in remaining_ids
+    assert retained_read.id in remaining_ids
+  end
+
+  test "expunge handles mixed read and unread messages correctly" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    # Create a mix of messages that should and shouldn't be deleted
+    messages = [
+      # Should be deleted
+      %Message{
+        from_id: "AAAA12A",
+        from_name: "Test User",
+        to_id: "BBBB12B",
+        subject: "Old Unread",
+        contents: "Delete me",
+        sent_date: DateTime.add(now, -20, :day),  # 20 days old
+        read: false,
+        retain: false,
+        retain_date: DateTime.add(now, -6, :day)
+      },
+      %Message{
+        from_id: "AAAA12A",
+        from_name: "Test User",
+        to_id: "BBBB12B",
+        subject: "Expired Read",
+        contents: "Delete me",
+        sent_date: DateTime.add(now, -8, :day),
+        read: true,
+        retain: false,
+        retain_date: DateTime.add(now, -2, :day)  # expired 2 days ago
+      },
+
+      # Should NOT be deleted
+      %Message{
+        from_id: "AAAA12A",
+        from_name: "Test User",
+        to_id: "BBBB12B",
+        subject: "Recent Unread",
+        contents: "Keep me",
+        sent_date: DateTime.add(now, -3, :day),  # only 3 days old
+        read: false,
+        retain: false,
+        retain_date: DateTime.add(now, 11, :day)
+      },
+      %Message{
+        from_id: "AAAA12A",
+        from_name: "Test User",
+        to_id: "BBBB12B",
+        subject: "Valid Read",
+        contents: "Keep me",
+        sent_date: DateTime.add(now, -4, :day),
+        read: true,
+        retain: false,
+        retain_date: DateTime.add(now, 1, :day)  # expires tomorrow
+      },
+      %Message{
+        from_id: "AAAA12A",
+        from_name: "Test User",
+        to_id: "BBBB12B",
+        subject: "Retained",
+        contents: "Keep me",
+        sent_date: DateTime.add(now, -10, :day),
+        read: true,
+        retain: true,
+        retain_date: DateTime.add(now, 18, :day)  # expires in 18 days
+      }
+    ]
+
+    Enum.each(messages, &Repo.insert!/1)
+
+    assert 5 == Message |> Repo.aggregate(:count)
+
+    Messaging.expunge(now)
+
+    # Should have deleted 2 messages (old unread and expired read)
+    assert 3 == Message |> Repo.aggregate(:count)
+
+    remaining = Message |> Repo.all()
+    remaining_subjects = Enum.map(remaining, & &1.subject) |> Enum.sort()
+
+    assert remaining_subjects == ["Recent Unread", "Retained", "Valid Read"]
+  end
+
+  test "expunge correctly handles edge case of message sent exactly at cutoff time" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    # Message sent exactly 14 days and 1 second ago (should be deleted)
+    %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Just Over 14 Days",
+      contents: "Should be deleted",
+      sent_date: DateTime.add(now, -14 * 24 * 60 * 60 - 1, :second),
+      read: false,
+      retain: false,
+      retain_date: DateTime.add(now, -1, :second)
+    } |> Repo.insert!()
+
+    # retain_date exactly now (should NOT be deleted - the comparison is a strict <)
+    %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Exactly 14 Days",
+      contents: "Should not be deleted",
+      sent_date: DateTime.add(now, -14 * 24 * 60 * 60, :second),
+      read: false,
+      retain: false,
+      retain_date: now
+    } |> Repo.insert!()
+
+    assert 2 == Message |> Repo.aggregate(:count)
+
+    Messaging.expunge(now)
+
+    assert 1 == Message |> Repo.aggregate(:count)
+    remaining = Message |> Repo.one!()
+    assert remaining.subject == "Exactly 14 Days"
+  end
+
+  test "expunge ignores retain flag for read messages" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Retained but Expired Date",
+      contents: "Check retain flag handling",
+      sent_date: DateTime.add(now, -30, :day),
+      read: true,
+      retain: true,
+      retain_date: DateTime.add(now, -1, :day)  # This date is expired
+    } |> Repo.insert!()
+
+    # Read message without retain flag and expired date
+    %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Not Retained and Expired",
+      contents: "Should be deleted",
+      sent_date: DateTime.add(now, -30, :day),
+      read: true,
+      retain: false,
+      retain_date: DateTime.add(now, -1, :day)  # This date is expired
+    } |> Repo.insert!()
+
+    assert 2 == Message |> Repo.aggregate(:count)
+
+    Messaging.expunge(now)
+
+    # Retain flag only means the user opted to extend the retention date, and is
+    # not otherwise considered in when messages are expunged.  That is, when the
+    # user marks a message as retained, the retain date is extended at that time,
+    # and the flag set to true.
+
+    assert 0 == Message |> Repo.aggregate(:count),
+           "Both messages should be deleted based on retain_date regardless of retain flag"
+    end
+
+  test "expunge keeps an unread message the user retained until its retain_date" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    # The mailbox list lets a member mark any message R without opening it, so a
+    # message can be retained and still unread. Retaining moves retain_date to
+    # sent + 28 days; the 14 day unread cutoff must not override that.
+    retained_unread = %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Retained Unread",
+      contents: "Should not be deleted",
+      sent_date: DateTime.add(now, -20, :day),
+      read: false,
+      retain: true,
+      retain_date: DateTime.add(now, 8, :day)
+    } |> Repo.insert!()
+
+    # Same message once the extended date has passed (should be deleted)
+    expired_retained_unread = %Message{
+      from_id: "AAAA12A",
+      from_name: "Test User",
+      to_id: "BBBB12B",
+      subject: "Expired Retained Unread",
+      contents: "Should be deleted",
+      sent_date: DateTime.add(now, -30, :day),
+      read: false,
+      retain: true,
+      retain_date: DateTime.add(now, -2, :day)
+    } |> Repo.insert!()
+
+    Messaging.expunge(now)
+
+    remaining_ids = Message |> Repo.all() |> Enum.map(& &1.id)
+
+    assert retained_unread.id in remaining_ids
+    refute expired_retained_unread.id in remaining_ids
+  end
 end
