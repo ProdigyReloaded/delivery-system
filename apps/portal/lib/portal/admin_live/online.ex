@@ -152,7 +152,7 @@ defmodule Prodigy.Portal.AdminLive.Online do
         <span class="text-muted small">{@total} online</span>
       </div>
 
-      <form phx-change="filter" class="mb-0">
+      <form id="online-filter-form" phx-change="filter" class="mb-0">
         <div class="admin-table-scroll" id="online-scroll">
         <table class="table table-sm table-hover align-middle admin-table-sticky">
           <thead>

@@ -290,7 +290,7 @@ defmodule Prodigy.Portal.AdminLive.Users do
         <span class="text-muted small">{@total} users</span>
       </div>
 
-      <form phx-change="filter" class="mb-0">
+      <form id="service-users-filter-form" phx-change="filter" class="mb-0">
         <div class="admin-table-scroll" id="users-scroll">
         <table class="table table-sm table-hover align-middle admin-table-sticky">
           <thead>
