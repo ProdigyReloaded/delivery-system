@@ -79,12 +79,26 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
     end
   end
 
+  # Receive-side tests must not create unrelated outgoing DIA responses.
+  defmodule ReceiveOnlyDiaProtocol do
+    use GenServer
+
+    defdelegate init(opts), to: TestDiaProtocol
+    defdelegate handle_call(request, from, queue), to: TestDiaProtocol
+
+    def handle_packet(pid, packet) do
+      {:ok, _response} = TestDiaProtocol.handle_packet(pid, packet)
+      :ok
+    end
+  end
+
   @timeout 1000
   @options %Options{dia_module: TestDiaProtocol, ranch_module: TestRanch}
 
-  setup do
+  setup context do
     {:ok, socket} = TestTransport.start_link({})
-    {:ok, tcsp} = TcsProtocol.start_link(socket, TestTransport, @options)
+    options = %{@options | dia_module: context[:dia_module] || TestDiaProtocol}
+    {:ok, tcsp} = TcsProtocol.start_link(socket, TestTransport, options)
     :ok = wait_for(fn -> GenServer.call(tcsp, :get_dia_pid) != nil end, @timeout)
     dia_pid = GenServer.call(tcsp, :get_dia_pid)
 
@@ -230,42 +244,60 @@ defmodule Prodigy.Server.Protocol.Tcs.Test do
 
   end
 
+  @tag dia_module: ReceiveOnlyDiaProtocol
   test "TCS receive sequence rolls over from 255 to 0", context do
     for i <- 0..514 do
-      seq_mod = Integer.mod(i, 256)
-
-      send(
-        context.tcsp,
-        {:tcp, nil,
-         Packet.encode(%Packet{type: Type.UD1NAK, seq: seq_mod, payload: <<"foo">>})}
-      )
+      send_receive_packet(context, i, Type.UD1NAK)
     end
 
+    send_receive_packet(context, 515, Type.UD1ACK)
+    assert_received_rollover(context)
+  end
+
+  @tag dia_module: ReceiveOnlyDiaProtocol
+  test "receive rollover stays independent of transmitter timer checks", context do
+    for i <- 0..514 do
+      send_receive_packet(context, i, Type.UD1NAK)
+
+      if rem(i + 1, 128) == 0 do
+        # Drain the receive process, then service the same event as its timer.
+        # The synchronous calls are barriers; this does not rely on wall time.
+        %{tx_pid: tx_pid} = :sys.get_state(context.tcsp)
+        send(tx_pid, :run_checks)
+        :sys.get_state(tx_pid)
+        assert TestTransport.count(context.socket) == 0
+      end
+    end
+
+    send_receive_packet(context, 515, Type.UD1ACK)
+
+    # Include responses queued by the final packets in the final queue assertion.
+    %{tx_pid: tx_pid} = :sys.get_state(context.tcsp)
+    send(tx_pid, :run_checks)
+    :sys.get_state(tx_pid)
+
+    assert_received_rollover(context)
+  end
+
+  defp send_receive_packet(context, sequence, type) do
     send(
       context.tcsp,
-      {:tcp, nil, Packet.encode(%Packet{type: Type.UD1ACK, seq: 515, payload: <<"foo">>})}
+      {:tcp, nil, Packet.encode(%Packet{type: type, seq: sequence, payload: <<"foo">>})}
     )
+  end
 
-    #    :ok = wait_for(fn () -> TestDiaProtocol.is_alive?(context.dia_pid) and TestDiaProtocol.count(context.dia_pid) == 516 end, @timeout)
-    case wait_for(
-           fn ->
-             TestDiaProtocol.is_alive?(context.dia_pid) and
-               TestDiaProtocol.count(context.dia_pid) == 516
-           end,
-           @timeout
-         ) do
-      :timeout ->
-        Logger.debug(
-          "alive? #{TestDiaProtocol.is_alive?(context.dia_pid)} count: #{TestDiaProtocol.count(context.dia_pid)}"
-        )
+  defp assert_received_rollover(context) do
+    :ok = wait_for(fn -> TestDiaProtocol.count(context.dia_pid) == 516 end, @timeout)
+    assert TestDiaProtocol.count(context.dia_pid) == 516
 
-      :ok ->
-        :ok
+    for i <- 0..515 do
+      packet = TestDiaProtocol.take(context.dia_pid)
+      assert packet.seq == Integer.mod(i, 256)
+      assert packet.type == if(i == 515, do: Type.UD1ACK, else: Type.UD1NAK)
+      assert packet.payload == <<"foo">>
     end
 
-    assert TestDiaProtocol.count(context.dia_pid) == 516
     :ok = wait_for(fn -> TestTransport.count(context.socket) == 1 end, @timeout)
-
     assert TestTransport.count(context.socket) == 1
     {:ok, %Packet{} = packet, _excess} = Packet.decode(TestTransport.take(context.socket))
     assert packet.type == Type.ACKPKT
